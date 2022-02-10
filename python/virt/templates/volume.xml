@@ -1,0 +1,10 @@
+<volume type='file'>
+  <name>{name}</name>
+  <capacity unit='bytes'>{capacity}</capacity>
+  <target>
+    <format type='{format-type}'/>
+    <permissions>
+      <mode>0644</mode>
+    </permissions>
+  </target>
+</volume>

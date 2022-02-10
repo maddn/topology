@@ -1,0 +1,20 @@
+username cisco
+ group root-lr
+ group cisco-support
+ secret 10 $6$DvJvk/SpCQh15k/.$4ntfUQUxrmzrTUyLC6BXBu.Un.MSOJuVguMvykUILaEoyg4xjVjNGi0UvWHQNP6pcAAMIq0HEYXafnxzRChq30
+!
+line console
+ width 0
+!
+interface MgmtEth0/RP0/CPU0/0
+ ipv4 address {management-ip-address} 255.255.255.0
+ no shutdown
+!
+router static
+ address-family ipv4 unicast
+  10.16.0.0/16 198.18.1.1
+  198.18.128.0/18 198.18.1.1
+ !
+!
+ssh server v2
+end

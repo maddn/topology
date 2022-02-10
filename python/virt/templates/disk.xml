@@ -1,0 +1,5 @@
+<disk type="volume" device="{disk-device-type}">
+  <driver name="qemu" type="{file-format}"/>
+  <source pool="{storage-pool}" volume="{volume-name}"/>
+  <target dev="{target-dev}" bus="{bus}"/>
+</disk>

@@ -1,0 +1,318 @@
+module topology {
+
+  yang-version 1.1;
+  namespace "http://example.com/topology";
+  prefix topology;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import tailf-common {
+    prefix tailf;
+  }
+
+  grouping network-grouping {
+    leaf name {
+      type string;
+    }
+    list interface {
+      leaf domain-name {
+        type string;
+      }
+      leaf host-interface {
+        type string;
+      }
+    }
+  }
+
+  grouping libvirt-action-input-grouping {
+    leaf hypervisor {
+      type leafref {
+        path "/topologies/libvirt/hypervisor/name";
+      }
+      mandatory true;
+    }
+  }
+
+  grouping libvirt-action-output-grouping {
+    list libvirt-action {
+      leaf action {
+        type string;
+      }
+      leaf-list networks {
+        type string;
+      }
+      leaf-list domains {
+        type string;
+      }
+      leaf-list volumes {
+        type string;
+      }
+    }
+  }
+
+  grouping interface-oper-grouping {
+    leaf ip-address {
+      type inet:ipv4-address;
+    }
+    leaf mac-address {
+      type string;
+    }
+    leaf host-interface {
+      type string;
+    }
+  }
+
+  container topologies {
+
+    container libvirt {
+      list hypervisor {
+        key name;
+        leaf name {
+          type string;
+        }
+        leaf url {
+          type string;
+          mandatory true;
+        }
+        leaf username {
+          type string;
+        }
+        leaf password {
+          type string;
+        }
+        leaf management-bridge {
+          type string;
+          default 'l3v1';
+        }
+        leaf management-ip-address-start {
+          type inet:ipv4-address;
+          default '198.18.1.60';
+        }
+        leaf mac-address-format {
+          type string;
+          default '02:0c:15:c0:{:02x}:{:02x}';
+        }
+      }
+      container get {
+        action domains {
+          tailf:actionpoint libvirt-get-objects;
+          input {
+            uses libvirt-action-input-grouping;
+          }
+          output {
+            list domain {
+              leaf name {
+                type string;
+              }
+              leaf vcpus {
+                type uint16;
+              }
+              leaf memory {
+                type uint16;
+              }
+              leaf active {
+                type boolean;
+              }
+            }
+          }
+        }
+        action networks {
+          tailf:actionpoint libvirt-get-objects;
+          input {
+            uses libvirt-action-input-grouping;
+          }
+          output {
+            list network {
+              uses network-grouping;
+              leaf bridge-name {
+                type string;
+              }
+            }
+            list external-bridge {
+              uses network-grouping;
+            }
+          }
+        }
+        action volumes {
+          tailf:actionpoint libvirt-get-objects;
+          input {
+            uses libvirt-action-input-grouping;
+          }
+          output {
+            list storage-pool {
+              leaf name {
+                type string;
+              }
+              list volume {
+                leaf name {
+                  type string;
+                }
+                leaf capacity {
+                  type uint32;
+                }
+                leaf allocation {
+                  type uint32;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    list topology {
+      key name;
+      description "This is an RFS skeleton service";
+
+      leaf name {
+        tailf:info "Unique service id";
+        tailf:cli-allow-range;
+        type string;
+      }
+
+      container devices {
+        list device {
+          key id;
+          leaf id {
+            type string;
+            mandatory true;
+          }
+          leaf prefix {
+            type string;
+            mandatory true;
+          }
+          leaf device-type {
+            type enumeration {
+              enum XRv-9000;
+            }
+            mandatory true;
+          }
+          leaf vcpus {
+            type uint16;
+            mandatory true;
+          }
+          leaf memory {
+            type uint16;
+            mandatory true;
+          }
+          leaf template {
+            type string;
+            mandatory true;
+          }
+          leaf storage-pool {
+            type string;
+            mandatory true;
+          }
+          leaf base-image {
+            type string;
+            mandatory true;
+          }
+          leaf day0-file {
+            type string;
+          }
+          leaf device-name {
+            type string;
+            config false;
+            tailf:callpoint device-name-callpoint {
+              tailf:transform true;
+            }
+          }
+          container management-interface {
+            config false;
+            tailf:cdb-oper {
+              tailf:persistent true;
+            }
+            uses interface-oper-grouping;
+          }
+        }
+      }
+
+      container links {
+        list link {
+          key "a-end-device z-end-device";
+          leaf a-end-device {
+            type string;
+            must "count(../../link[a-end-device = current()]" +
+                                 "[z-end-device = current()]) = 0" {
+              error-message "a-end-device and z-end-device must be different";
+            }
+            tailf:non-strict-leafref {
+              path "../../../devices/device/device-name";
+            }
+          }
+          container a-end-interface {
+            config false;
+            tailf:cdb-oper {
+              tailf:persistent true;
+            }
+            uses interface-oper-grouping;
+          }
+          leaf z-end-device {
+            type string;
+            must "count(../../link[a-end-device = current()]" +
+                                 "[z-end-device = current()]) = 0" {
+              error-message "a-end-device and z-end-device must be different";
+            }
+            tailf:non-strict-leafref {
+              path "../../../devices/device/device-name";
+            }
+          }
+          container z-end-interface {
+            config false;
+            tailf:cdb-oper {
+              tailf:persistent true;
+            }
+            uses interface-oper-grouping;
+          }
+          leaf host-bridge {
+            type string;
+            config false;
+            tailf:cdb-oper {
+              tailf:persistent true;
+            }
+          }
+          leaf mac-address {
+            type string;
+            config false;
+            tailf:cdb-oper {
+              tailf:persistent true;
+            }
+          }
+        }
+      }
+
+      container libvirt {
+        leaf hypervisor {
+          type leafref {
+            path "/topologies/libvirt/hypervisor/name";
+          }
+        }
+        action define {
+          tailf:actionpoint libvirt-action;
+          output {
+            uses libvirt-action-output-grouping;
+          }
+        }
+        action undefine {
+          tailf:actionpoint libvirt-action;
+          output {
+            uses libvirt-action-output-grouping;
+          }
+        }
+        action start {
+          tailf:actionpoint libvirt-action;
+          output {
+            uses libvirt-action-output-grouping;
+          }
+        }
+        action stop {
+          tailf:actionpoint libvirt-action;
+          output {
+            uses libvirt-action-output-grouping;
+          }
+        }
+      }
+    }
+  }
+}
