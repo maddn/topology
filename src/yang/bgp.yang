@@ -1,0 +1,60 @@
+submodule bgp {
+
+  yang-version 1.1;
+  belongs-to topology {
+    prefix topology;
+  }
+
+  import tailf-common {
+    prefix tailf;
+  }
+  import tailf-ncs {
+    prefix ncs;
+  }
+
+  grouping bgp-routers-grouping {
+    leaf loopback-id {
+      type leafref {
+        path "deref(../../topology)/../ip-connectivity/loopback-interfaces/loopback/id";
+      }
+    }
+    leaf-list routers {
+      type string;
+      tailf:non-strict-leafref {
+        path "deref(../../topology)/../devices/device/device-name";
+      }
+    }
+  }
+
+  grouping bgp-grouping {
+    list bgp {
+      key as-number;
+
+      uses ncs:service-data;
+      ncs:servicepoint bgp;
+
+      leaf as-number {
+        type uint16;
+      }
+
+      leaf topology {
+        type leafref {
+          path "/topologies/topology/name";
+        }
+        mandatory true;
+      }
+
+      container route-reflector {
+        uses bgp-routers-grouping;
+      }
+
+      container provider-edge {
+        uses bgp-routers-grouping;
+      }
+
+      container link-state {
+        uses bgp-routers-grouping;
+      }
+    }
+  }
+}

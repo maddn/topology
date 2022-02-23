@@ -1,0 +1,113 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="bgp">
+  <?set DEFAULT_LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
+  <?set-root-node {/}?>
+  <devices xmlns="http://tail-f.com/ns/ncs">
+    <device>
+      <name>{provider-edge/routers | link-state/routers}</name>
+      <?set ROLE={local-name(..)}?>
+      <?set LOOPBACK_ID={../loopback-id}?>
+      <?if {$LOOPBACK_ID=""}?>
+        <?set LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+      <?end?>
+
+      <config>
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <bgp>
+            <bgp-no-instance>
+              <id>{string(../../as-number)}</id>
+              <bgp>
+                <router-id>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
+              </bgp>
+              <address-family>
+                <vpnv4 when="{$ROLE='provider-edge'}">
+                  <unicast/>
+                </vpnv4>
+                <link-state when="{$ROLE='link-state'}">
+                  <link-state/>
+                </link-state>
+              </address-family>
+
+              <?foreach {../../route-reflector/routers}?>
+                <?set RR_LOOPBACK_ID={../loopback-id}?>
+                <?if {$RR_LOOPBACK_ID=""}?>
+                  <?set RR_LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+                <?end?>
+                <neighbor>
+                  <id>{string(/devices/device[name=current()]/config/interface/Loopback[id=$RR_LOOPBACK_ID]/ipv4/address/ip)}</id>
+                  <remote-as>{string(../../as-number)}</remote-as>
+                  <update-source>
+                    <Loopback>{$LOOPBACK_ID}</Loopback>
+                  </update-source>
+                  <address-family>
+                    <vpnv4 when="{$ROLE='provider-edge'}">
+                      <unicast/>
+                    </vpnv4>
+                    <link-state when="{$ROLE='link-state'}">
+                      <link-state/>
+                    </link-state>
+                  </address-family>
+                </neighbor>
+              <?end?>
+            </bgp-no-instance>
+          </bgp>
+        </router>
+      </config>
+    </device>
+
+    <device>
+      <name>{route-reflector/routers}</name>
+      <?set LOOPBACK_ID={../loopback-id}?>
+      <?if {$LOOPBACK_ID=""}?>
+        <?set LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+      <?end?>
+
+      <config>
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <bgp>
+            <bgp-no-instance>
+              <id>{string(../../as-number)}</id>
+              <bgp>
+                <router-id>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
+              </bgp>
+              <address-family>
+                <vpnv4 when="{count(../../provider-edge/routers)>0}">
+                  <unicast/>
+                </vpnv4>
+                <link-state when="{count(../../link-state/routers)>0}">
+                  <link-state/>
+                </link-state>
+              </address-family>
+
+              <?foreach {../../provider-edge/routers | ../../link-state/routers}?>
+                <?set PE_LOOPBACK_ID={../loopback-id}?>
+                <?if {$PE_LOOPBACK_ID=""}?>
+                  <?set PE_LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+                <?end?>
+                <neighbor>
+                  <id>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PE_LOOPBACK_ID]/ipv4/address/ip)}</id>
+                  <remote-as>{string(../../as-number)}</remote-as>
+                  <update-source>
+                    <Loopback>{$LOOPBACK_ID}</Loopback>
+                  </update-source>
+                  <address-family>
+                    <vpnv4 when="{local-name(..)='provider-edge'}">
+                      <unicast>
+                        <route-reflector-client/>
+                      </unicast>
+                    </vpnv4>
+                    <link-state when="{local-name(..)='link-state'}">
+                      <link-state>
+                        <route-reflector-client/>
+                      </link-state>
+                    </link-state>
+                  </address-family>
+                </neighbor>
+              <?end?>
+            </bgp-no-instance>
+          </bgp>
+        </router>
+      </config>
+    </device>
+  </devices>
+</config-template>

@@ -1,0 +1,134 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+  servicepoint="segment-routing">
+
+  <?macro LinkEndpointSR device_name interface_id?>
+    <device>
+      <name>{$device_name}</name>
+      <config>
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <isis>
+            <tag tags="nocreate">
+              <name>{string(/name)}</name>
+              <interface>
+                <name>GigabitEthernet0/0/0/{$interface_id}</name>
+                <address-family tags="merge">
+                  <ipv4>
+                    <unicast>
+                      <fast-reroute>
+                        <enable>
+                          <per-prefix/>
+                        </enable>
+                        <per-prefix>
+                          <ti-lfa/>
+                        </per-prefix>
+                      </fast-reroute>
+                    </unicast>
+                  </ipv4>
+                </address-family>
+              </interface>
+            </tag>
+          </isis>
+        </router>
+      </config>
+    </device>
+  <?endmacro?>
+
+  <?save-context SERVICE?>
+  <?set-context-node {deref(igp)/..}?>
+  <?set LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
+  <?set PCE_LOOPBACK_ID={/pce/loopback-id}?>
+  <?if {$PCE_LOOPBACK_ID=""}?>
+    <?set PCE_LOOPBACK_ID={$LOOPBACK_ID}?>
+  <?end?>
+
+  <devices xmlns="http://tail-f.com/ns/ncs">
+    <device>
+      <name>{devices}</name>
+      <config>
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <isis>
+            <tag tags="nocreate">
+              <name>{string(/igp)}</name>
+              <address-family tags="merge">
+                <ipv4>
+                  <unicast>
+                    <segment-routing>
+                      <mpls/>
+                    </segment-routing>
+                  </unicast>
+                </ipv4>
+              </address-family>
+              <interface>
+                <name>Loopback{$LOOPBACK_ID}</name>
+                <address-family tags="merge">
+                  <ipv4>
+                    <unicast>
+                      <prefix-sid>
+                        <absolute>{number(/prefix-sid-start) + number(deref(current())/../id)}</absolute>
+                      </prefix-sid>
+                    </unicast>
+                  </ipv4>
+                </address-family>
+              </interface>
+            </tag>
+          </isis>
+        </router>
+
+        <segment-routing xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <global-block>
+            <lower-bound>{/srgb/lower-bound}</lower-bound>
+            <upper-bound>{/srgb/upper-bound}</upper-bound>
+          </global-block>
+
+          <?set-root-node {/}?>
+          <traffic-eng>
+            <pcc>
+              <source-address>
+                <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+              </source-address>
+
+              <?switch-context SERVICE?>
+              <?set-root-node {/}?>
+              <pce when="{pce/router}">
+                <address>
+                  <ipv4>
+                    <address>{/devices/device[name=current()/pce/router]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</address>
+                    <password when="{pce/password}">
+                      <type>encrypted</type>
+                      <secret>{pce/password}</secret>
+                    </password>
+                  </ipv4>
+                </address>
+              </pce>
+            </pcc>
+          </traffic-eng>
+        </segment-routing>
+      </config>
+    </device>
+
+    <?switch-context SERVICE?>
+    <?set-root-node {/}?>
+    <device>
+      <name>{pce/router}</name>
+      <config>
+        <pce xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <address>
+            <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+          </address>
+          <password when="{pce/password}">
+            <type>encrypted</type>
+            <secret>{../password}</secret>
+          </password>
+        </pce>
+      </config>
+    </device>
+
+    <?set-root-node {deref(igp)/..}?>
+    <?foreach {deref(/topology)/../links/link}?>
+      <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
+        <?expand LinkEndpointSR device_name=a-end-device interface_id=a-end-interface-id?>
+        <?expand LinkEndpointSR device_name=z-end-device interface_id=z-end-interface-id?>
+      <?end?>
+    <?end?>
+  </devices>
+</config-template>

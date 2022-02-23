@@ -4,14 +4,17 @@ all: fxs
 # Include standard NCS examples build definitions and rules
 include $(NCS_DIR)/src/ncs/build/include.ncs.mk
 
-SRC = $(wildcard yang/*.yang)
+YANG_FILES = $(wildcard yang/*.yang)
+SRC = $(and $(YANG_FILES),$(notdir $(shell grep -L "belongs-to" $(YANG_FILES))))
 DIRS = ../load-dir java/src/$(JDIR)/$(NS)
-FXS = $(SRC:yang/%.yang=../load-dir/%.fxs)
+FXS = $(SRC:%.yang=../load-dir/%.fxs)
 
 ## Uncomment and patch the line below if you have a dependency to a NED
 ## or to other YANG files
 # YANGPATH += ../../<ned-name>/src/ncsc-out/modules/yang \
 # 	../../<pkt-name>/src/yang
+
+YANGPATH +=	yang
 
 NCSCPATH   = $(YANGPATH:%=--yangpath %)
 YANGERPATH = $(YANGPATH:%=--path %)

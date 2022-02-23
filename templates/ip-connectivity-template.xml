@@ -1,0 +1,68 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="ip-connectivity">
+  <devices xmlns="http://tail-f.com/ns/ncs">
+    <device>
+      <name>{../devices/device/device-name}</name>
+      <?set DEVICE_ID={id}?>
+      <config>
+        <interface xmlns="http://tail-f.com/ned/cisco-ios-xr" foreach="{/loopback-interfaces/loopback}">
+          <Loopback>
+            <id>{id}</id>
+            <ipv4>
+              <address>
+                <ip>{subnet-first-three-octets}.{$DEVICE_ID}</ip>
+                <mask>255.255.255.0</mask>
+              </address>
+            </ipv4>
+          </Loopback>
+        </interface>
+      </config>
+    </device>
+
+    <?foreach {../links/link}?>
+      <?set A_END_DEVICE_ID={../../devices/device[device-name=current()/a-end-device]/id}?>
+      <?set Z_END_DEVICE_ID={../../devices/device[device-name=current()/z-end-device]/id}?>
+
+      <?set LINK_ID_OCTETS='{$A_END_DEVICE_ID}.{$Z_END_DEVICE_ID}'?>
+      <?if {number($A_END_DEVICE_ID) > number($Z_END_DEVICE_ID)?>
+        <?set LINK_ID_OCTETS='{$Z_END_DEVICE_ID}.{$A_END_DEVICE_ID}'?>
+      <?end?>
+
+      <device>
+        <name>{a-end-device}</name>
+        <config>
+          <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <GigabitEthernet>
+              <id>0/0/0/{a-end-interface-id}</id>
+              <description>Connection to device {z-end-device} destination interface 0/0/0/{z-end-interface-id}</description>
+              <ipv4>
+                <address>
+                  <ip>{/physical-interfaces/subnet-first-octet}.{$LINK_ID_OCTETS}.{$A_END_DEVICE_ID}</ip>
+                  <mask>255.255.255.0</mask>
+                </address>
+              </ipv4>
+            </GigabitEthernet>
+          </interface>
+        </config>
+      </device>
+
+      <device>
+        <name>{z-end-device}</name>
+        <config>
+          <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <GigabitEthernet>
+              <id>0/0/0/{z-end-interface-id}</id>
+              <description>Connection to device {a-end-device} destination interface 0/0/0/{a-end-interface-id}</description>
+              <ipv4>
+                <address>
+                  <ip>{/physical-interfaces/subnet-first-octet}.{$LINK_ID_OCTETS}.{$Z_END_DEVICE_ID}</ip>
+                  <mask>255.255.255.0</mask>
+                </address>
+              </ipv4>
+            </GigabitEthernet>
+          </interface>
+        </config>
+      </device>
+    <?end?>
+  </devices>
+</config-template>

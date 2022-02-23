@@ -31,8 +31,7 @@ class LibvirtGetObjects(Action):
     @Action.action
     def cb_action(self, uinfo, name, kp, input, output, trans):
         self.log.info('action name: ', name)
-        hypervisor = maagic.get_root(
-                trans).topologies.libvirt.hypervisor[input.hypervisor]
+        hypervisor = maagic.get_node(trans, kp[1:])
 
         libvirt_conn = LibvirtConnection()
         libvirt_conn.connect(hypervisor.url)

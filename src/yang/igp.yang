@@ -1,0 +1,52 @@
+submodule igp {
+
+  yang-version 1.1;
+  belongs-to topology {
+    prefix topology;
+  }
+
+  import tailf-common {
+    prefix tailf;
+  }
+  import tailf-ncs {
+    prefix ncs;
+  }
+
+  grouping igp-grouping {
+    list igp {
+      key name;
+
+      uses ncs:service-data;
+      ncs:servicepoint igp;
+
+      leaf name {
+        type string;
+      }
+
+      leaf topology {
+        type leafref {
+          path "/topologies/topology/name";
+        }
+        mandatory true;
+      }
+
+      leaf-list devices {
+        type string;
+        tailf:non-strict-leafref {
+          path "deref(../topology)/../devices/device/device-name";
+        }
+      }
+
+      choice routing-protocol {
+        mandatory true;
+        container is-is {
+          presence true;
+        }
+      }
+
+      leaf mpls-ldp {
+        type empty;
+      }
+    }
+  }
+}

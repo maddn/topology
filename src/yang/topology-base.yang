@@ -1,0 +1,114 @@
+submodule topology-base {
+
+  yang-version 1.1;
+  belongs-to topology {
+    prefix topology;
+  }
+
+  import tailf-common {
+    prefix tailf;
+  }
+
+  grouping topology-base-grouping {
+    list topology {
+      key name;
+      description "This is an RFS skeleton service";
+
+      leaf name {
+        tailf:info "Unique service id";
+        tailf:cli-allow-range;
+        type string;
+      }
+
+      container devices {
+        list device {
+          key id;
+
+          leaf id {
+            type string;
+            mandatory true;
+          }
+
+          leaf prefix {
+            type string;
+            mandatory true;
+          }
+
+          leaf device-name {
+            type string;
+            config false;
+            tailf:callpoint device-name-callpoint {
+              tailf:transform true;
+            }
+          }
+        }
+      }
+
+      container links {
+        list link {
+          key "a-end-device z-end-device";
+
+          leaf a-end-device {
+            type string;
+            must "count(../../link[a-end-device = current()]" +
+                                 "[z-end-device = current()]) = 0" {
+              error-message "a-end-device and z-end-device must be different";
+            }
+            tailf:non-strict-leafref {
+              path "../../../devices/device/device-name";
+            }
+          }
+
+          leaf a-end-interface-id {
+            type uint8;
+          }
+
+          leaf z-end-device {
+            type string;
+            must "count(../../link[a-end-device = current()]" +
+                                 "[z-end-device = current()]) = 0" {
+              error-message "a-end-device and z-end-device must be different";
+            }
+            tailf:non-strict-leafref {
+              path "../../../devices/device/device-name";
+            }
+          }
+
+          leaf z-end-interface-id {
+            type uint8;
+          }
+
+          leaf igp-metric {
+            type uint32;
+            default 10;
+          }
+        }
+      }
+
+      container networks {
+        list network {
+          key name;
+
+          leaf name {
+            type string;
+          }
+
+          list device-interface {
+            key "device interface-id";
+
+            leaf device {
+              type string;
+              tailf:non-strict-leafref {
+                path "../../../../devices/device/device-name";
+              }
+            }
+
+            leaf interface-id {
+              type uint8;
+            }
+          }
+        }
+      }
+    }
+  }
+}

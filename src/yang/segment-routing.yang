@@ -1,0 +1,72 @@
+submodule segment-routing {
+
+  yang-version 1.1;
+  belongs-to topology {
+    prefix topology;
+  }
+
+  import tailf-common {
+    prefix tailf;
+  }
+  import tailf-ncs {
+    prefix ncs;
+  }
+
+  typedef sid {
+    type uint32 {
+      range "16000..1048575";
+    }
+  }
+
+  grouping segment-routing-grouping {
+    list segment-routing {
+      key igp;
+
+      uses ncs:service-data;
+      ncs:servicepoint segment-routing;
+
+      leaf igp {
+        type leafref {
+          path "/topologies/igp/name";
+        }
+      }
+
+      container srgb {
+        tailf:info
+          "Segement Routing Global Block. These bounds are used to
+           configure the SRGB on each router";
+        leaf lower-bound {
+          type sid;
+          default 16000;
+        }
+
+        leaf upper-bound {
+          type sid;
+          default 23999;
+        }
+      }
+
+      leaf prefix-sid-start {
+        type sid;
+        default 16000;
+      }
+
+      container pce {
+        leaf router {
+          type string;
+          tailf:non-strict-leafref {
+            path "/topologies/topology/devices/device/device-name";
+          }
+        }
+
+        leaf loopback-id {
+          type uint8;
+        }
+
+        leaf password {
+          type string;
+        }
+      }
+    }
+  }
+}

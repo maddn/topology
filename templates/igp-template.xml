@@ -1,0 +1,78 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+  servicepoint="igp">
+
+  <?macro LinkEndpointIGP device_name interface_id?>
+    <device>
+      <name>{$device_name}</name>
+      <config>
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <isis>
+            <tag>
+              <name>{string(/name)}</name>
+              <interface>
+                <name>GigabitEthernet0/0/0/{$interface_id}</name>
+                <circuit-type>level-2-only</circuit-type>
+                <point-to-point/>
+                <address-family>
+                  <ipv4>
+                    <unicast>
+                      <metric>{igp-metric}</metric>
+                    </unicast>
+                  </ipv4>
+                </address-family>
+              </interface>
+            </tag>
+          </isis>
+        </router>
+        <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{/mpls-ldp}">
+          <ldp>
+            <interface>
+              <name>GigabitEthernet0/0/0/{$interface_id}</name>
+            </interface>
+          </ldp>
+        </mpls>
+      </config>
+    </device>
+  <?endmacro?>
+
+  <devices xmlns="http://tail-f.com/ns/ncs">
+
+    <?foreach {deref(topology)/../links/link}?>
+      <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
+        <?expand LinkEndpointIGP device_name=a-end-device interface_id=a-end-interface-id?>
+        <?expand LinkEndpointIGP device_name=z-end-device interface_id=z-end-interface-id?>
+      <?end?>
+    <?end?>
+
+    <device>
+      <name>{devices}</name>
+      <config>
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <isis>
+            <tag>
+              <name>{string(/name)}</name>
+              <net>
+                <id>49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00</id>
+              </net>
+              <address-family>
+                <ipv4>
+                  <unicast>
+                    <router-id-address>
+                      <router-id>{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/subnet-first-three-octets}.{deref(current())/../id}</router-id>
+                    </router-id-address>
+                  </unicast>
+                </ipv4>
+              </address-family>
+              <interface foreach="{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback}">
+                <name>Loopback{id}</name>
+                <interface-type>passive</interface-type>
+                <circuit-type>level-2-only</circuit-type>
+              </interface>
+            </tag>
+          </isis>
+        </router>
+      </config>
+    </device>
+
+  </devices>
+</config-template>

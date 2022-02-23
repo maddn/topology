@@ -1,0 +1,121 @@
+submodule libvirt {
+
+  yang-version 1.1;
+
+  belongs-to topology {
+    prefix topology;
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import tailf-common {
+    prefix tailf;
+  }
+
+  grouping libvirt-network-grouping {
+    leaf name {
+      type string;
+    }
+    list interface {
+      leaf domain-name {
+        type string;
+      }
+      leaf host-interface {
+        type string;
+      }
+    }
+  }
+
+  grouping libvirt-hypervisor-grouping {
+    container libvirt {
+      list hypervisor {
+        key name;
+        leaf name {
+          type string;
+        }
+        leaf url {
+          type string;
+          mandatory true;
+        }
+        leaf username {
+          type string;
+        }
+        leaf password {
+          type string;
+        }
+        leaf management-bridge {
+          type string;
+          default 'l3v1';
+        }
+        leaf management-ip-address-start {
+          type inet:ipv4-address;
+          default '198.18.1.60';
+        }
+        leaf mac-address-format {
+          type string;
+          default '02:0c:15:c0:{:02x}:{:02x}';
+        }
+
+        container get {
+          action domains {
+            tailf:actionpoint libvirt-get-objects;
+            output {
+              list domain {
+                leaf name {
+                  type string;
+                }
+                leaf vcpus {
+                  type uint16;
+                }
+                leaf memory {
+                  type uint16;
+                }
+                leaf active {
+                  type boolean;
+                }
+              }
+            }
+          }
+
+          action networks {
+            tailf:actionpoint libvirt-get-objects;
+            output {
+              list network {
+                uses libvirt-network-grouping;
+                leaf bridge-name {
+                  type string;
+                }
+              }
+              list external-bridge {
+                uses libvirt-network-grouping;
+              }
+            }
+          }
+
+          action volumes {
+            tailf:actionpoint libvirt-get-objects;
+            output {
+              list storage-pool {
+                leaf name {
+                  type string;
+                }
+                list volume {
+                  leaf name {
+                    type string;
+                  }
+                  leaf capacity {
+                    type uint32;
+                  }
+                  leaf allocation {
+                    type uint32;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

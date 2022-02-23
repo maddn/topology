@@ -78,8 +78,8 @@ def run_action(action, hypervisor):
     action_input.hypervisor = hypervisor
     return action(action_input)
 
-def print_domains(libvirt, hypervisor):
-    domains = run_action(libvirt.get.domains, hypervisor)
+def print_domains(hypervisor):
+    domains = hypervisor.get.domains()
     print('\nDevices:')
     name_length = max(len(domain.name) for domain in domains.domain)
 
@@ -128,19 +128,19 @@ def print_other_networks(title, list_entries, include_fn=None):
                 print('       {} {}'.format(iface.domain_name,
                         iface.host_interface))
 
-def print_networks(libvirt, hypervisor):
-    networks = run_action(libvirt.get.networks, hypervisor)
+def print_networks(hypervisor):
+    networks = hypervisor.get.networks()
     print_link_networks(networks)
     print_other_networks('Other Networks', networks.network, is_not_link)
     print_other_networks('External Bridges', networks.external_bridge)
     print_other_networks('Unused Networks', networks.network, is_unused)
 
-def print_links(libvirt, hypervisor):
-    networks = run_action(libvirt.get.networks, hypervisor)
+def print_links(hypervisor):
+    networks = hypervisor.get.networks()
     print_link_networks(networks)
 
-def print_volumes(libvirt, hypervisor):
-    volumes = run_action(libvirt.get.volumes, hypervisor)
+def print_volumes(hypervisor):
+    volumes = hypervisor.get.volumes()
     print('\nStorage Pools:')
     for storage_pool in volumes.storage_pool:
         print(f'    {storage_pool.name}:')
@@ -151,7 +151,7 @@ def print_volumes(libvirt, hypervisor):
                     f'[{volume.capacity} MB]',
                     f'[{volume.allocation} MB]'))
 
-def print_libvirt(hypervisor, domains, networks, links, volumes):
+def print_libvirt(hypervisor_name, domains, networks, links, volumes):
     maapi = ncs.maapi.Maapi()
     ncs_maapi_usid = os.environ.get('NCS_MAAPI_USID')
 
@@ -168,22 +168,24 @@ def print_libvirt(hypervisor, domains, networks, links, volumes):
             print("No hypervisors configured")
             sys.exit(1)
 
-        if not hypervisor:
-            hypervisor = next(iter(libvirt.hypervisor)).name
+        if not hypervisor_name:
+            hypervisor_name = next(iter(libvirt.hypervisor)).name
 
-        if hypervisor not in libvirt.hypervisor:
-            print(f"Hypervisor {hypervisor} does not exist")
+        if hypervisor_name not in libvirt.hypervisor:
+            print(f"Hypervisor {hypervisor_name} does not exist")
             sys.exit(1)
+
+        hypervisor = libvirt.hypervisor[hypervisor_name]
 
         print_all = not(domains or networks or links or volumes)
         if domains or print_all:
-            print_domains(libvirt, hypervisor)
+            print_domains(hypervisor)
         if networks or print_all:
-            print_networks(libvirt, hypervisor)
+            print_networks(hypervisor)
         if links and not networks:
-            print_links(libvirt, hypervisor)
+            print_links(hypervisor)
         if volumes or print_all:
-            print_volumes(libvirt, hypervisor)
+            print_volumes(hypervisor)
 
     print()
 
