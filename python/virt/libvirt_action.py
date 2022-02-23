@@ -34,6 +34,9 @@ def generate_day0_volume_name(device_name):
 def generate_iface_dev_name(device_id, other_id):
     return f'veth-{device_id}-{other_id}'
 
+def sort_link_device_ids(device_ids):
+    return tuple(sorted(device_ids))
+
 def xml_to_string(xml):
     xml_stripped = re.sub(r'>\s+<', '><', tostring(xml, 'unicode'))
     return parseString(xml_stripped).toprettyxml('  ')
@@ -46,6 +49,17 @@ def write_oper_data(path, leaf_value_pairs):
                 trans.safe_delete(f'{path}/{leaf}')
             else:
                 trans.set_elem(value, f'{path}/{leaf}')
+        trans.apply()
+
+def nso_device_onboard(device_name, ip_address):
+    with maapi.single_write_trans('admin', 'python') as trans:
+        root = maagic.get_root(trans)
+        device = root.devices.device.create(device_name)
+        device.address = ip_address
+        device.device_type.cli.ned_id = 'cisco-iosxr-cli-7.33'
+        device.authgroup = 'cisco'
+        device.state.admin_state = 'unlocked'
+        device.ssh_algorithms.public_key.create('rsa-sha2-256')
         trans.apply()
 
 
@@ -61,20 +75,23 @@ class ResourceManager():
         self._networks = {}
 
         for link in topology.links.link:
-            device_ids = self._get_link_device_ids(link)
+            iface_ids = ((self._devices[link.z_end_device],  #a-end-interface-id
+                          self._devices[link.a_end_device])) #z-end-interface-id
+            device_ids = sort_link_device_ids(iface_ids)
             self._networks[device_ids] = (
                 generate_network_id(*device_ids),
-                self.generate_mac_address(*device_ids))
+                self.generate_mac_address(*device_ids),
+                iface_ids)
 
     def _get_link_device_ids(self, link):
-        return tuple(sorted((self._devices[link.a_end_device],
-                             self._devices[link.z_end_device])))
+        return sort_link_device_ids((self._devices[link.a_end_device],
+                                     self._devices[link.z_end_device]))
 
     def get_link_network(self, link):
         return self._networks[self._get_link_device_ids(link)]
 
     def get_iface_network_id(self, device_id, iface_id):
-        return self._networks.get(tuple(sorted((device_id, iface_id))),
+        return self._networks.get(sort_link_device_ids((device_id, iface_id)),
                 [generate_network_id(device_id, None)])[0]
 
     def get_mgmt_bridge(self):
@@ -285,28 +302,33 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
 
 class LinkNetwork(Network):
     def define(self, link):
-        (network_id, mac_address) = self._resource_mgr.get_link_network(link)
+        (network_id, mac_address, (a_end_iface_id, z_end_iface_id)
+                ) = self._resource_mgr.get_link_network(link)
         host_bridge = self._define_network(network_id, mac_address)
         write_oper_data(link._path, [
             ('host-bridge', host_bridge),
-            ('mac-address', mac_address)])
+            ('mac-address', mac_address),
+            ('a-end-interface-id', a_end_iface_id),
+            ('z-end-interface-id', z_end_iface_id)])
 
     def undefine(self, link):
         if self._action('undefine', link):
             write_oper_data(link._path, [
                 ('host-bridge', None),
-                ('mac-address', None)])
+                ('mac-address', None),
+                ('a-end-interface-id', None),
+                ('z-end-interface-id', None)])
 
     def _action(self, action, *args):
         link, = args
-        (network_id, _) = self._resource_mgr.get_link_network(link)
+        (network_id, _, _) = self._resource_mgr.get_link_network(link)
         return super()._action(action, network_id)
 
 
 class IsolatedNetwork(Network):
     def define(self, device_id):
         network_id = generate_network_id(device_id, None)
-        mac_address = self._resource_mgr.generate_mac_address(device_id, 0xff)
+        mac_address = self._resource_mgr.generate_mac_address(device_id, 0x00)
         self._define_network(network_id, mac_address)
 
     def _action(self, action, *args):
@@ -447,6 +469,9 @@ class Domain(LibvirtObject):
 
         self._libvirt.conn.defineXML(domain_xml_str)
         self._output.domains.create(device_name)
+
+        self._log.info(f'Creating device {device_name} in NSO')
+        nso_device_onboard(device_name, mgmt_ip_address)
 
     def undefine(self, device):
         if self._action('undefine', device):
