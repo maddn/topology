@@ -36,12 +36,6 @@ submodule topology-libvirt {
           tailf:persistent true;
         }
       }
-      refine "topology/networks/network/device-interface/interface-id" {
-        config false;
-        tailf:cdb-oper {
-          tailf:persistent true;
-        }
-      }
 
       augment "topology" {
         // uses libvirt-topology-actions-grouping;
@@ -205,6 +199,7 @@ submodule topology-libvirt {
         leaf device-type {
           type enumeration {
             enum XRv-9000;
+            enum Generic;
           }
           mandatory true;
         }
@@ -228,7 +223,13 @@ submodule topology-libvirt {
           type string;
           mandatory true;
         }
+        leaf disk-size {
+          type uint16;
+        }
         leaf day0-file {
+          type string;
+        }
+        leaf day0-upload-file {
           type string;
         }
         container management-interface {

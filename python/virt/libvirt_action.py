@@ -5,6 +5,7 @@ from ipaddress import IPv4Address
 from time import sleep
 from xml.etree.ElementTree import fromstring, tostring
 from xml.dom.minidom import parseString
+import base64
 import os
 import re
 import pycdlib
@@ -37,6 +38,10 @@ def generate_iface_dev_name(device_id, other_id):
 def sort_link_device_ids(device_ids):
     return tuple(sorted(device_ids))
 
+def generate_ip_address(ip_address_start, device_id):
+    return str(IPv4Address(ip_address_start) + device_id) if (
+            ip_address_start is not None) else None
+
 def xml_to_string(xml):
     xml_stripped = re.sub(r'>\s+<', '><', tostring(xml, 'unicode'))
     return parseString(xml_stripped).toprettyxml('  ')
@@ -63,24 +68,26 @@ def nso_device_onboard(device_name, ip_address):
         trans.apply()
 
 
-class ResourceManager():
-    def __init__(self, topology, hypervisor):
-        self._mac_address_format = hypervisor.mac_address_format
-        self._mgmt_ip_address_start = hypervisor.management_ip_address_start
-        self._mgmt_bridge = hypervisor.management_bridge
-
+class NetworkManager():
+    def __init__(self, topology):
         self._devices = {device.device_name:int(device.id)
                          for device in topology.devices.device}
         self._max_device_id = max(self._devices.values())
-        self._networks = {}
 
+        self._network_ifaces = {
+                (self._devices[device], network.interface_id): network.name
+                for network in topology.networks.network
+                for device in network.devices}
+        self._networks = {network.name: network.ip_address_start
+                for network in topology.networks.network}
+
+        self._link_networks = {}
         for link in topology.links.link:
             iface_ids = ((self._devices[link.z_end_device],  #a-end-interface-id
                           self._devices[link.a_end_device])) #z-end-interface-id
             device_ids = sort_link_device_ids(iface_ids)
-            self._networks[device_ids] = (
+            self._link_networks[device_ids] = (
                 generate_network_id(*device_ids),
-                self.generate_mac_address(*device_ids),
                 iface_ids)
 
     def _get_link_device_ids(self, link):
@@ -88,23 +95,39 @@ class ResourceManager():
                                      self._devices[link.z_end_device]))
 
     def get_link_network(self, link):
-        return self._networks[self._get_link_device_ids(link)]
+        device_ids = self._get_link_device_ids(link)
+        return (*self._link_networks[device_ids], device_ids)
+
+    def get_network(self, network_id):
+        return self._networks[network_id]
 
     def get_iface_network_id(self, device_id, iface_id):
-        return self._networks.get(sort_link_device_ids((device_id, iface_id)),
-                [generate_network_id(device_id, None)])[0]
-
-    def get_mgmt_bridge(self):
-        return self._mgmt_bridge
+        return self._network_ifaces.get((device_id, iface_id),
+                self._link_networks.get(
+                    sort_link_device_ids((device_id, iface_id)), [None])[0])
 
     def get_num_device_ifaces(self):
         return self._max_device_id + 1
+
+
+class ResourceManager():
+    def __init__(self, hypervisor):
+        mgmt_network = hypervisor.management_network
+
+        self._mac_address_format = hypervisor.mac_address_format
+        self._mgmt_ip_address_start = mgmt_network.ip_address_start
+
+        self.mgmt_bridge = mgmt_network.bridge
+        self.mgmt_network_variables = {
+            'gateway-address': mgmt_network.gateway_address,
+            'dns-server': mgmt_network.dns_server_address
+        }
 
     def generate_mac_address(self, pen_octet, ult_octet):
         return self._mac_address_format.format(pen_octet, ult_octet)
 
     def generate_mgmt_ip_address(self, device_id):
-        return str(IPv4Address(self._mgmt_ip_address_start) + device_id)
+        return generate_ip_address(self._mgmt_ip_address_start, device_id)
 
 
 class Templates():
@@ -128,7 +151,7 @@ class Templates():
                 defaultdict(str, variables))
 
     def apply_template(self, template_name, variables):
-        is_xml = os.path.splitext(template_name) == '.xml'
+        is_xml = os.path.splitext(template_name)[1] == '.xml'
         result = self._apply_template(template_name, variables)
         return self._clean_xml(result) if is_xml else result
 
@@ -142,9 +165,11 @@ class Templates():
 
 
 class DomainXmlBuilder():
-    def __init__(self, device_id, device_name, resource_mgr, templates):
+    def __init__(self, device_id, device_name,
+            resource_mgr, network_mgr, templates):
         self._templates = templates
         self._resource_mgr = resource_mgr
+        self._network_mgr = network_mgr
         self._device_name = device_name
         self._device_id = device_id
         self._domain_xml_devices = None
@@ -194,15 +219,15 @@ class DomainXmlBuilder():
                     'memory': memory})
         self._domain_xml_devices = self.domain_xml.find('devices')
 
-    def add_mgmt_iface(self):
+    def add_mgmt_iface(self, model_type):
         mac_address = self._generate_mac_address(0xff)
-        mgmt_bridge = self._resource_mgr.get_mgmt_bridge()
+        mgmt_bridge = self._resource_mgr.mgmt_bridge
         mgmt_ip_address = self._resource_mgr.generate_mgmt_ip_address(
                 self._device_id)
         iface_dev_name = self._generate_iface_dev_name(mgmt_bridge)
 
         self._domain_xml_devices.append(self._get_iface_xml(
-            None, iface_dev_name, mac_address, 'e1000', mgmt_bridge))
+            None, iface_dev_name, mac_address, model_type, mgmt_bridge))
 
         return (mgmt_ip_address, mac_address, iface_dev_name)
 
@@ -221,22 +246,23 @@ class DomainXmlBuilder():
         self._domain_xml_devices.append(self._get_cdrom_xml(
             generate_day0_volume_name(self._device_name), storage_pool))
 
-    def add_data_ifaces(self):
-        for iface_id in range(
-                self._resource_mgr.get_num_device_ifaces()):
-            network_id = self._resource_mgr.get_iface_network_id(
+    def add_data_ifaces(self, include_null_interfaces):
+        for iface_id in range(self._network_mgr.get_num_device_ifaces()):
+            network_id = self._network_mgr.get_iface_network_id(
                     self._device_id, iface_id)
 
-            self._domain_xml_devices.append(self._get_iface_xml(
-                network_id,
-                self._generate_iface_dev_name(iface_id),
-                self._generate_mac_address(iface_id), 'virtio'))
+            if network_id is not None or include_null_interfaces:
+                self._domain_xml_devices.append(self._get_iface_xml(
+                    network_id or generate_network_id(self._device_id, None),
+                    self._generate_iface_dev_name(iface_id),
+                    self._generate_mac_address(iface_id), 'virtio'))
 
 
 class LibvirtObject(): #pylint: disable=too-few-public-methods
-    def __init__(self, libvirt_conn, resource_mgr, log):
+    def __init__(self, libvirt_conn, resource_mgr, network_mgr, log):
         self._libvirt = libvirt_conn
         self._resource_mgr = resource_mgr
+        self._network_mgr = network_mgr
         self._log = log
         self._templates = Templates()
         self._output = None
@@ -260,7 +286,6 @@ class LibvirtObject(): #pylint: disable=too-few-public-methods
             action_method(*args)
         else:
             self._action(action, *args)
-
 
 
 class Network(LibvirtObject): #pylint: disable=too-few-public-methods
@@ -302,8 +327,9 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
 
 class LinkNetwork(Network):
     def define(self, link):
-        (network_id, mac_address, (a_end_iface_id, z_end_iface_id)
-                ) = self._resource_mgr.get_link_network(link)
+        (network_id, (a_end_iface_id, z_end_iface_id), device_ids
+                ) = self._network_mgr.get_link_network(link)
+        mac_address = self._resource_mgr.generate_mac_address(*device_ids)
         host_bridge = self._define_network(network_id, mac_address)
         write_oper_data(link._path, [
             ('host-bridge', host_bridge),
@@ -321,7 +347,7 @@ class LinkNetwork(Network):
 
     def _action(self, action, *args):
         link, = args
-        (network_id, _, _) = self._resource_mgr.get_link_network(link)
+        (network_id, _, _) = self._network_mgr.get_link_network(link)
         return super()._action(action, network_id)
 
 
@@ -329,7 +355,7 @@ class IsolatedNetwork(Network):
     def define(self, device_id):
         network_id = generate_network_id(device_id, None)
         mac_address = self._resource_mgr.generate_mac_address(device_id, 0x00)
-        self._define_network(network_id, mac_address)
+        self._define_network(network_id, mac_address, isolated=True)
 
     def _action(self, action, *args):
         device_id, = args
@@ -337,31 +363,36 @@ class IsolatedNetwork(Network):
         return super()._action(action, network_id)
 
 
-class ManagementNetwork(Network):
-    def define(self, network_id, idx):
-        mac_address = self._resource_mgr.generate_mac_address(0xff, 0xfe-idx)
+class ExtraNetwork(Network):
+    def define(self, network_id, mac_octets):
+        mac_address = self._resource_mgr.generate_mac_address(*mac_octets)
         self._define_network(network_id, mac_address)
 
 
 class Volume(LibvirtObject):
     def _load_templates(self):
         self._templates.load_template('templates', 'volume.xml')
+        self._templates.load_template('cloud-init', 'meta-data.yaml')
+        self._templates.load_template('cloud-init', 'network-config.yaml')
+        self._templates.load_template('cloud-init', 'ethernet.yaml')
 
     def load_day0_templates(self, devices):
         for device in devices:
             if device.day0_file is not None:
                 self._templates.load_template('images', device.day0_file)
 
-    def _create_iosxr_day0_iso_image(self, filename, variables):
-        day0_str = self._templates.apply_template(filename, variables)
-        day0_byte_str = day0_str.encode()
+    def _add_iso_file(self, iso, file_string, file_name):
+        self._log.info(f'{file_name}:\n{file_string}')
+        byte_str = file_string.encode()
+        iso.add_fp(BytesIO(byte_str), len(byte_str), f'/{file_name}')
+
+    def _create_iosxr_day0_iso_image(self, file_name, variables):
+        day0_str = self._templates.apply_template(file_name, variables)
         self._log.info('Writing day0 file to iso stream')
-        self._log.info(day0_str)
 
         iso = pycdlib.PyCdlib()
         iso.new(interchange_level=4, vol_ident='config-1')
-        iso.add_fp(BytesIO(day0_byte_str),
-                len(day0_byte_str), '/iosxr_config.txt')
+        self._add_iso_file(iso, day0_str, 'iosxr_config.txt')
 
         iso_stream = BytesIO()
         iso.write_fp(iso_stream)
@@ -369,10 +400,72 @@ class Volume(LibvirtObject):
         iso.close()
         return iso_stream.getvalue()
 
-    def _create_day0_volume(self, volume_name, pool_name, file_name, variables):
-        iso_byte_str = self._create_iosxr_day0_iso_image(file_name, variables)
+    def _get_cloud_init_ethernets(self, device_id):
+        network_config = ''
+        for iface_id in range(self._network_mgr.get_num_device_ifaces()):
+            network_id = self._network_mgr.get_iface_network_id(
+                    device_id, iface_id)
 
-        pool = self._libvirt.conn.storagePoolLookupByName(pool_name)
+            if network_id is not None:
+                ip_address_start = self._network_mgr.get_network(network_id)
+
+                if ip_address_start is not None:
+                    network_config += self._templates.apply_template(
+                        'ethernet.yaml', {
+                            'iface-id': iface_id,
+                            'ip-address': generate_ip_address(
+                                ip_address_start, device_id),
+                            'mac-address': self._resource_mgr.\
+                                    generate_mac_address(device_id, iface_id)
+                        })
+        return network_config
+
+    def _create_cloud_init_iso_image(self, device_id, file_name, variables):
+        meta_data = self._templates.apply_template('meta-data.yaml', variables)
+        network_config = self._templates.apply_template(
+                'network-config.yaml',variables)
+        network_config += self._get_cloud_init_ethernets(device_id)
+        user_data = self._templates.apply_template(file_name, variables)
+
+        self._log.info('Writing cloud-init files to iso stream')
+        iso = pycdlib.PyCdlib()
+        iso.new(interchange_level=4, vol_ident='cidata')
+
+        self._add_iso_file(iso, meta_data, 'meta-data')
+        self._add_iso_file(iso, network_config, 'network-config')
+        self._add_iso_file(iso, user_data, 'user-data')
+
+        iso_stream = BytesIO()
+        iso.write_fp(iso_stream)
+
+        iso.close()
+        return iso_stream.getvalue()
+
+    def _create_day0_volume(self, device):
+        device_id = int(device.id)
+        device_name = device.device_name
+        volume_name = generate_day0_volume_name(device_name)
+
+        variables = {
+            'device-name': device.device_name,
+            'ip-address': self._resource_mgr.generate_mgmt_ip_address(device_id),
+            'mac-address': self._resource_mgr.generate_mac_address(
+                device_id, 0xff),
+            **self._resource_mgr.mgmt_network_variables}
+
+        if device.day0_upload_file:
+            with open(device.day0_upload_file, 'rb') as binary_file:
+                byte_array = binary_file.read()
+            variables['file-content'] = base64.b64encode(byte_array).decode()
+
+        if device.device_type == 'XRv-9000':
+            iso_byte_str = self._create_iosxr_day0_iso_image(
+                    device.day0_file, variables)
+        else:
+            iso_byte_str = self._create_cloud_init_iso_image(
+                    device_id, device.day0_file, variables)
+
+        pool = self._libvirt.conn.storagePoolLookupByName(device.storage_pool)
         volume_xml_str = self._templates.apply_template('volume.xml', {
             'name': volume_name,
             'capacity': len(iso_byte_str),
@@ -389,7 +482,7 @@ class Volume(LibvirtObject):
         stream.finish()
         self._output.volumes.create(volume_name)
 
-    def _clone_volume(self, volume_name, pool_name, base_image_name):
+    def _clone_volume(self, volume_name, pool_name, base_image_name, size):
         pool = self._libvirt.conn.storagePoolLookupByName(pool_name)
         base_image = pool.storageVolLookupByName(base_image_name)
         volume_xml_str = self._templates.apply_template('volume.xml', {
@@ -398,7 +491,9 @@ class Volume(LibvirtObject):
 
         self._log.info(f'Creating volume {volume_name} from {base_image_name}')
         self._log.info(volume_xml_str)
-        pool.createXMLFrom(volume_xml_str, base_image)
+        vol = pool.createXMLFrom(volume_xml_str, base_image)
+        if size is not None:
+            vol.resize(size*1024*1024*1024)
         self._output.volumes.create(volume_name)
 
     def _delete_volume(self, pool, volume_name, volume_type='volume'):
@@ -409,15 +504,11 @@ class Volume(LibvirtObject):
             self._output.volumes.create(volume_name)
 
     def define(self, device):
-        device_name = device.device_name
-        self._clone_volume(generate_volume_name(device_name),
-                device.storage_pool, device.base_image)
+        self._clone_volume(generate_volume_name(device.device_name),
+                device.storage_pool, device.base_image, device.disk_size)
 
         if device.day0_file is not None:
-            self._create_day0_volume(generate_day0_volume_name(device_name),
-                    device.storage_pool, device.day0_file, {
-                    'management-ip-address': self._resource_mgr.\
-                            generate_mgmt_ip_address(int(device.id))})
+            self._create_day0_volume(device)
 
     def undefine(self, device):
         if device.storage_pool in self._libvirt.volumes:
@@ -445,7 +536,7 @@ class Domain(LibvirtObject):
         self._log.info(f'Defining domain {device_name}')
 
         xml_builder = DomainXmlBuilder(int(device.id), device_name,
-                self._resource_mgr, self._templates)
+                self._resource_mgr, self._network_mgr, self._templates)
 
         xml_builder.create_base(device.vcpus, device.memory, device.template)
         xml_builder.add_disk(device.storage_pool)
@@ -453,7 +544,8 @@ class Domain(LibvirtObject):
             xml_builder.add_day0_disk(device.storage_pool)
 
         (mgmt_ip_address, mac_address, iface_dev_name
-                ) = xml_builder.add_mgmt_iface()
+                ) = xml_builder.add_mgmt_iface('e1000'
+                        if device.device_type == 'XRv-9000' else 'virtio')
         write_oper_data(device.management_interface._path, [
                 ('ip-address', mgmt_ip_address),
                 ('mac-address', mac_address),
@@ -462,7 +554,7 @@ class Domain(LibvirtObject):
         if device.device_type == 'XRv-9000':
             xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS)
 
-        xml_builder.add_data_ifaces()
+        xml_builder.add_data_ifaces(device.device_type == 'XRv-9000')
 
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
         self._log.info(domain_xml_str)
@@ -502,13 +594,14 @@ class Domain(LibvirtObject):
 
 class Topology():
     def __init__(self, libvirt_conn, topology, hypervisor, log, output):
+        self._topology = topology
         self._devices = topology.devices.device
-        self._links = topology.links.link
         self._output = output
 
-        args = (libvirt_conn, ResourceManager(topology, hypervisor), log)
+        args = (libvirt_conn, ResourceManager(hypervisor),
+                NetworkManager(topology), log)
 
-        self._mgmt_network = ManagementNetwork(*args)
+        self._extra_network = ExtraNetwork(*args)
         self._link_network = LinkNetwork(*args)
         self._isolated_network = IsolatedNetwork(*args)
         self._volume = Volume(*args)
@@ -523,13 +616,19 @@ class Topology():
 
         if any(device.device_type == 'XRv-9000' for device in self._devices):
             for (idx, network_id) in enumerate(XRV9K_EXTRA_MGMT_NETWORKS):
-                self._mgmt_network.action(action, output, network_id, idx)
+                self._extra_network.action(
+                        action, output, network_id, (0xff, 0xff-idx))
 
-        for link in self._links:
+        for (idx, network) in enumerate(self._topology.networks.network):
+            self._extra_network.action(
+                    action, output, network.name, (0xfe, 0xff-idx))
+
+        for link in self._topology.links.link:
             self._link_network.action(action, output, link)
 
         for device in self._devices:
-            self._isolated_network.action(action, output, int(device.id))
+            if device.device_type == 'XRv-9000':
+                self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)
 

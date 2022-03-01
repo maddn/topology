@@ -1,0 +1,6 @@
+  eth{iface-id}:
+    match:
+      macaddress: "{mac-address}"
+    addresses:
+    - {ip-address}/24
+    set-name: eth{iface-id}

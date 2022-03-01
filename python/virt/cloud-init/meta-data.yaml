@@ -1,0 +1,3 @@
+instance-id: {device-name}
+local-hostname: {device-name}
+dsmode: local

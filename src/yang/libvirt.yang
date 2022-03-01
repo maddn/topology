@@ -44,13 +44,23 @@ submodule libvirt {
         leaf password {
           type string;
         }
-        leaf management-bridge {
-          type string;
-          default 'l3v1';
-        }
-        leaf management-ip-address-start {
-          type inet:ipv4-address;
-          default '198.18.1.60';
+        container management-network {
+          leaf bridge {
+            type string;
+            default 'l3v1';
+          }
+          leaf ip-address-start {
+            type inet:ipv4-address;
+            default '198.18.1.60';
+          }
+          leaf gateway-address {
+            type inet:ipv4-address;
+            default '198.18.1.1';
+          }
+          leaf dns-server-address {
+            type inet:ipv4-address;
+            default '198.18.133.1';
+          }
         }
         leaf mac-address-format {
           type string;

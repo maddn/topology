@@ -5,6 +5,9 @@ submodule topology-base {
     prefix topology;
   }
 
+  import ietf-inet-types {
+    prefix inet;
+  }
   import tailf-common {
     prefix tailf;
   }
@@ -25,7 +28,7 @@ submodule topology-base {
           key id;
 
           leaf id {
-            type string;
+            type uint8;
             mandatory true;
           }
 
@@ -93,18 +96,20 @@ submodule topology-base {
             type string;
           }
 
-          list device-interface {
-            key "device interface-id";
+          leaf interface-id {
+            type uint8;
+            mandatory true;
+          }
 
-            leaf device {
-              type string;
-              tailf:non-strict-leafref {
-                path "../../../../devices/device/device-name";
-              }
-            }
+          leaf ip-address-start {
+            type inet:ipv4-address;
+            default '10.11.12.0';
+          }
 
-            leaf interface-id {
-              type uint8;
+          leaf-list devices {
+            type string;
+            tailf:non-strict-leafref {
+              path "../../../devices/device/device-name";
             }
           }
         }

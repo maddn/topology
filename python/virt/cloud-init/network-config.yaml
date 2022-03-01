@@ -1,0 +1,12 @@
+version: 2
+ethernets:
+  eth-mgmt:
+    match:
+      macaddress: "{mac-address}"
+    addresses:
+    - {ip-address}/24
+    gateway4: {gateway-address}
+    nameservers:
+      addresses:
+      - {dns-server}
+    set-name: eth-mgmt
