@@ -196,41 +196,10 @@ submodule topology-libvirt {
       augment "topology/devices/device" {
         // uses topology:libvirt-device-grouping;
         // grouping libvirt-device-grouping {
-        leaf device-type {
-          type enumeration {
-            enum XRv-9000;
-            enum Generic;
+        leaf definition {
+          type leafref {
+            path "/topologies/libvirt/device-definition/name";
           }
-          mandatory true;
-        }
-        leaf vcpus {
-          type uint16;
-          mandatory true;
-        }
-        leaf memory {
-          type uint16;
-          mandatory true;
-        }
-        leaf template {
-          type string;
-          mandatory true;
-        }
-        leaf storage-pool {
-          type string;
-          mandatory true;
-        }
-        leaf base-image {
-          type string;
-          mandatory true;
-        }
-        leaf disk-size {
-          type uint16;
-        }
-        leaf day0-file {
-          type string;
-        }
-        leaf day0-upload-file {
-          type string;
         }
         container management-interface {
           config false;

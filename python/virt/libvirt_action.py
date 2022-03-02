@@ -39,7 +39,7 @@ def sort_link_device_ids(device_ids):
     return tuple(sorted(device_ids))
 
 def generate_ip_address(ip_address_start, device_id):
-    return str(IPv4Address(ip_address_start) + device_id) if (
+    return str(IPv4Address(ip_address_start) + int(device_id)) if (
             ip_address_start is not None) else None
 
 def xml_to_string(xml):
@@ -171,7 +171,7 @@ class DomainXmlBuilder():
         self._resource_mgr = resource_mgr
         self._network_mgr = network_mgr
         self._device_name = device_name
-        self._device_id = device_id
+        self._device_id = int(device_id)
         self._domain_xml_devices = None
         self.domain_xml = None
 
@@ -259,10 +259,11 @@ class DomainXmlBuilder():
 
 
 class LibvirtObject(): #pylint: disable=too-few-public-methods
-    def __init__(self, libvirt_conn, resource_mgr, network_mgr, log):
+    def __init__(self, libvirt_conn, resource_mgr, network_mgr, dev_defs, log):
         self._libvirt = libvirt_conn
         self._resource_mgr = resource_mgr
         self._network_mgr = network_mgr
+        self._dev_defs = dev_defs
         self._log = log
         self._templates = Templates()
         self._output = None
@@ -377,9 +378,10 @@ class Volume(LibvirtObject):
         self._templates.load_template('cloud-init', 'ethernet.yaml')
 
     def load_day0_templates(self, devices):
-        for device in devices:
-            if device.day0_file is not None:
-                self._templates.load_template('images', device.day0_file)
+        day0_templates = filter(None, set(self._dev_defs[
+            device.definition].day0_file for device in devices))
+        for template in day0_templates:
+            self._templates.load_template('images', template)
 
     def _add_iso_file(self, iso, file_string, file_name):
         self._log.info(f'{file_name}:\n{file_string}')
@@ -441,31 +443,29 @@ class Volume(LibvirtObject):
         iso.close()
         return iso_stream.getvalue()
 
-    def _create_day0_volume(self, device):
-        device_id = int(device.id)
-        device_name = device.device_name
+    def _create_day0_volume(self, device_id, device_name, dev_def):
         volume_name = generate_day0_volume_name(device_name)
 
         variables = {
-            'device-name': device.device_name,
+            'device-name': device_name,
             'ip-address': self._resource_mgr.generate_mgmt_ip_address(device_id),
             'mac-address': self._resource_mgr.generate_mac_address(
                 device_id, 0xff),
             **self._resource_mgr.mgmt_network_variables}
 
-        if device.day0_upload_file:
-            with open(device.day0_upload_file, 'rb') as binary_file:
+        if dev_def.day0_upload_file:
+            with open(dev_def.day0_upload_file, 'rb') as binary_file:
                 byte_array = binary_file.read()
             variables['file-content'] = base64.b64encode(byte_array).decode()
 
-        if device.device_type == 'XRv-9000':
+        if dev_def.device_type == 'XRv-9000':
             iso_byte_str = self._create_iosxr_day0_iso_image(
-                    device.day0_file, variables)
+                    dev_def.day0_file, variables)
         else:
             iso_byte_str = self._create_cloud_init_iso_image(
-                    device_id, device.day0_file, variables)
+                    device_id, dev_def.day0_file, variables)
 
-        pool = self._libvirt.conn.storagePoolLookupByName(device.storage_pool)
+        pool = self._libvirt.conn.storagePoolLookupByName(dev_def.storage_pool)
         volume_xml_str = self._templates.apply_template('volume.xml', {
             'name': volume_name,
             'capacity': len(iso_byte_str),
@@ -504,20 +504,23 @@ class Volume(LibvirtObject):
             self._output.volumes.create(volume_name)
 
     def define(self, device):
-        self._clone_volume(generate_volume_name(device.device_name),
-                device.storage_pool, device.base_image, device.disk_size)
+        dev_def = self._dev_defs[device.definition]
+        device_name = device.device_name
+        self._clone_volume(generate_volume_name(device_name),
+                dev_def.storage_pool, dev_def.base_image, dev_def.disk_size)
 
-        if device.day0_file is not None:
-            self._create_day0_volume(device)
+        if dev_def.day0_file is not None:
+            self._create_day0_volume(int(device.id), device_name, dev_def)
 
     def undefine(self, device):
-        if device.storage_pool in self._libvirt.volumes:
-            device_name = device.device_name
+        dev_def = self._dev_defs[device.definition]
+        device_name = device.device_name
+        if dev_def.storage_pool in self._libvirt.volumes:
             pool = self._libvirt.conn.storagePoolLookupByName(
-                    device.storage_pool)
+                    dev_def.storage_pool)
             self._delete_volume(pool, generate_volume_name(device_name))
 
-            if device.day0_file is not None:
+            if dev_def.day0_file is not None:
                 day0_volume_name = generate_day0_volume_name(device_name)
                 self._delete_volume(pool, day0_volume_name, 'day0 volume')
 
@@ -528,33 +531,36 @@ class Domain(LibvirtObject):
         self._templates.load_template('templates', 'disk.xml')
 
     def load_device_templates(self, devices):
-        for device in devices:
-            self._templates.load_template('images', f'{device.template}.xml')
+        device_templates = set(self._dev_defs[device.definition].template
+                for device in devices)
+        for template in device_templates:
+            self._templates.load_template('images', f'{template}.xml')
 
     def define(self, device):
         device_name = device.device_name
         self._log.info(f'Defining domain {device_name}')
 
+        dev_def = self._dev_defs[device.definition]
         xml_builder = DomainXmlBuilder(int(device.id), device_name,
                 self._resource_mgr, self._network_mgr, self._templates)
 
-        xml_builder.create_base(device.vcpus, device.memory, device.template)
-        xml_builder.add_disk(device.storage_pool)
-        if device.day0_file is not None:
-            xml_builder.add_day0_disk(device.storage_pool)
+        xml_builder.create_base(dev_def.vcpus, dev_def.memory, dev_def.template)
+        xml_builder.add_disk(dev_def.storage_pool)
+        if dev_def.day0_file is not None:
+            xml_builder.add_day0_disk(dev_def.storage_pool)
 
         (mgmt_ip_address, mac_address, iface_dev_name
                 ) = xml_builder.add_mgmt_iface('e1000'
-                        if device.device_type == 'XRv-9000' else 'virtio')
+                        if dev_def.device_type == 'XRv-9000' else 'virtio')
         write_oper_data(device.management_interface._path, [
                 ('ip-address', mgmt_ip_address),
                 ('mac-address', mac_address),
                 ('host-interface', iface_dev_name)])
 
-        if device.device_type == 'XRv-9000':
+        if dev_def.device_type == 'XRv-9000':
             xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS)
 
-        xml_builder.add_data_ifaces(device.device_type == 'XRv-9000')
+        xml_builder.add_data_ifaces(dev_def.device_type == 'XRv-9000')
 
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
         self._log.info(domain_xml_str)
@@ -593,13 +599,14 @@ class Domain(LibvirtObject):
 
 
 class Topology():
-    def __init__(self, libvirt_conn, topology, hypervisor, log, output):
+    def __init__(self, libvirt_conn, topology, dev_defs,
+            hypervisor, log, output):
         self._topology = topology
-        self._devices = topology.devices.device
+        self._dev_defs = dev_defs
         self._output = output
 
         args = (libvirt_conn, ResourceManager(hypervisor),
-                NetworkManager(topology), log)
+                NetworkManager(topology), dev_defs, log)
 
         self._extra_network = ExtraNetwork(*args)
         self._link_network = LinkNetwork(*args)
@@ -607,14 +614,15 @@ class Topology():
         self._volume = Volume(*args)
         self._domain = Domain(*args)
 
-        self._volume.load_day0_templates(self._devices)
-        self._domain.load_device_templates(self._devices)
+        self._volume.load_day0_templates(self._topology.devices.device)
+        self._domain.load_device_templates(self._topology.devices.device)
 
     def action(self, action):
         output = self._output.libvirt_action.create()
         output.action = action
 
-        if any(device.device_type == 'XRv-9000' for device in self._devices):
+        if any(self._dev_defs[device.definition].device_type == 'XRv-9000'
+                for device in self._topology.devices.device):
             for (idx, network_id) in enumerate(XRV9K_EXTRA_MGMT_NETWORKS):
                 self._extra_network.action(
                         action, output, network_id, (0xff, 0xff-idx))
@@ -626,8 +634,8 @@ class Topology():
         for link in self._topology.links.link:
             self._link_network.action(action, output, link)
 
-        for device in self._devices:
-            if device.device_type == 'XRv-9000':
+        for device in self._topology.devices.device:
+            if self._dev_defs[device.definition].device_type == 'XRv-9000':
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)
@@ -635,7 +643,7 @@ class Topology():
     def wait_for_shutdown(self):
         timer = 0
         while any(self._domain.is_active(device)
-                  for device in self._devices) and timer < 60:
+                  for device in self._topology.devices.device) and timer < 60:
             sleep(10)
             timer += 10
 
@@ -645,21 +653,22 @@ class LibvirtAction(Action):
     def cb_action(self, uinfo, name, kp, input, output, trans):
         self.log.info('action name: ', name)
 
+        root = maagic.get_root(trans)
         topology = maagic.get_node(trans, kp[1:])
         hypervisor_name = topology.libvirt.hypervisor
 
         if hypervisor_name is None:
             raise Exception('No hypervisor defined for this topology')
 
-        hypervisor = maagic.get_root(
-                trans).topologies.libvirt.hypervisor[hypervisor_name]
+        hypervisor = root.topologies.libvirt.hypervisor[hypervisor_name]
+        dev_defs = root.topologies.libvirt.device_definition
 
         libvirt_conn = LibvirtConnection()
         libvirt_conn.connect(hypervisor.url)
         libvirt_conn.populate_cache()
 
         topology = Topology(
-                libvirt_conn, topology, hypervisor, self.log, output)
+                libvirt_conn, topology, dev_defs, hypervisor, self.log, output)
 
         action = name
         if name == 'start':

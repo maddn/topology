@@ -126,6 +126,49 @@ submodule libvirt {
           }
         }
       }
+
+      list device-definition {
+        key name;
+        leaf name {
+          type string;
+        }
+        leaf device-type {
+          type enumeration {
+            enum XRv-9000;
+            enum Generic;
+          }
+          mandatory true;
+        }
+        leaf vcpus {
+          type uint16;
+          mandatory true;
+        }
+        leaf memory {
+          type uint16;
+          mandatory true;
+        }
+        leaf template {
+          type string;
+          mandatory true;
+        }
+        leaf storage-pool {
+          type string;
+          mandatory true;
+        }
+        leaf base-image {
+          type string;
+          mandatory true;
+        }
+        leaf disk-size {
+          type uint16;
+        }
+        leaf day0-file {
+          type string;
+        }
+        leaf day0-upload-file {
+          type string;
+        }
+      }
     }
   }
 }
