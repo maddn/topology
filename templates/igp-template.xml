@@ -58,7 +58,7 @@
                 <ipv4>
                   <unicast>
                     <router-id-address>
-                      <router-id>{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/subnet-first-three-octets}.{deref(current())/../id}</router-id>
+                      <router-id>{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/subnet-start}.{deref(current())/../id}</router-id>
                     </router-id-address>
                   </unicast>
                 </ipv4>

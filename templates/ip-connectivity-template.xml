@@ -1,16 +1,16 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
                  servicepoint="ip-connectivity">
   <devices xmlns="http://tail-f.com/ns/ncs">
-    <device>
+    <device tags="nocreate">
       <name>{../devices/device/device-name}</name>
       <?set DEVICE_ID={id}?>
       <config>
         <interface xmlns="http://tail-f.com/ned/cisco-ios-xr" foreach="{/loopback-interfaces/loopback}">
-          <Loopback>
+          <Loopback tags="merge">
             <id>{id}</id>
             <ipv4>
               <address>
-                <ip>{subnet-first-three-octets}.{$DEVICE_ID}</ip>
+                <ip>{subnet-start}.{$DEVICE_ID}</ip>
                 <mask>255.255.255.0</mask>
               </address>
             </ipv4>
@@ -28,16 +28,16 @@
         <?set LINK_ID_OCTETS='{$Z_END_DEVICE_ID}.{$A_END_DEVICE_ID}'?>
       <?end?>
 
-      <device>
+      <device tags="nocreate">
         <name>{a-end-device}</name>
         <config>
           <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-            <GigabitEthernet>
+            <GigabitEthernet tags="merge">
               <id>0/0/0/{a-end-interface-id}</id>
               <description>Connection to device {z-end-device} destination interface 0/0/0/{z-end-interface-id}</description>
               <ipv4>
                 <address>
-                  <ip>{/physical-interfaces/subnet-first-octet}.{$LINK_ID_OCTETS}.{$A_END_DEVICE_ID}</ip>
+                  <ip>{/physical-interfaces/subnet-start}.{$LINK_ID_OCTETS}.{$A_END_DEVICE_ID}</ip>
                   <mask>255.255.255.0</mask>
                 </address>
               </ipv4>
@@ -46,16 +46,16 @@
         </config>
       </device>
 
-      <device>
+      <device tags="nocreate">
         <name>{z-end-device}</name>
         <config>
           <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-            <GigabitEthernet>
+            <GigabitEthernet tags="merge">
               <id>0/0/0/{z-end-interface-id}</id>
               <description>Connection to device {a-end-device} destination interface 0/0/0/{a-end-interface-id}</description>
               <ipv4>
                 <address>
-                  <ip>{/physical-interfaces/subnet-first-octet}.{$LINK_ID_OCTETS}.{$Z_END_DEVICE_ID}</ip>
+                  <ip>{/physical-interfaces/subnet-start}.{$LINK_ID_OCTETS}.{$Z_END_DEVICE_ID}</ip>
                   <mask>255.255.255.0</mask>
                 </address>
               </ipv4>

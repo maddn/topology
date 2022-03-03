@@ -4,6 +4,9 @@ module topology {
   namespace "http://example.com/topology";
   prefix topology;
 
+  import tailf-common {
+    prefix tailf;
+  }
   import tailf-ncs {
     prefix ncs;
   }
@@ -14,6 +17,7 @@ module topology {
   include igp;
   include bgp;
   include segment-routing;
+  include traffic-generator;
 
   container topologies {
     uses topology-libvirt-grouping;
@@ -32,11 +36,9 @@ module topology {
           leaf id {
             type uint8;
           }
-          leaf subnet-first-three-octets {
-            type string {
-              pattern
-                '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){2}'
-              + '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])';
+          leaf subnet-start {
+            type tailf:octet-list {
+              tailf:value-length 3;
             }
             mandatory true;
           }
@@ -50,8 +52,10 @@ module topology {
       }
 
       container physical-interfaces {
-        leaf subnet-first-octet {
-          type uint8;
+        leaf subnet-start {
+          type tailf:octet-list {
+            tailf:value-length 1;
+          }
           default 10;
         }
       }
@@ -62,6 +66,7 @@ module topology {
     uses igp-grouping;
     uses bgp-grouping;
     uses segment-routing-grouping;
+    uses traffic-generator-grouping;
   }
 }
 
