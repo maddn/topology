@@ -1,22 +1,19 @@
 #cloud-config
 
 users:
-- name: cisco
+- name: {username}
   sudo: ['ALL=(ALL) NOPASSWD:ALL']
   groups: sudo
   shell: /bin/bash
+  passwd: {password}
+  lock_passwd: false
 
 ssh_pwauth: true
-
-chpasswd:
-  list: |
-    cisco:cisco
-  expire: false
 
 write_files:
 - encoding: b64
   content: {file-content}
-  path: /home/cisco/tgs.zip
+  path: /home/{username}/tgs.zip
   permissions: '0644'
 
 packages:
@@ -25,7 +22,7 @@ packages:
 - python3-pip
 
 runcmd:
-- [ chown, -R, cisco:cisco, /home/cisco ]
-- [ su, -, cisco, -c, "mkdir -p tgs && unzip -o tgs.zip -d tgs" ]
-- [ su, -, cisco, -c, "pip3 install -r tgs/requirements.txt" ]
-- [ su, -, cisco, -c, "python tgs/tgs_rest_api.py > /tmp/tgs_start.log 2>&1 &" ]
+- [ chown, -R, {username}:{username}, /home/{username} ]
+- [ su, -, {username}, -c, "mkdir -p tgs && unzip -o tgs.zip -d tgs" ]
+- [ su, -, {username}, -c, "pip3 install -r tgs/requirements.txt" ]
+- [ su, -, {username}, -c, "python tgs/tgs_rest_api.py > /tmp/tgs_start.log 2>&1 &" ]

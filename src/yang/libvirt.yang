@@ -12,6 +12,12 @@ submodule libvirt {
   import tailf-common {
     prefix tailf;
   }
+  import tailf-ncs {
+    prefix ncs;
+  }
+  import tailf-ncs-ned {
+    prefix ned;
+  }
 
   grouping libvirt-network-grouping {
     leaf name {
@@ -167,6 +173,20 @@ submodule libvirt {
         }
         leaf day0-upload-file {
           type string;
+        }
+        leaf authgroup {
+          type leafref {
+            path "/ncs:devices/ncs:authgroups/ncs:group/ncs:name";
+          }
+          mandatory true;
+        }
+        leaf ned-id {
+          type union {
+            type string;
+            type identityref {
+              base ned:cli-ned-id;
+            }
+          }
         }
       }
     }

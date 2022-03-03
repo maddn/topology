@@ -5,13 +5,18 @@ from ipaddress import IPv4Address
 from time import sleep
 from xml.etree.ElementTree import fromstring, tostring
 from xml.dom.minidom import parseString
+
 import base64
+import crypt
 import os
 import re
+
 import pycdlib
+
 from ncs.dp import Action
 from ncs import maapi, maagic, OPERATIONAL
 from virt.libvirt_connection import LibvirtConnection
+_ncs = __import__('_ncs')
 
 PYTHON_DIR = os.path.dirname(__file__)
 XRV9K_EXTRA_MGMT_NETWORKS = ['ctrl', 'host']
@@ -56,13 +61,13 @@ def write_oper_data(path, leaf_value_pairs):
                 trans.set_elem(value, f'{path}/{leaf}')
         trans.apply()
 
-def nso_device_onboard(device_name, ip_address):
+def nso_device_onboard(device_name, ip_address, ned_id, authgroup):
     with maapi.single_write_trans('admin', 'python') as trans:
         root = maagic.get_root(trans)
         device = root.devices.device.create(device_name)
         device.address = ip_address
-        device.device_type.cli.ned_id = 'cisco-iosxr-cli-7.33'
-        device.authgroup = 'cisco'
+        device.device_type.cli.ned_id = ned_id
+        device.authgroup = authgroup
         device.state.admin_state = 'unlocked'
         device.ssh_algorithms.public_key.create('rsa-sha2-256')
         trans.apply()
@@ -111,9 +116,11 @@ class NetworkManager():
 
 
 class ResourceManager():
-    def __init__(self, hypervisor):
-        mgmt_network = hypervisor.management_network
+    def __init__(self, hypervisor, username):
+        self._username = username
+        self._authgroups = maagic.get_root(hypervisor).devices.authgroups.group
 
+        mgmt_network = hypervisor.management_network
         self._mac_address_format = hypervisor.mac_address_format
         self._mgmt_ip_address_start = mgmt_network.ip_address_start
 
@@ -128,6 +135,11 @@ class ResourceManager():
 
     def generate_mgmt_ip_address(self, device_id):
         return generate_ip_address(self._mgmt_ip_address_start, device_id)
+
+    def get_authgroup_mapping(self, authgroup_name):
+        authgroup = self._authgroups[authgroup_name]
+        return authgroup.umap[self._username] if (
+                self._username in authgroup.umap) else authgroup.default_map
 
 
 class Templates():
@@ -445,12 +457,16 @@ class Volume(LibvirtObject):
 
     def _create_day0_volume(self, device_id, device_name, dev_def):
         volume_name = generate_day0_volume_name(device_name)
+        mapping = self._resource_mgr.get_authgroup_mapping(dev_def.authgroup)
 
         variables = {
             'device-name': device_name,
             'ip-address': self._resource_mgr.generate_mgmt_ip_address(device_id),
             'mac-address': self._resource_mgr.generate_mac_address(
                 device_id, 0xff),
+            'username': mapping.remote_name,
+            'password': crypt.crypt(_ncs.decrypt(mapping.remote_password),
+                crypt.mksalt(crypt.METHOD_SHA512)),
             **self._resource_mgr.mgmt_network_variables}
 
         if dev_def.day0_upload_file:
@@ -569,7 +585,9 @@ class Domain(LibvirtObject):
         self._output.domains.create(device_name)
 
         self._log.info(f'Creating device {device_name} in NSO')
-        nso_device_onboard(device_name, mgmt_ip_address)
+        if dev_def.ned_id is not None:
+            nso_device_onboard(device_name, mgmt_ip_address,
+                    dev_def.ned_id, dev_def.authgroup)
 
     def undefine(self, device):
         if self._action('undefine', device):
@@ -599,14 +617,14 @@ class Domain(LibvirtObject):
 
 
 class Topology():
-    def __init__(self, libvirt_conn, topology, dev_defs,
-            hypervisor, log, output):
+    def __init__(self, libvirt_conn, topology,
+            hypervisor, log, output, username):
         self._topology = topology
-        self._dev_defs = dev_defs
+        self._dev_defs = maagic.cd(topology, '../libvirt/device-definition')
         self._output = output
 
-        args = (libvirt_conn, ResourceManager(hypervisor),
-                NetworkManager(topology), dev_defs, log)
+        args = (libvirt_conn, ResourceManager(hypervisor, username),
+                NetworkManager(topology), self._dev_defs, log)
 
         self._extra_network = ExtraNetwork(*args)
         self._link_network = LinkNetwork(*args)
@@ -653,22 +671,22 @@ class LibvirtAction(Action):
     def cb_action(self, uinfo, name, kp, input, output, trans):
         self.log.info('action name: ', name)
 
-        root = maagic.get_root(trans)
         topology = maagic.get_node(trans, kp[1:])
         hypervisor_name = topology.libvirt.hypervisor
 
         if hypervisor_name is None:
             raise Exception('No hypervisor defined for this topology')
 
-        hypervisor = root.topologies.libvirt.hypervisor[hypervisor_name]
-        dev_defs = root.topologies.libvirt.device_definition
+        hypervisor = maagic.cd(topology,
+                '../libvirt/hypervisor')[hypervisor_name]
 
+        trans.maapi.install_crypto_keys()
         libvirt_conn = LibvirtConnection()
         libvirt_conn.connect(hypervisor.url)
         libvirt_conn.populate_cache()
 
-        topology = Topology(
-                libvirt_conn, topology, dev_defs, hypervisor, self.log, output)
+        topology = Topology(libvirt_conn, topology,
+                hypervisor, self.log, output, uinfo.username)
 
         action = name
         if name == 'start':
