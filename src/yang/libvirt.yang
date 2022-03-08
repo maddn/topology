@@ -6,6 +6,9 @@ submodule libvirt {
     prefix topology;
   }
 
+  import ietf-yang-types {
+     prefix yang;
+  }
   import ietf-inet-types {
     prefix inet;
   }
@@ -68,9 +71,11 @@ submodule libvirt {
             default '198.18.133.1';
           }
         }
-        leaf mac-address-format {
-          type string;
-          default '02:0c:15:c0:{:02x}:{:02x}';
+        leaf mac-address-start {
+          type yang:hex-string {
+            tailf:value-length 3;
+          }
+          default '02:c1:5c';
         }
 
         container get {

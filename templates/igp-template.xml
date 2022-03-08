@@ -67,6 +67,11 @@
                 <name>Loopback{id}</name>
                 <interface-type>passive</interface-type>
                 <circuit-type>level-2-only</circuit-type>
+                <address-family>
+                  <ipv4>
+                    <unicast/>
+                  </ipv4>
+                </address-family>
               </interface>
             </tag>
           </isis>

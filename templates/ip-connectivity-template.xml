@@ -11,7 +11,7 @@
             <ipv4>
               <address>
                 <ip>{subnet-start}.{$DEVICE_ID}</ip>
-                <mask>255.255.255.0</mask>
+                <mask>255.255.255.255</mask>
               </address>
             </ipv4>
           </Loopback>
@@ -41,6 +41,7 @@
                   <mask>255.255.255.0</mask>
                 </address>
               </ipv4>
+              <shutdown tags="delete"/>
             </GigabitEthernet>
           </interface>
         </config>
@@ -59,6 +60,7 @@
                   <mask>255.255.255.0</mask>
                 </address>
               </ipv4>
+              <shutdown tags="delete"/>
             </GigabitEthernet>
           </interface>
         </config>

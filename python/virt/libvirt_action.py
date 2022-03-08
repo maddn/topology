@@ -121,7 +121,8 @@ class ResourceManager():
         self._authgroups = maagic.get_root(hypervisor).devices.authgroups.group
 
         mgmt_network = hypervisor.management_network
-        self._mac_address_format = hypervisor.mac_address_format
+        suffix = '{:02x}:{:02x}:{:02x}'
+        self._mac_address_format = f'{hypervisor.mac_address_start}:{suffix}'
         self._mgmt_ip_address_start = mgmt_network.ip_address_start
 
         self.mgmt_bridge = mgmt_network.bridge
@@ -130,8 +131,8 @@ class ResourceManager():
             'dns-server': mgmt_network.dns_server_address
         }
 
-    def generate_mac_address(self, pen_octet, ult_octet):
-        return self._mac_address_format.format(pen_octet, ult_octet)
+    def generate_mac_address(self, pen_octet, ult_octet, is_iface=False):
+        return self._mac_address_format.format(is_iface, pen_octet, ult_octet)
 
     def generate_mgmt_ip_address(self, device_id):
         return generate_ip_address(self._mgmt_ip_address_start, device_id)
@@ -189,7 +190,7 @@ class DomainXmlBuilder():
 
     def _generate_mac_address(self, last_octet):
         return self._resource_mgr.generate_mac_address(
-                self._device_id, last_octet)
+                self._device_id, last_octet, True)
 
     def _generate_iface_dev_name(self, other_id):
         return generate_iface_dev_name(self._device_id, other_id)
@@ -430,7 +431,8 @@ class Volume(LibvirtObject):
                             'ip-address': generate_ip_address(
                                 ip_address_start, device_id),
                             'mac-address': self._resource_mgr.\
-                                    generate_mac_address(device_id, iface_id)
+                                    generate_mac_address(
+                                        device_id, iface_id, True)
                         })
         return network_config
 
@@ -463,7 +465,7 @@ class Volume(LibvirtObject):
             'device-name': device_name,
             'ip-address': self._resource_mgr.generate_mgmt_ip_address(device_id),
             'mac-address': self._resource_mgr.generate_mac_address(
-                device_id, 0xff),
+                device_id, 0xff, True),
             'username': mapping.remote_name,
             'password': crypt.crypt(_ncs.decrypt(mapping.remote_password),
                 crypt.mksalt(crypt.METHOD_SHA512)),
