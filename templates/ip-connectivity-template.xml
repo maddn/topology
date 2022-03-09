@@ -1,5 +1,43 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
-                 servicepoint="ip-connectivity">
+  servicepoint="ip-connectivity">
+
+  <?macro GetSortedDeviceIds device_id_1 device_id_2?>
+    <?set LOWER_DEVICE_ID='{$device_id_1}'?>
+    <?set HIGHER_DEVICE_ID='{$device_id_2}'?>
+    <?if {number($device_id_1) > number($device_id_2)?>
+      <?set LOWER_DEVICE_ID='{$device_id_2}'?>
+      <?set HIGHER_DEVICE_ID='{$device_id_1}'?>
+    <?end?>
+  <?endmacro?>
+
+  <?macro GigabitEthernetAddresses device_name device_id interface_id connected_device_name connected_interface_id?>
+    <device tags="nocreate">
+      <name>{$device_name}</name>
+      <config>
+        <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <GigabitEthernet tags="merge">
+            <id>0/0/0/{$interface_id}</id>
+            <description>Connection to device {$connected_device_name} destination interface 0/0/0/{$connected_interface_id}</description>
+            <ipv4>
+              <address>
+                <ip>{/physical-interfaces/ipv4-subnet-start}.{$LOWER_DEVICE_ID}.{$HIGHER_DEVICE_ID}.{$device_id}</ip>
+                <mask>255.255.255.0</mask>
+              </address>
+            </ipv4>
+            <ipv6 when="{/physical-interfaces/ipv6-subnet-start}">
+              <address>
+                <prefix-list>
+                  <prefix>{/physical-interfaces/ipv6-subnet-start}::{$LOWER_DEVICE_ID}:{$HIGHER_DEVICE_ID}:{$device_id}/112</prefix>
+                </prefix-list>
+              </address>
+            </ipv6>
+            <shutdown tags="delete"/>
+          </GigabitEthernet>
+        </interface>
+      </config>
+    </device>
+  <?endmacro?>
+
   <devices xmlns="http://tail-f.com/ns/ncs">
     <device tags="nocreate">
       <name>{../devices/device/device-name}</name>
@@ -10,61 +48,44 @@
             <id>{id}</id>
             <ipv4>
               <address>
-                <ip>{subnet-start}.{$DEVICE_ID}</ip>
+                <ip>{ipv4-subnet-start}.{$DEVICE_ID}</ip>
                 <mask>255.255.255.255</mask>
               </address>
             </ipv4>
+            <ipv6 when="{ipv6-subnet-start}">
+              <address>
+                <prefix-list>
+                  <prefix>{ipv6-subnet-start}::{$DEVICE_ID}/128</prefix>
+                </prefix-list>
+              </address>
+            </ipv6>
           </Loopback>
         </interface>
       </config>
     </device>
 
     <?foreach {../links/link}?>
-      <?set A_END_DEVICE_ID={../../devices/device[device-name=current()/a-end-device]/id}?>
-      <?set Z_END_DEVICE_ID={../../devices/device[device-name=current()/z-end-device]/id}?>
+      <?expand GetSortedDeviceIds
+        device_id_1=deref(a-end-device)/../id
+        device_id_2=deref(z-end-device)/../id
+      ?>
 
-      <?set LINK_ID_OCTETS='{$A_END_DEVICE_ID}.{$Z_END_DEVICE_ID}'?>
-      <?if {number($A_END_DEVICE_ID) > number($Z_END_DEVICE_ID)?>
-        <?set LINK_ID_OCTETS='{$Z_END_DEVICE_ID}.{$A_END_DEVICE_ID}'?>
-      <?end?>
+      <?expand GigabitEthernetAddresses
+        device_name=a-end-device
+        device_id=deref(a-end-device)/../id
+        interface_id=a-end-interface-id
+        connected_device_name=z-end-device
+        connected_interface_id=z-end-interface-id
+      ?>
 
-      <device tags="nocreate">
-        <name>{a-end-device}</name>
-        <config>
-          <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-            <GigabitEthernet tags="merge">
-              <id>0/0/0/{a-end-interface-id}</id>
-              <description>Connection to device {z-end-device} destination interface 0/0/0/{z-end-interface-id}</description>
-              <ipv4>
-                <address>
-                  <ip>{/physical-interfaces/subnet-start}.{$LINK_ID_OCTETS}.{$A_END_DEVICE_ID}</ip>
-                  <mask>255.255.255.0</mask>
-                </address>
-              </ipv4>
-              <shutdown tags="delete"/>
-            </GigabitEthernet>
-          </interface>
-        </config>
-      </device>
-
-      <device tags="nocreate">
-        <name>{z-end-device}</name>
-        <config>
-          <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-            <GigabitEthernet tags="merge">
-              <id>0/0/0/{z-end-interface-id}</id>
-              <description>Connection to device {a-end-device} destination interface 0/0/0/{a-end-interface-id}</description>
-              <ipv4>
-                <address>
-                  <ip>{/physical-interfaces/subnet-start}.{$LINK_ID_OCTETS}.{$Z_END_DEVICE_ID}</ip>
-                  <mask>255.255.255.0</mask>
-                </address>
-              </ipv4>
-              <shutdown tags="delete"/>
-            </GigabitEthernet>
-          </interface>
-        </config>
-      </device>
+      <?expand GigabitEthernetAddresses
+        device_name=z-end-device
+        device_id=deref(z-end-device)/../id
+        interface_id=z-end-interface-id
+        connected_device_name=a-end-device
+        connected_interface_id=a-end-interface-id
+      ?>
     <?end?>
+
   </devices>
 </config-template>

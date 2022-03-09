@@ -19,6 +19,11 @@ module topology {
   include segment-routing;
   include traffic-generator;
 
+  typedef hexadectet-list {
+    type string {
+      pattern '[0-9a-fA-F]{0,4}(:[0-9a-fA-F]{0,4})*';
+    }
+  }
   container topologies {
     uses topology-libvirt-grouping;
     uses libvirt-hypervisor-grouping;
@@ -36,12 +41,19 @@ module topology {
           leaf id {
             type uint8;
           }
-          leaf subnet-start {
+          leaf ipv4-subnet-start {
             type tailf:octet-list {
               tailf:value-length 3;
             }
             mandatory true;
           }
+          leaf ipv6-subnet-start {
+            type hexadectet-list {
+              pattern '.*(:.*){0,4}';
+            }
+          }
+
+
           leaf primary {
             type empty;
             must "count(../../loopback/primary)=1" {
@@ -52,11 +64,17 @@ module topology {
       }
 
       container physical-interfaces {
-        leaf subnet-start {
+        leaf ipv4-subnet-start {
           type tailf:octet-list {
             tailf:value-length 1;
           }
           default 10;
+        }
+        leaf ipv6-subnet-start {
+          type hexadectet-list {
+            pattern '.*(:.*){0,2}';
+          }
+          default 2001;
         }
       }
     }
