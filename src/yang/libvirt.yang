@@ -170,6 +170,13 @@ submodule libvirt {
           type string;
           mandatory true;
         }
+        leaf base-image-type {
+          type enumeration {
+            enum backing-store;
+            enum clone;
+          }
+          default backing-store;
+        }
         leaf disk-size {
           type uint16;
         }

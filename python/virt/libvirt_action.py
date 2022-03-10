@@ -195,13 +195,15 @@ class DomainXmlBuilder():
     def _generate_iface_dev_name(self, other_id):
         return generate_iface_dev_name(self._device_id, other_id)
 
-    def _get_disk_xml(self, volume_name, pool_name):
+    def _get_disk_xml(self, volume_name, pool_name, base_image_name):
         return self._templates.apply_xml_template('disk.xml', {
             'disk-device-type': 'disk',
             'file-format': 'qcow2',
             'storage-pool': pool_name,
             'volume-name': volume_name,
             'target-dev': 'vda',
+            'backing-store': 'volume' if base_image_name is not None else '',
+            'base-image-name': base_image_name,
             'bus': 'virtio'})
 
     def _get_cdrom_xml(self, volume_name, pool_name):
@@ -251,9 +253,9 @@ class DomainXmlBuilder():
                 self._generate_mac_address(0xfe-idx),
                 'e1000'))
 
-    def add_disk(self, storage_pool):
+    def add_disk(self, storage_pool, base_image):
         self._domain_xml_devices.append(self._get_disk_xml(
-            generate_volume_name(self._device_name), storage_pool))
+            generate_volume_name(self._device_name), storage_pool, base_image))
 
     def add_day0_disk(self, storage_pool):
         self._domain_xml_devices.append(self._get_cdrom_xml(
@@ -500,18 +502,28 @@ class Volume(LibvirtObject):
         stream.finish()
         self._output.volumes.create(volume_name)
 
-    def _clone_volume(self, volume_name, pool_name, base_image_name, size):
+    def _create_volume(self, volume_name, pool_name,
+            base_image_name, clone, new_size):
         pool = self._libvirt.conn.storagePoolLookupByName(pool_name)
         base_image = pool.storageVolLookupByName(base_image_name)
+        volume_size = base_image.info()[1] if not clone else ''
         volume_xml_str = self._templates.apply_template('volume.xml', {
             'name': volume_name,
+            'capacity': volume_size,
             'format-type': 'qcow2'})
 
-        self._log.info(f'Creating volume {volume_name} from {base_image_name}')
-        self._log.info(volume_xml_str)
-        vol = pool.createXMLFrom(volume_xml_str, base_image)
-        if size is not None:
-            vol.resize(size*1024*1024*1024)
+        if clone:
+            self._log.info(
+                f'Creating volume {volume_name} from {base_image_name}')
+            self._log.info(volume_xml_str)
+            vol = pool.createXMLFrom(volume_xml_str, base_image)
+        else:
+            self._log.info(f'Creating volume {volume_name}')
+            self._log.info(volume_xml_str)
+            vol = pool.createXML(volume_xml_str)
+
+        if new_size is not None:
+            vol.resize(new_size*1024*1024*1024)
         self._output.volumes.create(volume_name)
 
     def _delete_volume(self, pool, volume_name, volume_type='volume'):
@@ -524,8 +536,9 @@ class Volume(LibvirtObject):
     def define(self, device):
         dev_def = self._dev_defs[device.definition]
         device_name = device.device_name
-        self._clone_volume(generate_volume_name(device_name),
-                dev_def.storage_pool, dev_def.base_image, dev_def.disk_size)
+        self._create_volume(generate_volume_name(device_name),
+                dev_def.storage_pool, dev_def.base_image,
+                dev_def.base_image_type == 'clone', dev_def.disk_size)
 
         if dev_def.day0_file is not None:
             self._create_day0_volume(int(device.id), device_name, dev_def)
@@ -563,7 +576,8 @@ class Domain(LibvirtObject):
                 self._resource_mgr, self._network_mgr, self._templates)
 
         xml_builder.create_base(dev_def.vcpus, dev_def.memory, dev_def.template)
-        xml_builder.add_disk(dev_def.storage_pool)
+        xml_builder.add_disk(dev_def.storage_pool, dev_def.base_image
+                if dev_def.base_image_type == 'backing-store' else None)
         if dev_def.day0_file is not None:
             xml_builder.add_day0_disk(dev_def.storage_pool)
 

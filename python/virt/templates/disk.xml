@@ -2,4 +2,8 @@
   <driver name="qemu" type="{file-format}"/>
   <source pool="{storage-pool}" volume="{volume-name}"/>
   <target dev="{target-dev}" bus="{bus}"/>
+  <backingStore type="{backing-store}">
+    <format type='qcow2'/>
+    <source pool="{storage-pool}" volume="{base-image-name}"/>
+  </backingStore>
 </disk>
