@@ -1,0 +1,73 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="base-config">
+  <devices xmlns="http://tail-f.com/ns/ncs">
+    <device tags="nocreate">
+      <name>{deref(topology)/../devices/device/device-name}</name>
+      <config tags="merge">
+        <hostname xmlns="http://tail-f.com/ned/cisco-ios-xr">{device-name}</hostname>
+        <line xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <console>
+            <width>0</width>
+          </console>
+        </line>
+        <banner xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <login>
+            <start-marker>$</start-marker>
+            <message>{/login-banner}</message>
+            <end-marker>$</end-marker>
+          </login>
+        </banner>
+      </config>
+    </device>
+
+    <?foreach {static-routes/route}?>
+      <?set SOURCE_DEVICE_ID={deref(source-device)/../id}?>
+      <?set DESTINATION_DEVICE_ID={deref(destination-device)/../id}?>
+      <?expand GetSortedDeviceIds device_id_1=$SOURCE_DEVICE_ID device_id_2=$DESTINATION_DEVICE_ID?>
+      <?set LINK_SUBNET={concat(deref(../../topology)/../ip-connectivity/physical-interfaces/ipv4-subnet-start, '.', $LOWER_DEVICE_ID, '.', $HIGHER_DEVICE_ID)}?>
+
+      <device>
+        <name>{source-device}</name>
+        <config>
+          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <static>
+              <address-family>
+                <ipv4>
+                  <unicast>
+                    <routes-ip>
+                      <net>{deref(loopback-interface)/../ipv4-subnet-start}.{$DESTINATION_DEVICE_ID}/32</net>
+                      <address>{$LINK_SUBNET}.{$DESTINATION_DEVICE_ID}</address>
+                    </routes-ip>
+                  </unicast>
+                </ipv4>
+              </address-family>
+            </static>
+          </router>
+        </config>
+      </device>
+      <device when="return-route">
+        <name>{destination-device}</name>
+        <config>
+          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <static>
+              <address-family>
+                <ipv4>
+                  <unicast>
+                    <routes-ip when="{return-route='source-device'}">
+                      <net>{deref(loopback-interface)/../ipv4-subnet-start}.{$SOURCE_DEVICE_ID}/32</net>
+                      <address>{$LINK_SUBNET}.{$SOURCE_DEVICE_ID}</address>
+                    </routes-ip>
+                    <routes-ip when="{return-route='source-subnet'}">
+                      <net>{deref(loopback-interface)/../ipv4-subnet-start}.0/24</net>
+                      <address>{$LINK_SUBNET}.{$SOURCE_DEVICE_ID}</address>
+                    </routes-ip>
+                  </unicast>
+                </ipv4>
+              </address-family>
+            </static>
+          </router>
+        </config>
+      </device>
+    <?end?>
+  </devices>
+</config-template>

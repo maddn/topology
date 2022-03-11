@@ -60,6 +60,12 @@
                     <router-id-address>
                       <router-id>{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/subnet-start}.{deref(current())/../id}</router-id>
                     </router-id-address>
+                    <redistribute when="{count(/../base-config[topology=/topology]/static-routes/route[source-device=current()]) > 0}">
+                      <static/>
+                    </redistribute>
+                    <redistribute when="{count(/../traffic-generator[topology=/topology]/devices[.=current()]) = 1}">
+                      <static/>
+                    </redistribute>
                   </unicast>
                 </ipv4>
               </address-family>

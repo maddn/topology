@@ -5,6 +5,9 @@ submodule topology-libvirt {
     prefix topology;
   }
 
+  import ietf-yang-types {
+     prefix yang;
+  }
   import ietf-inet-types {
     prefix inet;
   }
@@ -184,7 +187,7 @@ submodule topology-libvirt {
           }
         }
         leaf mac-address {
-          type string;
+          type yang:mac-address;
           config false;
           tailf:cdb-oper {
             tailf:persistent true;
@@ -210,7 +213,7 @@ submodule topology-libvirt {
             type inet:ipv4-address;
           }
           leaf mac-address {
-            type string;
+            type yang:mac-address;
           }
           leaf host-interface {
             type string;

@@ -3,9 +3,6 @@ username {username}
  group cisco-support
  secret 10 {password}
 !
-line console
- width 0
-!
 interface MgmtEth0/RP0/CPU0/0
  ipv4 address {ip-address} 255.255.255.0
  no shutdown

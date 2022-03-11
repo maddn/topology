@@ -14,6 +14,7 @@ module topology {
   include topology-base;
   include topology-libvirt;
   include libvirt;
+  include base-config;
   include igp;
   include bgp;
   include segment-routing;
@@ -53,7 +54,6 @@ module topology {
             }
           }
 
-
           leaf primary {
             type empty;
             must "count(../../loopback/primary)=1" {
@@ -81,6 +81,7 @@ module topology {
   }
 
   augment "/topologies" {
+    uses base-config-grouping;
     uses igp-grouping;
     uses bgp-grouping;
     uses segment-routing-grouping;

@@ -1,0 +1,78 @@
+submodule base-config {
+
+  yang-version 1.1;
+  belongs-to topology {
+    prefix topology;
+  }
+
+  import tailf-common {
+    prefix tailf;
+  }
+  import tailf-ncs {
+    prefix ncs;
+  }
+
+  grouping base-config-grouping {
+    list base-config {
+      key topology;
+
+      uses ncs:service-data;
+      ncs:servicepoint base-config;
+
+      leaf topology {
+        type leafref {
+          path "/topologies/topology/name";
+        }
+      }
+
+      leaf login-banner {
+        type string;
+      }
+
+      container static-routes {
+        list route {
+          key "source-device destination-device loopback-interface";
+          leaf source-device {
+            type string;
+            tailf:non-strict-leafref {
+              path "deref(../../../topology)/../devices/device/device-name";
+            }
+          }
+
+          leaf destination-device {
+            type string;
+            tailf:non-strict-leafref {
+              path "deref(../../../topology)/../devices/device/device-name";
+            }
+            must "count(deref(../../../topology)/../links/" +
+                       "link[a-end-device=current()]" +
+                           "[z-end-device=current()/../source-device]) + " +
+                 "count(deref(../../../topology)/../links/" +
+                       "link[z-end-device=current()]" +
+                           "[a-end-device=current()/../source-device]) = 1" {
+              tailf:dependency "../source-device";
+              tailf:dependency "../../../../topology/links/link";
+              error-message "source-device and destination-device must be " +
+                "directly connect (with an entry in the topology links list.)";
+            }
+          }
+
+          leaf loopback-interface {
+            type leafref {
+              path "deref(../../../topology)/../ip-connectivity/loopback-interfaces/loopback/id";
+            }
+          }
+
+          leaf return-route {
+            type enumeration {
+              enum source-device;
+              enum source-subnet;
+              enum none;
+            }
+            default source-subnet;
+          }
+        }
+      }
+    }
+  }
+}
