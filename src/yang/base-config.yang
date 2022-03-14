@@ -73,6 +73,23 @@ submodule base-config {
           }
         }
       }
+
+      container pce {
+        leaf router {
+          type string;
+          tailf:non-strict-leafref {
+            path "/topologies/topology/devices/device/device-name";
+          }
+        }
+
+        leaf loopback-id {
+          type uint8;
+        }
+
+        leaf password {
+          type string;
+        }
+      }
     }
   }
 }

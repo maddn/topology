@@ -33,13 +33,8 @@
     </device>
   <?endmacro?>
 
-  <?save-context SERVICE?>
   <?set-context-node {deref(igp)/..}?>
-  <?set LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
-  <?set PCE_LOOPBACK_ID={/pce/loopback-id}?>
-  <?if {$PCE_LOOPBACK_ID=""}?>
-    <?set PCE_LOOPBACK_ID={$LOOPBACK_ID}?>
-  <?end?>
+  <?expand GetPCEVariables?>
 
   <devices xmlns="http://tail-f.com/ns/ncs">
     <device>
@@ -80,22 +75,21 @@
             <upper-bound>{/srgb/upper-bound}</upper-bound>
           </global-block>
 
-          <?set-root-node {/}?>
-          <traffic-eng>
+          <traffic-eng when="{/pce}">
             <pcc>
+              <?set-root-node {/}?>
               <source-address>
                 <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
               </source-address>
 
-              <?switch-context SERVICE?>
-              <?set-root-node {/}?>
-              <pce when="{pce/router}">
+              <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
+              <pce>
                 <address>
                   <ipv4>
-                    <address>{/devices/device[name=current()/pce/router]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</address>
-                    <password when="{pce/password}">
-                      <type>encrypted</type>
-                      <secret>{pce/password}</secret>
+                    <address>{string(/devices/device[name=current()/router]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
+                    <password when="{password}">
+                      <type>clear</type>
+                      <secret>{password}</secret>
                     </password>
                   </ipv4>
                 </address>
@@ -106,24 +100,7 @@
       </config>
     </device>
 
-    <?switch-context SERVICE?>
-    <?set-root-node {/}?>
-    <device>
-      <name>{pce/router}</name>
-      <config>
-        <pce xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <address>
-            <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
-          </address>
-          <password when="{pce/password}">
-            <type>encrypted</type>
-            <secret>{../password}</secret>
-          </password>
-        </pce>
-      </config>
-    </device>
-
-    <?set-root-node {deref(igp)/..}?>
+    <?set-root-node {.}?>
     <?foreach {deref(/topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
         <?expand LinkEndpointSR device_name=a-end-device interface_id=a-end-interface-id?>

@@ -51,21 +51,8 @@ submodule segment-routing {
         default 16000;
       }
 
-      container pce {
-        leaf router {
-          type string;
-          tailf:non-strict-leafref {
-            path "/topologies/topology/devices/device/device-name";
-          }
-        }
-
-        leaf loopback-id {
-          type uint8;
-        }
-
-        leaf password {
-          type string;
-        }
+      leaf pce {
+        type empty;
       }
     }
   }

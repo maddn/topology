@@ -43,10 +43,6 @@ submodule igp {
           presence true;
         }
       }
-
-      leaf mpls-ldp {
-        type empty;
-      }
     }
   }
 }

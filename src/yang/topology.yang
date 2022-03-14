@@ -16,6 +16,7 @@ module topology {
   include libvirt;
   include base-config;
   include igp;
+  include mpls;
   include bgp;
   include segment-routing;
   include traffic-generator;
@@ -83,6 +84,7 @@ module topology {
   augment "/topologies" {
     uses base-config-grouping;
     uses igp-grouping;
+    uses mpls-grouping;
     uses bgp-grouping;
     uses segment-routing-grouping;
     uses traffic-generator-grouping;

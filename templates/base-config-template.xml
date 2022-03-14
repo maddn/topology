@@ -1,5 +1,14 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
-                 servicepoint="base-config">
+  servicepoint="base-config">
+
+  <?macro GetPCEVariables?>
+    <?set PCE_LOOPBACK_ID={../base-config[topology=current()/topology]/pce/loopback-id}?>
+    <?set LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
+    <?if {$PCE_LOOPBACK_ID=""}?>
+      <?set PCE_LOOPBACK_ID={$LOOPBACK_ID}?>
+    <?end?>
+  <?endmacro?>
+
   <devices xmlns="http://tail-f.com/ns/ncs">
     <device tags="nocreate">
       <name>{deref(topology)/../devices/device/device-name}</name>
@@ -24,7 +33,9 @@
       <?set SOURCE_DEVICE_ID={deref(source-device)/../id}?>
       <?set DESTINATION_DEVICE_ID={deref(destination-device)/../id}?>
       <?expand GetSortedDeviceIds device_id_1=$SOURCE_DEVICE_ID device_id_2=$DESTINATION_DEVICE_ID?>
-      <?set LINK_SUBNET={concat(deref(../../topology)/../ip-connectivity/physical-interfaces/ipv4-subnet-start, '.', $LOWER_DEVICE_ID, '.', $HIGHER_DEVICE_ID)}?>
+      <?set LINK_SUBNET={concat(
+        deref(../../topology)/../ip-connectivity/physical-interfaces/ipv4-subnet-start,
+        '.', $LOWER_DEVICE_ID, '.', $HIGHER_DEVICE_ID)}?>
 
       <device>
         <name>{source-device}</name>
@@ -69,5 +80,22 @@
         </config>
       </device>
     <?end?>
+
+    <?expand GetPCEVariables?>
+    <?set-root-node {/}?>
+    <device>
+      <name>{pce/router}</name>
+      <config>
+        <pce xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <address>
+            <ipv4>{/devices/device[name=current()/router]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+          </address>
+          <password when="{password}">
+            <type>clear</type>
+            <secret>{password}</secret>
+          </password>
+        </pce>
+      </config>
+    </device>
   </devices>
 </config-template>

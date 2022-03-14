@@ -24,13 +24,6 @@
             </tag>
           </isis>
         </router>
-        <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{/mpls-ldp}">
-          <ldp>
-            <interface>
-              <name>GigabitEthernet0/0/0/{$interface_id}</name>
-            </interface>
-          </ldp>
-        </mpls>
       </config>
     </device>
   <?endmacro?>
@@ -58,7 +51,7 @@
                 <ipv4>
                   <unicast>
                     <router-id-address>
-                      <router-id>{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/subnet-start}.{deref(current())/../id}</router-id>
+                      <router-id>{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.{deref(current())/../id}</router-id>
                     </router-id-address>
                     <redistribute when="{count(/../base-config[topology=/topology]/static-routes/route[source-device=current()]) > 0}">
                       <static/>
