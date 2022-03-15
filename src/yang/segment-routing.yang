@@ -18,6 +18,19 @@ submodule segment-routing {
     }
   }
 
+  typedef hexadectet {
+    type string {
+      length "0..4";
+      pattern "[0-9a-fA-F]*";
+    }
+  }
+
+  typedef flex-algo {
+    type uint8 {
+      range "128..255";
+    }
+  }
+
   grouping segment-routing-grouping {
     list segment-routing {
       key igp;
@@ -53,6 +66,40 @@ submodule segment-routing {
 
       leaf pce {
         type empty;
+      }
+
+      list flex-algo {
+        key id;
+
+        leaf id {
+          type flex-algo;
+        }
+
+        leaf metric-type-delay {
+          type empty;
+        }
+
+        leaf affinity-exclude {
+          type leafref {
+            path "/topologies/topology/links/link/affinity";
+          }
+        }
+
+        leaf srv6-locator {
+          when "../../srv6";
+          type string;
+        }
+      }
+
+      container srv6 {
+        when "deref(deref(../igp)/../topology)/../ip-connectivity/ipv6" {
+          tailf:dependency "/topologies/topology/ip-connectivity/ipv6";
+        }
+        presence true;
+        leaf locator-prefix-start {
+          type hexadectet;
+          default "fcbb";
+        }
       }
     }
   }

@@ -19,6 +19,11 @@
                       <metric>{igp-metric}</metric>
                     </unicast>
                   </ipv4>
+                  <ipv6 when="{../../ip-connectivity/ipv6}">
+                    <unicast>
+                      <metric>{igp-metric}</metric>
+                    </unicast>
+                  </ipv6>
                 </address-family>
               </interface>
             </tag>
@@ -37,13 +42,14 @@
       <?end?>
     <?end?>
 
+    <?set-root-node {deref(topology)/../ip-connectivity}?>
     <device>
       <name>{devices}</name>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
             <tag>
-              <name>{string(/name)}</name>
+              <name>{string(../name)}</name>
               <net>
                 <id>49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00</id>
               </net>
@@ -51,18 +57,25 @@
                 <ipv4>
                   <unicast>
                     <router-id-address>
-                      <router-id>{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.{deref(current())/../id}</router-id>
+                      <router-id>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.{deref(current())/../id}</router-id>
                     </router-id-address>
-                    <redistribute when="{count(/../base-config[topology=/topology]/static-routes/route[source-device=current()]) > 0}">
+                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) > 0}">
                       <static/>
                     </redistribute>
-                    <redistribute when="{count(/../traffic-generator[topology=/topology]/devices[.=current()]) = 1}">
+                    <redistribute when="{count(../../traffic-generator[topology=/../name]/devices[.=current()]) = 1}">
                       <static/>
                     </redistribute>
                   </unicast>
                 </ipv4>
+                <ipv6 when="{/ipv6}">
+                  <unicast>
+                    <router-id>
+                      <Loopback>{/loopback-interfaces/loopback[primary]/id}</Loopback>
+                    </router-id>
+                  </unicast>
+                </ipv6>
               </address-family>
-              <interface foreach="{deref(/topology)/../ip-connectivity/loopback-interfaces/loopback}">
+              <interface foreach="{/loopback-interfaces/loopback}">
                 <name>Loopback{id}</name>
                 <interface-type>passive</interface-type>
                 <circuit-type>level-2-only</circuit-type>
@@ -70,6 +83,9 @@
                   <ipv4>
                     <unicast/>
                   </ipv4>
+                  <ipv6 when="{/ipv6}">
+                    <unicast/>
+                  </ipv6>
                 </address-family>
               </interface>
             </tag>

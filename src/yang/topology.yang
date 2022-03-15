@@ -50,9 +50,11 @@ module topology {
             mandatory true;
           }
           leaf ipv6-subnet-start {
+            when "../../../ipv6";
             type hexadectet-list {
               pattern '.*(:.*){0,4}';
             }
+            mandatory true;
           }
 
           leaf primary {
@@ -72,11 +74,16 @@ module topology {
           default 10;
         }
         leaf ipv6-subnet-start {
+          when "../../ipv6";
           type hexadectet-list {
             pattern '.*(:.*){0,2}';
           }
           default 2001;
         }
+      }
+
+      leaf ipv6 {
+        type empty;
       }
     }
   }

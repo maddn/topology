@@ -1,6 +1,7 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
                  servicepoint="bgp">
   <?set DEFAULT_LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
+  <?set IPV6={boolean(deref(topology)/../ip-connectivity/ipv6)}?>
   <?set-root-node {/}?>
   <devices xmlns="http://tail-f.com/ns/ncs">
     <device>
@@ -23,6 +24,9 @@
                 <vpnv4 when="{$ROLE='provider-edge'}">
                   <unicast/>
                 </vpnv4>
+                <vpnv6 when="{$ROLE='provider-edge' and $IPV6='true'}">
+                  <unicast/>
+                </vpnv6>
                 <link-state when="{$ROLE='link-state'}">
                   <link-state/>
                 </link-state>
@@ -46,6 +50,18 @@
                     <link-state when="{$ROLE='link-state'}">
                       <link-state/>
                     </link-state>
+                  </address-family>
+                </neighbor>
+                <neighbor when="{$ROLE='provider-edge' and $IPV6='true'}">
+                  <id>{substring-before(/devices/device[name=current()]/config/interface/Loopback[id=$RR_LOOPBACK_ID]/ipv6/address/prefix-list/prefix, '/128')}</id>
+                  <remote-as>{string(../../as-number)}</remote-as>
+                  <update-source>
+                    <Loopback>{$LOOPBACK_ID}</Loopback>
+                  </update-source>
+                  <address-family>
+                    <vpnv6 when="{$ROLE='provider-edge'}">
+                      <unicast/>
+                    </vpnv6>
                   </address-family>
                 </neighbor>
               <?end?>
@@ -74,6 +90,9 @@
                 <vpnv4 when="{count(../../provider-edge/routers)>0}">
                   <unicast/>
                 </vpnv4>
+                <vpnv6 when="{count(../../provider-edge/routers)>0 and $IPV6='true'}">
+                  <unicast/>
+                </vpnv6>
                 <link-state when="{count(../../link-state/routers)>0}">
                   <link-state/>
                 </link-state>
@@ -101,6 +120,20 @@
                         <route-reflector-client/>
                       </link-state>
                     </link-state>
+                  </address-family>
+                </neighbor>
+                <neighbor when="{local-name(..)='provider-edge' and $IPV6='true'}">
+                  <id>{substring-before(/devices/device[name=current()]/config/interface/Loopback[id=$PE_LOOPBACK_ID]/ipv6/address/prefix-list/prefix, '/128')}</id>
+                  <remote-as>{string(../../as-number)}</remote-as>
+                  <update-source>
+                    <Loopback>{$LOOPBACK_ID}</Loopback>
+                  </update-source>
+                  <address-family>
+                    <vpnv6 when="{local-name(..)='provider-edge'}">
+                      <unicast>
+                        <route-reflector-client/>
+                      </unicast>
+                    </vpnv6>
                   </address-family>
                 </neighbor>
               <?end?>

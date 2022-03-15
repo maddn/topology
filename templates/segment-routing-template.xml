@@ -8,7 +8,7 @@
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
             <tag tags="nocreate">
-              <name>{string(/name)}</name>
+              <name>{string(/igp)}</name>
               <interface>
                 <name>GigabitEthernet0/0/0/{$interface_id}</name>
                 <address-family tags="merge">
@@ -25,6 +25,9 @@
                     </unicast>
                   </ipv4>
                 </address-family>
+                <affinity tags="merge" when="{count(/flex-algo) > 0}">
+                  <flex-algo>{affinity}</flex-algo>
+                </affinity>
               </interface>
             </tag>
           </isis>
@@ -33,17 +36,20 @@
     </device>
   <?endmacro?>
 
+  <?set IGP_NAME={igp}?>
   <?set-context-node {deref(igp)/..}?>
   <?expand GetPCEVariables?>
 
   <devices xmlns="http://tail-f.com/ns/ncs">
     <device>
       <name>{devices}</name>
+      <?set DEVICE_NAME={.}?>
+      <?set DEVICE_ID={deref(.)/../id}?>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
             <tag tags="nocreate">
-              <name>{string(/igp)}</name>
+              <name>{$IGP_NAME}</name>
               <address-family tags="merge">
                 <ipv4>
                   <unicast>
@@ -52,6 +58,20 @@
                     </segment-routing>
                   </unicast>
                 </ipv4>
+                <ipv6 when="{deref(../topology)/../ip-connectivity/ipv6}">
+                  <unicast>
+                    <segment-routing>
+                      <srv6 when="{/srv6}">
+                        <locator>
+                          <name>MAIN</name>
+                        </locator>
+                        <locator foreach="{/flex-algo}">
+                          <name>{srv6-locator}</name>
+                        </locator>
+                      </srv6>
+                    </segment-routing>
+                  </unicast>
+                </ipv6>
               </address-family>
               <interface>
                 <name>Loopback{$LOOPBACK_ID}</name>
@@ -59,12 +79,45 @@
                   <ipv4>
                     <unicast>
                       <prefix-sid>
-                        <absolute>{number(/prefix-sid-start) + number(deref(current())/../id)}</absolute>
+                        <absolute>{number(/prefix-sid-start) + number($DEVICE_ID)}</absolute>
                       </prefix-sid>
+                      <prefix-sid-algorithm>
+                        <prefix-sid>
+                          <?set FLEX_ALGO_INDEX=1?>
+                          <algorithm foreach="{/flex-algo}">
+                            <id>{id}</id>
+                            <absolute>{number(/prefix-sid-start) + 1000 + number($FLEX_ALGO_INDEX) * 100 + number($DEVICE_ID)}</absolute>
+                            <?set FLEX_ALGO_INDEX={$FLEX_ALGO_INDEX+1}?>
+                          </algorithm>
+                        </prefix-sid>
+                      </prefix-sid-algorithm>
                     </unicast>
                   </ipv4>
                 </address-family>
               </interface>
+
+              <?set BIT_POSITION={101}?>
+              <?set-root-node {/}?>
+              <?foreach {deref(../topology)/../links/link}?>
+                <?if {count(/devices/device[name=$DEVICE_NAME]/config/router/isis/tag[name=$IGP_NAME]/affinity-map[name=current()/affinity]) = 0}?>
+                  <affinity-map tags="merge">
+                    <name>{affinity}</name>
+                    <bit-position>{$BIT_POSITION}</bit-position>
+                  </affinity-map>
+                  <?set BIT_POSITION={$BIT_POSITION+1}?>
+                <?end?>
+              <?end?>
+
+              <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
+              <flex-algo tags="merge" foreach="{/flex-algo}">
+                <id>{id}</id>
+                <metric-type>
+                  <delay when="{metric-type-delay}"/>
+                </metric-type>
+                <affinity>
+                  <exclude-any>{affinity-exclude}</exclude-any>
+                </affinity>
+              </flex-algo>
             </tag>
           </isis>
         </router>
@@ -96,6 +149,33 @@
               </pce>
             </pcc>
           </traffic-eng>
+
+          <srv6 when="{/srv6}">
+            <locators>
+              <?set LOCATOR_INDEX={0}?>
+              <locator>
+                <name>MAIN</name>
+                <micro-segment>
+                  <behavior>
+                    <unode>psp-usd</unode>
+                  </behavior>
+                </micro-segment>
+                <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
+                <algorithm>{algorithm}</algorithm>
+              </locator>
+              <locator foreach="{/flex-algo}">
+                <name>{srv6-locator}</name>
+                <?set LOCATOR_INDEX={$LOCATOR_INDEX+1}?>
+                <micro-segment>
+                  <behavior>
+                    <unode>psp-usd</unode>
+                  </behavior>
+                </micro-segment>
+                <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
+                <algorithm>{algorithm}</algorithm>
+              </locator>
+            </locators>
+          </srv6>
         </segment-routing>
       </config>
     </device>
@@ -103,6 +183,7 @@
     <?set-root-node {.}?>
     <?foreach {deref(/topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
+        <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
         <?expand LinkEndpointSR device_name=a-end-device interface_id=a-end-interface-id?>
         <?expand LinkEndpointSR device_name=z-end-device interface_id=z-end-interface-id?>
       <?end?>
