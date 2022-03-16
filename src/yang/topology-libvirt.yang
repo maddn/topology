@@ -5,17 +5,16 @@ submodule topology-libvirt {
     prefix topology;
   }
 
-  import ietf-yang-types {
-     prefix yang;
-  }
-  import ietf-inet-types {
-    prefix inet;
-  }
   import tailf-common {
     prefix tailf;
   }
 
   include topology-base;
+
+  // Additional groupings are in a seperate submodule due to an NSO bug.
+  // If the groupings are in the same submodule they are missing from the
+  // compiled moduled.
+  include topology-libvirt-subgroupings;
 
   typedef topology-status {
     type enumeration {
@@ -41,8 +40,6 @@ submodule topology-libvirt {
       }
 
       augment "topology" {
-        // uses libvirt-topology-actions-grouping;
-        // grouping libvirt-topology-actions-grouping {
         container libvirt {
           leaf hypervisor {
             type leafref {
@@ -52,89 +49,25 @@ submodule topology-libvirt {
           action define {
             tailf:actionpoint libvirt-action;
             output {
-              // uses libvirt-action-output-grouping;
-              // grouping libvirt-action-output-grouping {
-              list libvirt-action {
-                leaf action {
-                  type string;
-                }
-                leaf-list networks {
-                  type string;
-                }
-                leaf-list domains {
-                  type string;
-                }
-                leaf-list volumes {
-                  type string;
-                }
-              }
-            // }
+              uses libvirt-action-output-grouping;
             }
           }
           action undefine {
             tailf:actionpoint libvirt-action;
             output {
-              // uses libvirt-action-output-grouping;
-              // grouping libvirt-action-output-grouping {
-              list libvirt-action {
-                leaf action {
-                  type string;
-                }
-                leaf-list networks {
-                  type string;
-                }
-                leaf-list domains {
-                  type string;
-                }
-                leaf-list volumes {
-                  type string;
-                }
-              }
-            // }
+              uses libvirt-action-output-grouping;
             }
           }
           action start {
             tailf:actionpoint libvirt-action;
             output {
-              // uses libvirt-action-output-grouping;
-              // grouping libvirt-action-output-grouping {
-              list libvirt-action {
-                leaf action {
-                  type string;
-                }
-                leaf-list networks {
-                  type string;
-                }
-                leaf-list domains {
-                  type string;
-                }
-                leaf-list volumes {
-                  type string;
-                }
-              }
-            // }
+              uses libvirt-action-output-grouping;
             }
           }
           action stop {
             tailf:actionpoint libvirt-action;
             output {
-              // uses libvirt-action-output-grouping;
-              // grouping libvirt-action-output-grouping {
-              list libvirt-action {
-                leaf action {
-                  type string;
-                }
-                leaf-list networks {
-                  type string;
-                }
-                leaf-list domains {
-                  type string;
-                }
-                leaf-list volumes {
-                  type string;
-                }
-              }
-            // }
+              uses libvirt-action-output-grouping;
             }
           }
           action check-topology-status {
@@ -153,73 +86,18 @@ submodule topology-libvirt {
             }
           }
         }
-      // }
       }
 
       augment "topology/links/link" {
-        // uses libvirt-link-grouping;
-        // grouping libvirt-link-grouping {
-        leaf host-bridge {
-          type string;
-          config false;
-          tailf:cdb-oper {
-            tailf:persistent true;
-          }
-        }
-        leaf mac-address {
-          type string;
-          config false;
-          tailf:cdb-oper {
-            tailf:persistent true;
-          }
-        }
-      // }
+        uses libvirt-network-grouping;
       }
 
       augment "topology/networks/network" {
-        // uses libvirt-link-grouping;
-        // grouping libvirt-link-grouping {
-        leaf host-bridge {
-          type string;
-          config false;
-          tailf:cdb-oper {
-            tailf:persistent true;
-          }
-        }
-        leaf mac-address {
-          type yang:mac-address;
-          config false;
-          tailf:cdb-oper {
-            tailf:persistent true;
-          }
-        }
-      // }
+        uses libvirt-network-grouping;
       }
 
       augment "topology/devices/device" {
-        // uses topology:libvirt-device-grouping;
-        // grouping libvirt-device-grouping {
-        leaf definition {
-          type leafref {
-            path "/topologies/libvirt/device-definition/name";
-          }
-        }
-        container management-interface {
-          config false;
-          tailf:cdb-oper {
-            tailf:persistent true;
-          }
-          leaf ip-address {
-            type inet:ipv4-address;
-          }
-          leaf mac-address {
-            type yang:mac-address;
-          }
-          leaf host-interface {
-            type string;
-          }
-        }
-      // }
+        uses libvirt-device-grouping;
       }
     }
   }

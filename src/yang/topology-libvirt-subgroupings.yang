@@ -1,0 +1,75 @@
+submodule topology-libvirt-subgroupings {
+
+  yang-version 1.1;
+  belongs-to topology {
+    prefix topology;
+  }
+
+  import ietf-yang-types {
+     prefix yang;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import tailf-common {
+    prefix tailf;
+  }
+
+  grouping libvirt-action-output-grouping {
+    list libvirt-action {
+      leaf action {
+        type string;
+      }
+      leaf-list networks {
+        type string;
+      }
+      leaf-list domains {
+        type string;
+      }
+      leaf-list volumes {
+        type string;
+      }
+    }
+  }
+
+  grouping libvirt-network-grouping {
+    leaf host-bridge {
+      type string;
+      config false;
+      tailf:cdb-oper {
+        tailf:persistent true;
+      }
+    }
+    leaf mac-address {
+      type yang:mac-address;
+      config false;
+      tailf:cdb-oper {
+        tailf:persistent true;
+      }
+    }
+  }
+
+  grouping libvirt-device-grouping {
+    leaf definition {
+      type leafref {
+        path "/topologies/libvirt/device-definition/name";
+      }
+    }
+    container management-interface {
+      config false;
+      tailf:cdb-oper {
+        tailf:persistent true;
+      }
+      leaf ip-address {
+        type inet:ipv4-address;
+      }
+      leaf mac-address {
+        type yang:mac-address;
+      }
+      leaf host-interface {
+        type string;
+      }
+    }
+  }
+
+}

@@ -22,7 +22,7 @@ submodule libvirt {
     prefix ned;
   }
 
-  grouping libvirt-network-grouping {
+  grouping libvirt-get-network-grouping {
     leaf name {
       type string;
     }
@@ -103,13 +103,13 @@ submodule libvirt {
             tailf:actionpoint libvirt-get-objects;
             output {
               list network {
-                uses libvirt-network-grouping;
+                uses libvirt-get-network-grouping;
                 leaf bridge-name {
                   type string;
                 }
               }
               list external-bridge {
-                uses libvirt-network-grouping;
+                uses libvirt-get-network-grouping;
               }
             }
           }

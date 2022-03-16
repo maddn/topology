@@ -13,6 +13,7 @@ module topology {
 
   include topology-base;
   include topology-libvirt;
+  include topology-libvirt-subgroupings;
   include libvirt;
   include base-config;
   include igp;
