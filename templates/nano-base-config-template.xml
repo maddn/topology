@@ -1,0 +1,25 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="managed-topology"
+                 componenttype="topology:initial-config"
+                 state="topology:base-config">
+
+  <topologies xmlns="http://example.com/topology">
+    <base-config>
+      <topology>{topology}</topology>
+      <login-banner>{login-banner}</login-banner>
+      <static-routes>
+        <route foreach="{static-routes/route}">
+          <source-device>{source-device}</source-device>
+          <destination-device>{destination-device}</destination-device>
+          <loopback-interface>{loopback-interface}</loopback-interface>
+          <return-route>{return-route}</return-route>
+        </route>
+      </static-routes>
+      <pce when="{pce}">
+        <router>{pce/router}</router>
+        <loopback-id>{pce/loopback-id}</loopback-id>
+        <password>{pce/password}</password>
+      </pce>
+    </base-config>
+  </topologies>
+</config-template>

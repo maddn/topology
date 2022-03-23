@@ -1,0 +1,26 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="managed-topology"
+                 componenttype="topology:segment-routing"
+                 state="topology:config">
+
+  <topologies xmlns="http://example.com/topology">
+    <segment-routing>
+      <igp>{string(igp/name)}</igp>
+      <srgb>
+        <lower-bound>{segment-routing/srgb/lower-bound}</lower-bound>
+        <upper-bound>{segment-routing/srgb/upper-bound}</upper-bound>
+      </srgb>
+      <prefix-sid-start>{segment-routing/prefix-sid-start}</prefix-sid-start>
+      <pce when="{segment-routing/pce}"/>
+      <srv6 when="{segment-routing/srv6}">
+        <locator-prefix-start>{segment-routing/srv6/locator-prefix-start}</locator-prefix-start>
+      </srv6>
+      <flex-algo foreach="{segment-routing/flex-algo}">
+        <id>{id}</id>
+        <metric-type-delay when="{metric-type-delay}"/>
+        <affinity-exclude>{affinity-exclude}</affinity-exclude>
+        <srv6-locator>{srv6-locator}</srv6-locator>
+      </flex-algo>
+    </segment-routing>
+  </topologies>
+</config-template>

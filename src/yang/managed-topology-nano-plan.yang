@@ -1,0 +1,311 @@
+submodule managed-topology-nano-plan {
+  yang-version 1.1;
+  belongs-to topology { prefix topology; }
+
+  import tailf-ncs { prefix ncs; }
+
+  identity libvirt-topology { base ncs:plan-component-type; }
+  identity libvirt-device { base ncs:plan-component-type; }
+  identity initial-config { base ncs:plan-component-type; }
+  identity igp { base ncs:plan-component-type; }
+  identity bgp { base ncs:plan-component-type; }
+  identity mpls { base ncs:plan-component-type; }
+  identity segment-routing { base ncs:plan-component-type; }
+  identity traffic-generator { base ncs:plan-component-type; }
+
+  identity defined { base ncs:plan-state; }
+  identity started { base ncs:plan-state; }
+  identity reachable { base ncs:plan-state; }
+  identity synced { base ncs:plan-state; }
+  identity ip-connectivity { base ncs:plan-state; }
+  identity base-config { base ncs:plan-state; }
+  identity config { base ncs:plan-state; }
+
+  ncs:plan-outline managed-topology-plan {
+    ncs:self-as-service-status;
+    ncs:component-type "ncs:self" {
+      ncs:state "ncs:init";
+      ncs:state "ncs:ready";
+    }
+
+    ncs:component-type "libvirt-topology" {
+      ncs:state "ncs:init" {
+        ncs:create {
+          ncs:post-action-node
+              "/topologies/topology[name=$SERVICE/topology]/libvirt" {
+            ncs:action-name "define";
+            ncs:sync;
+          }
+        }
+      }
+      ncs:state "defined" {
+        ncs:create {
+          ncs:post-action-node
+              "/topologies/topology[name=$SERVICE/topology]/libvirt" {
+            ncs:action-name "start";
+            ncs:sync;
+          }
+        }
+      }
+      ncs:state "ncs:ready" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor "$PLAN" {
+              ncs:trigger-expr
+                "count(component[type='topology:libvirt-device']
+                       /state[name='ncs:ready'][status!='reached'])=0";
+            }
+          }
+        }
+      }
+    }
+
+    ncs:component-type "libvirt-device" {
+      ncs:state "ncs:init";
+      ncs:state "defined" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "/topologies/topology[name=$SERVICE/topology]
+                 /devices/device[id=$ID]" {
+              ncs:trigger-expr "status!='undefined'";
+            }
+          }
+        }
+      }
+      ncs:state "started" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "/topologies/topology[name=$SERVICE/topology]
+                 /devices/device[id=$ID]" {
+              ncs:trigger-expr "status!='defined'";
+            }
+          }
+        }
+      }
+      ncs:state "reachable" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "/topologies/topology[name=$SERVICE/topology]
+                 /devices/device[id=$ID]" {
+              ncs:trigger-expr "status!='not-reachable'";
+            }
+          }
+        }
+      }
+      ncs:state "synced" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "/topologies/topology[name=$SERVICE/topology]
+                 /devices/device[id=$ID]" {
+              ncs:trigger-expr "status='ready'";
+            }
+          }
+        }
+      }
+      ncs:state "ncs:ready";
+    }
+
+    ncs:component-type "initial-config" {
+      ncs:state "ncs:init" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "$PLAN/component[name='topology']/state[name='ncs:ready']" {
+              ncs:trigger-expr "status='reached'";
+            }
+          }
+        }
+      }
+      ncs:state "ip-connectivity" {
+        ncs:create {
+          ncs:nano-callback;
+        }
+      }
+      ncs:state "base-config" {
+        ncs:create {
+          ncs:nano-callback;
+        }
+      }
+      ncs:state "ncs:ready";
+    }
+
+    ncs:component-type "igp" {
+      ncs:state "ncs:init" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "$PLAN/component[name='initial-config']" +
+                "/state[name='ncs:ready']" {
+              ncs:trigger-expr "status='reached'";
+            }
+          }
+        }
+      }
+      ncs:state "config" {
+        ncs:create {
+          ncs:nano-callback;
+        }
+      }
+      ncs:state "ncs:ready";
+    }
+
+    ncs:component-type "bgp" {
+      ncs:state "ncs:init" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "$PLAN/component[name='initial-config']" +
+                "/state[name='ncs:ready']" {
+              ncs:trigger-expr "status='reached'";
+            }
+          }
+        }
+      }
+      ncs:state "config" {
+        ncs:create {
+          ncs:nano-callback;
+        }
+      }
+      ncs:state "ncs:ready";
+    }
+
+    ncs:component-type "mpls" {
+      ncs:state "ncs:init" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor "$PLAN/component[name='igp']/state[name='ncs:ready']" {
+              ncs:trigger-expr "status='reached'";
+            }
+          }
+        }
+      }
+      ncs:state "config" {
+        ncs:create {
+          ncs:nano-callback;
+        }
+      }
+      ncs:state "ncs:ready";
+    }
+
+    ncs:component-type "segment-routing" {
+      ncs:state "ncs:init" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor "$PLAN/component[name='igp']/state[name='ncs:ready']" {
+              ncs:trigger-expr "status='reached'";
+            }
+          }
+        }
+      }
+      ncs:state "config" {
+        ncs:create {
+          ncs:nano-callback;
+        }
+      }
+      ncs:state "ncs:ready";
+    }
+
+    ncs:component-type "traffic-generator" {
+      ncs:state "ncs:init" {
+        ncs:create {
+          ncs:pre-condition {
+            ncs:monitor
+                "$PLAN/component[name='initial-config']" +
+                "/state[name='ncs:ready']" {
+              ncs:trigger-expr "status='reached'";
+            }
+          }
+        }
+      }
+      ncs:state "config" {
+        ncs:create {
+          ncs:nano-callback;
+        }
+      }
+      ncs:state "ncs:ready";
+    }
+  }
+
+  ncs:service-behavior-tree managed-topology {
+    ncs:plan-outline-ref managed-topology-plan;
+
+    ncs:selector {
+      ncs:create-component "'self'" {
+        ncs:component-type-ref "ncs:self";
+      }
+      ncs:create-component "'topology'" {
+        ncs:component-type-ref "libvirt-topology";
+      }
+
+      ncs:multiplier {
+        ncs:foreach
+            "/topologies/topology[name=$SERVICE/topology]/devices/device" {
+          ncs:when
+            "/topologies/libvirt
+             /device-definition[name=current()/definition]/ned-id";
+          ncs:variable "DEVICE_NAME" {
+            ncs:value-expr "device-name";
+          }
+          ncs:variable "ID" {
+            ncs:value-expr "id";
+          }
+          ncs:create-component "$DEVICE_NAME" {
+            ncs:component-type-ref "libvirt-device";
+          }
+        }
+      }
+
+      ncs:create-component "'initial-config'" {
+        ncs:component-type-ref "initial-config";
+      }
+
+      ncs:selector {
+        ncs:pre-condition {
+          ncs:monitor "$SERVICE/igp" {
+            ncs:trigger-expr "name";
+          }
+        }
+        ncs:create-component "'igp'" {
+          ncs:component-type-ref "igp";
+        }
+        ncs:create-component "'mpls'" {
+          ncs:pre-condition {
+            ncs:monitor "$SERVICE/mpls" {
+              ncs:trigger-expr "count(child::*)>0";
+            }
+          }
+          ncs:component-type-ref "mpls";
+        }
+        ncs:create-component "'segment-routing'" {
+          ncs:pre-condition {
+            ncs:monitor "$SERVICE/segment-routing" {
+              ncs:trigger-expr "count(child::*)>0";
+            }
+          }
+          ncs:component-type-ref "segment-routing";
+        }
+      }
+
+      ncs:create-component "'bgp'" {
+        ncs:pre-condition {
+          ncs:monitor "$SERVICE/bgp" {
+            ncs:trigger-expr "as-number";
+          }
+        }
+        ncs:component-type-ref "bgp";
+      }
+      ncs:create-component "'traffic-generator'" {
+        ncs:pre-condition {
+          ncs:monitor "$SERVICE/traffic-generator" {
+            ncs:trigger-expr "count(devices)>0";
+          }
+        }
+        ncs:component-type-ref "traffic-generator";
+      }
+    }
+  }
+}

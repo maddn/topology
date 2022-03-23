@@ -1,0 +1,24 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="managed-topology"
+                 componenttype="topology:bgp"
+                 state="topology:config">
+
+    <topologies xmlns="http://example.com/topology">
+    <bgp>
+      <as-number>{bgp/as-number}</as-number>
+      <topology>{/topology}</topology>
+      <route-reflector>
+        <loopback-id>{route-reflector/loopback-id}</loopback-id>
+        <routers>{route-reflector/routers}</routers>
+      </route-reflector>
+      <provider-edge>
+        <loopback-id>{provider-edge/loopback-id}</loopback-id>
+        <routers>{provider-edge/routers}</routers>
+      </provider-edge>
+      <link-state>
+        <loopback-id>{link-state/loopback-id}</loopback-id>
+        <routers>{link-state/routers}</routers>
+      </link-state>
+    </bgp>
+  </topologies>
+</config-template>

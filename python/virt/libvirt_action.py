@@ -13,9 +13,13 @@ import re
 
 import pycdlib
 
+import ncs
 from ncs.dp import Action
 from ncs import maapi, maagic, OPERATIONAL
 from virt.libvirt_connection import LibvirtConnection
+from virt.topology_status import \
+        update_status_after_action, schedule_topology_ping
+
 _ncs = __import__('_ncs')
 
 PYTHON_DIR = os.path.dirname(__file__)
@@ -61,15 +65,13 @@ def write_oper_data(path, leaf_value_pairs):
                 trans.set_elem(value, f'{path}/{leaf}')
         trans.apply()
 
-def nso_device_onboard(device_name, ip_address, ned_id, authgroup):
+def nso_device_onboard(device):
     with maapi.single_write_trans('admin', 'python') as trans:
-        root = maagic.get_root(trans)
-        device = root.devices.device.create(device_name)
-        device.address = ip_address
-        device.device_type.cli.ned_id = ned_id
-        device.authgroup = authgroup
-        device.state.admin_state = 'unlocked'
-        device.ssh_algorithms.public_key.create('rsa-sha2-256')
+        device_context = maagic.get_node(trans, device._path)
+        template_vars = ncs.template.Variables()
+        template_vars.add('NAME', device_context.device_name)
+        template = ncs.template.Template(device_context)
+        template.apply('nso-device-template', template_vars)
         trans.apply()
 
 
@@ -602,8 +604,7 @@ class Domain(LibvirtObject):
 
         self._log.info(f'Creating device {device_name} in NSO')
         if dev_def.ned_id is not None:
-            nso_device_onboard(device_name, mgmt_ip_address,
-                    dev_def.ned_id, dev_def.authgroup)
+            nso_device_onboard(device)
 
     def undefine(self, device):
         if self._action('undefine', device):
@@ -673,6 +674,7 @@ class Topology():
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)
+            update_status_after_action(device, action)
 
     def wait_for_shutdown(self):
         timer = 0
@@ -688,6 +690,13 @@ class LibvirtAction(Action):
         self.log.info('action name: ', name)
 
         topology = maagic.get_node(trans, kp[1:])
+
+        action = name
+        if action in ('start', 'define') and not input.force:
+            if (action == 'start' and topology.status != 'defined' or
+                action == 'define' and topology.status != 'undefined'):
+                return
+
         hypervisor_name = topology.libvirt.hypervisor
 
         if hypervisor_name is None:
@@ -701,15 +710,18 @@ class LibvirtAction(Action):
         libvirt_conn.connect(hypervisor.url)
         libvirt_conn.populate_cache()
 
-        topology = Topology(libvirt_conn, topology,
+        libvirt_topology = Topology(libvirt_conn, topology,
                 hypervisor, self.log, output, uinfo.username)
 
-        action = name
         if name == 'start':
             action = 'create'
         elif name == 'stop':
-            topology.action('shutdown')
-            topology.wait_for_shutdown()
+            libvirt_topology.action('shutdown')
+            libvirt_topology.wait_for_shutdown()
             action = 'destroy'
 
-        topology.action(action)
+        libvirt_topology.action(action)
+        update_status_after_action(topology, action)
+
+        if name == 'start':
+            schedule_topology_ping(kp[1:])

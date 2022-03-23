@@ -1,0 +1,13 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="managed-topology"
+                 componenttype="topology:traffic-generator"
+                 state="topology:config">
+
+<topologies xmlns="http://example.com/topology">
+    <traffic-generator>
+      <topology>{topology}</topology>
+      <devices>{traffic-generator/devices}</devices>
+      <destinations>{traffic-generator/destinations}</destinations>
+    </traffic-generator>
+  </topologies>
+</config-template>

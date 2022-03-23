@@ -1,106 +1,99 @@
 submodule segment-routing {
-
   yang-version 1.1;
-  belongs-to topology {
-    prefix topology;
-  }
+  belongs-to topology { prefix topology; }
 
-  import tailf-common {
-    prefix tailf;
-  }
-  import tailf-ncs {
-    prefix ncs;
-  }
+  import tailf-common { prefix tailf; }
+  import tailf-ncs { prefix ncs; }
 
   typedef sid {
     type uint32 {
       range "16000..1048575";
     }
   }
-
   typedef hexadectet {
     type string {
       length "0..4";
       pattern "[0-9a-fA-F]*";
     }
   }
-
   typedef flex-algo {
     type uint8 {
       range "128..255";
     }
   }
 
-  grouping segment-routing-grouping {
+  grouping segment-routing-service-grouping {
     list segment-routing {
+      tailf:sort-priority 1000;
       key igp;
-
-      uses ncs:service-data;
-      ncs:servicepoint segment-routing;
-
       leaf igp {
         type leafref {
           path "/topologies/igp/name";
         }
       }
 
-      container srgb {
-        tailf:info
-          "Segement Routing Global Block. These bounds are used to
-           configure the SRGB on each router";
-        leaf lower-bound {
-          type sid;
-          default 16000;
-        }
+      uses ncs:service-data;
+      ncs:servicepoint segment-routing;
 
-        leaf upper-bound {
-          type sid;
-          default 23999;
-        }
-      }
-
-      leaf prefix-sid-start {
-        type sid;
-        default 16000;
-      }
-
-      leaf pce {
-        type empty;
-      }
-
-      list flex-algo {
-        key id;
-
-        leaf id {
-          type flex-algo;
-        }
-
-        leaf metric-type-delay {
-          type empty;
-        }
-
-        leaf affinity-exclude {
-          type leafref {
-            path "/topologies/topology/links/link/affinity";
-          }
-        }
-
-        leaf srv6-locator {
-          when "../../srv6";
-          type string;
-        }
-      }
+      uses segment-routing-grouping;
 
       container srv6 {
         when "deref(deref(../igp)/../topology)/../ip-connectivity/ipv6" {
           tailf:dependency "/topologies/topology/ip-connectivity/ipv6";
         }
         presence true;
-        leaf locator-prefix-start {
-          type hexadectet;
-          default "fcbb";
+        uses srv6-grouping;
+      }
+    }
+  }
+
+  grouping segment-routing-grouping {
+    container srgb {
+      tailf:info
+        "Segement Routing Global Block. These bounds are used to
+         configure the SRGB on each router";
+      leaf lower-bound {
+        type sid;
+        default 16000;
+      }
+      leaf upper-bound {
+        type sid;
+        default 23999;
+      }
+    }
+
+    leaf prefix-sid-start {
+      type sid;
+      default 16000;
+    }
+    leaf pce {
+      type empty;
+    }
+
+    list flex-algo {
+      key id;
+      leaf id {
+        type flex-algo;
+      }
+      leaf metric-type-delay {
+        type empty;
+      }
+      leaf affinity-exclude {
+        type leafref {
+          path "/topologies/topology/links/link/affinity";
         }
       }
+      leaf srv6-locator {
+        when "../../srv6";
+        type string;
+      }
+    }
+  }
+
+  grouping srv6-grouping {
+    leaf locator-prefix-start {
+      type hexadectet;
+      default "fcbb";
     }
   }
 }

@@ -1,13 +1,8 @@
 submodule topology-libvirt {
-
   yang-version 1.1;
-  belongs-to topology {
-    prefix topology;
-  }
+  belongs-to topology { prefix topology; }
 
-  import tailf-common {
-    prefix tailf;
-  }
+  import tailf-common { prefix tailf; }
 
   include topology-base;
 
@@ -15,14 +10,6 @@ submodule topology-libvirt {
   // If the groupings are in the same submodule they are missing from the
   // compiled moduled.
   include topology-libvirt-subgroupings;
-
-  typedef topology-status {
-    type enumeration {
-      enum ready;
-      enum not-ready;
-      enum error;
-    }
-  }
 
   grouping topology-libvirt-grouping {
     uses topology-base-grouping {
@@ -48,6 +35,11 @@ submodule topology-libvirt {
           }
           action define {
             tailf:actionpoint libvirt-action;
+            input {
+              leaf force {
+                type boolean;
+              }
+            }
             output {
               uses libvirt-action-output-grouping;
             }
@@ -60,6 +52,11 @@ submodule topology-libvirt {
           }
           action start {
             tailf:actionpoint libvirt-action;
+            input {
+              leaf force {
+                type boolean;
+              }
+            }
             output {
               uses libvirt-action-output-grouping;
             }
@@ -70,20 +67,36 @@ submodule topology-libvirt {
               uses libvirt-action-output-grouping;
             }
           }
-          action check-topology-status {
-            tailf:actionpoint check-topology-status;
-            output {
+        }
+
+        action check-topology-status {
+          tailf:actionpoint check-topology-status;
+          input {
+            leaf frequency {
+              type enumeration {
+                enum run-now;
+                enum schedule;
+              }
+              default run-now;
+            }
+          }
+          output {
+            list device {
+              leaf name {
+                type string;
+              }
               leaf status {
-                type topology-status;
+                type status;
               }
             }
           }
-          leaf topology-status {
-            type topology-status;
-            config false;
-            tailf:cdb-oper {
-              tailf:persistent true;
-            }
+        }
+        leaf status {
+          type status;
+          default undefined;
+          config false;
+          tailf:cdb-oper {
+            tailf:persistent true;
           }
         }
       }
@@ -91,11 +104,9 @@ submodule topology-libvirt {
       augment "topology/links/link" {
         uses libvirt-network-grouping;
       }
-
       augment "topology/networks/network" {
         uses libvirt-network-grouping;
       }
-
       augment "topology/devices/device" {
         uses libvirt-device-grouping;
       }

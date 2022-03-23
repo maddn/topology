@@ -1,41 +1,36 @@
 submodule traffic-generator {
-
   yang-version 1.1;
-  belongs-to topology {
-    prefix topology;
-  }
+  belongs-to topology { prefix topology; }
 
-  import tailf-common {
-    prefix tailf;
-  }
-  import tailf-ncs {
-    prefix ncs;
-  }
+  import tailf-common { prefix tailf; }
+  import tailf-ncs { prefix ncs; }
 
-  grouping traffic-generator-grouping {
+  grouping traffic-generator-service-grouping {
     list traffic-generator {
       key topology;
-
-      uses ncs:service-data;
-      ncs:servicepoint traffic-generator;
-
       leaf topology {
         type leafref {
           path "/topologies/topology/name";
         }
       }
 
-      leaf-list devices {
-        type string;
-        tailf:non-strict-leafref {
-          path "deref(../topology)/../devices/device/device-name";
-        }
-      }
+      uses ncs:service-data;
+      ncs:servicepoint traffic-generator;
 
-      leaf-list destinations {
-        type tailf:octet-list {
-          tailf:value-length 2;
-        }
+      uses traffic-generator-grouping;
+    }
+  }
+
+  grouping traffic-generator-grouping {
+    leaf-list devices {
+      type string;
+      tailf:non-strict-leafref {
+        path "deref(../topology)/../devices/device/device-name";
+      }
+    }
+    leaf-list destinations {
+      type tailf:octet-list {
+        tailf:value-length 2;
       }
     }
   }

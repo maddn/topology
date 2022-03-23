@@ -1,0 +1,73 @@
+submodule ip-connectivity {
+  yang-version 1.1;
+  belongs-to topology { prefix topology; }
+
+  import tailf-common { prefix tailf; }
+  import tailf-ncs { prefix ncs; }
+
+  typedef hexadectet-list {
+    type string {
+      pattern '[0-9a-fA-F]{0,4}(:[0-9a-fA-F]{0,4})*';
+    }
+  }
+
+  grouping ip-connectivity-service-grouping {
+    container ip-connectivity {
+      presence true;
+
+      uses ncs:service-data;
+      ncs:servicepoint ip-connectivity;
+
+      uses ip-connectivity-grouping;
+    }
+  }
+
+  grouping ip-connectivity-grouping {
+    container loopback-interfaces {
+      list loopback {
+        key id;
+        leaf id {
+          type uint8;
+        }
+        leaf ipv4-subnet-start {
+          type tailf:octet-list {
+            tailf:value-length 3;
+          }
+          mandatory true;
+        }
+        leaf ipv6-subnet-start {
+          when "../../../ipv6";
+          type hexadectet-list {
+            pattern '.*(:.*){0,4}';
+          }
+          mandatory true;
+        }
+        leaf primary {
+          type empty;
+          must "count(../../loopback/primary)=1" {
+            error-message "Exactly 1 loopback interface must be primary";
+          }
+        }
+      }
+    }
+
+    container physical-interfaces {
+      leaf ipv4-subnet-start {
+        type tailf:octet-list {
+          tailf:value-length 1;
+        }
+        default 10;
+      }
+      leaf ipv6-subnet-start {
+        when "../../ipv6";
+        type hexadectet-list {
+          pattern '.*(:.*){0,2}';
+        }
+        default 2001;
+      }
+    }
+    leaf ipv6 {
+      type empty;
+    }
+  }
+}

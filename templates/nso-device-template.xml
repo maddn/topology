@@ -1,0 +1,30 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0">
+  <devices xmlns="http://tail-f.com/ns/ncs">
+    <?set-root-node {deref(definition)/..}?>
+    <device tags="merge">
+      <name>{$NAME}</name>
+      <address>{management-interface/ip-address}</address>
+      <authgroup>{/authgroup}</authgroup>
+      <device-type>
+        <cli>
+          <ned-id>{/ned-id}</ned-id>
+        </cli>
+      </device-type>
+      <ssh-algorithms>
+        <public-key>rsa-sha2-256</public-key>
+      </ssh-algorithms>
+      <trace>pretty</trace>
+      <state>
+        <admin-state>unlocked</admin-state>
+      </state>
+      <read-timeout>120</read-timeout>
+      <ned-settings when="{derived-from(/ned-id, 'cisco-iosxr-cli:cisco-iosxr-cli')}">
+        <cisco-iosxr xmlns="http://tail-f.com/ned/cisco-iosxr/meta">
+          <read>
+            <admin-show-running-config>false</admin-show-running-config>
+          </read>
+        </cisco-iosxr>
+      </ned-settings>
+    </device>
+  </devices>
+</config-template>

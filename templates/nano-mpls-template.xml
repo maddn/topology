@@ -1,0 +1,16 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="managed-topology"
+                 componenttype="topology:mpls"
+                 state="topology:config">
+
+  <topologies xmlns="http://example.com/topology">
+    <mpls>
+      <igp>{string(igp/name)}</igp>
+      <ldp when="{mpls/ldp}"/>
+      <rsvp when="{mpls/rsvp}"/>
+      <traffic-engineering when="{mpls/traffic-engineering}">
+        <pce when="{mpls/traffic-engineering/pce}"/>
+      </traffic-engineering>
+    </mpls>
+  </topologies>
+</config-template>

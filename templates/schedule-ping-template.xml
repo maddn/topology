@@ -1,0 +1,10 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0">
+  <scheduler xmlns="http://tail-f.com/ns/ncs-scheduler">
+    <task>
+      <name>ping-topology-{name}</name>
+      <schedule>*/2 * * * *</schedule>
+      <action-node>{$PATH}</action-node>
+      <action-name>check-topology-status</action-name>
+    </task>
+  </scheduler>
+</config-template>

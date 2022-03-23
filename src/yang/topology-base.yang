@@ -1,16 +1,9 @@
 submodule topology-base {
-
   yang-version 1.1;
-  belongs-to topology {
-    prefix topology;
-  }
+  belongs-to topology { prefix topology; }
 
-  import ietf-inet-types {
-    prefix inet;
-  }
-  import tailf-common {
-    prefix tailf;
-  }
+  import ietf-inet-types { prefix inet; }
+  import tailf-common { prefix tailf; }
 
   grouping topology-base-grouping {
     list topology {
@@ -26,17 +19,14 @@ submodule topology-base {
       container devices {
         list device {
           key id;
-
           leaf id {
             type uint8;
             mandatory true;
           }
-
           leaf prefix {
             type string;
             mandatory true;
           }
-
           leaf device-name {
             type string;
             config false;
@@ -50,7 +40,6 @@ submodule topology-base {
       container links {
         list link {
           key "a-end-device z-end-device";
-
           leaf a-end-device {
             type string;
             must "count(../../link[a-end-device = current()]" +
@@ -61,11 +50,9 @@ submodule topology-base {
               path "../../../devices/device/device-name";
             }
           }
-
           leaf a-end-interface-id {
             type uint8;
           }
-
           leaf z-end-device {
             type string;
             must "count(../../link[a-end-device = current()]" +
@@ -76,16 +63,13 @@ submodule topology-base {
               path "../../../devices/device/device-name";
             }
           }
-
           leaf z-end-interface-id {
             type uint8;
           }
-
           leaf igp-metric {
             type uint32;
             default 10;
           }
-
           leaf affinity {
             type string;
           }
@@ -95,21 +79,17 @@ submodule topology-base {
       container networks {
         list network {
           key name;
-
           leaf name {
             type string;
           }
-
           leaf interface-id {
             type uint8;
             mandatory true;
           }
-
           leaf ip-address-start {
             type inet:ipv4-address;
             default '10.11.12.0';
           }
-
           leaf-list devices {
             type string;
             tailf:non-strict-leafref {

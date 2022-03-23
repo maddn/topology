@@ -1,41 +1,36 @@
 submodule mpls {
-
   yang-version 1.1;
-  belongs-to topology {
-    prefix topology;
-  }
+  belongs-to topology { prefix topology; }
 
-  import tailf-ncs {
-    prefix ncs;
-  }
+  import tailf-ncs { prefix ncs; }
 
-  grouping mpls-grouping {
+  grouping mpls-service-grouping {
     list mpls {
       key igp;
-
-      uses ncs:service-data;
-      ncs:servicepoint mpls;
-
       leaf igp {
         type leafref {
           path "/topologies/igp/name";
         }
       }
 
-      leaf ldp {
+      uses ncs:service-data;
+      ncs:servicepoint mpls;
+
+      uses mpls-grouping;
+    }
+  }
+
+  grouping mpls-grouping {
+    leaf ldp {
+      type empty;
+    }
+    leaf rsvp {
+      type empty;
+    }
+    container traffic-engineering {
+      presence true;
+      leaf pce {
         type empty;
-      }
-
-      leaf rsvp {
-        type empty;
-      }
-
-      container traffic-engineering {
-        presence true;
-
-        leaf pce {
-          type empty;
-        }
       }
     }
   }

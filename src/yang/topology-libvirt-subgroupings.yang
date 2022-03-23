@@ -1,18 +1,20 @@
 submodule topology-libvirt-subgroupings {
-
   yang-version 1.1;
-  belongs-to topology {
-    prefix topology;
-  }
+  belongs-to topology { prefix topology; }
 
-  import ietf-yang-types {
-     prefix yang;
-  }
-  import ietf-inet-types {
-    prefix inet;
-  }
-  import tailf-common {
-    prefix tailf;
+  import ietf-yang-types { prefix yang; }
+  import ietf-inet-types { prefix inet; }
+  import tailf-common { prefix tailf; }
+
+  typedef status {
+    type enumeration {
+      enum undefined;
+      enum defined;
+      enum reachable;
+      enum ready;
+      enum not-reachable;
+      enum sync-error;
+    }
   }
 
   grouping libvirt-action-output-grouping {
@@ -68,6 +70,14 @@ submodule topology-libvirt-subgroupings {
       }
       leaf host-interface {
         type string;
+      }
+    }
+    leaf status {
+      type status;
+      default undefined;
+      config false;
+      tailf:cdb-oper {
+        tailf:persistent true;
       }
     }
   }

@@ -1,0 +1,14 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="managed-topology"
+                 componenttype="topology:igp"
+                 state="topology:config">
+
+  <topologies xmlns="http://example.com/topology">
+    <igp>
+      <name>{igp/name}</name>
+      <topology>{/topology}</topology>
+      <devices>{devices}</devices>
+      <is-is when="{is-is}"/>
+    </igp>
+  </topologies>
+</config-template>

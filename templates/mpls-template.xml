@@ -42,6 +42,28 @@
     <device>
       <name>{devices}</name>
       <config>
+
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <isis>
+            <tag tags="merge">
+              <name>{$IGP_NAME}</name>
+              <address-family tags="merge">
+                <ipv4>
+                  <unicast>
+                    <mpls when="{/traffic-engineering}">
+                      <traffic-eng>
+                        <router-id>
+                          <Loopback>{deref(../topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}</Loopback>
+                        </router-id>
+                      </traffic-eng>
+                    </mpls>
+                  </unicast>
+                </ipv4>
+              </address-family>
+            </tag>
+          </isis>
+        </router>
+
         <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <traffic-eng when="{/traffic-engineering}">
 

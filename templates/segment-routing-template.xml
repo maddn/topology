@@ -7,7 +7,7 @@
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
-            <tag tags="nocreate">
+            <tag tags="merge">
               <name>{string(/igp)}</name>
               <interface>
                 <name>GigabitEthernet0/0/0/{$interface_id}</name>
@@ -48,7 +48,7 @@
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
-            <tag tags="nocreate">
+            <tag tags="merge">
               <name>{$IGP_NAME}</name>
               <address-family tags="merge">
                 <ipv4>

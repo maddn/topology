@@ -1,101 +1,88 @@
 module topology {
-
   yang-version 1.1;
   namespace "http://example.com/topology";
   prefix topology;
 
-  import tailf-common {
-    prefix tailf;
-  }
-  import tailf-ncs {
-    prefix ncs;
-  }
+  import tailf-common { prefix tailf; }
+  import tailf-ncs { prefix ncs; }
 
   include topology-base;
   include topology-libvirt;
   include topology-libvirt-subgroupings;
   include libvirt;
+  include ip-connectivity;
   include base-config;
   include igp;
-  include mpls;
   include bgp;
+  include mpls;
   include segment-routing;
   include traffic-generator;
+  include managed-topology-nano-plan;
 
-  typedef hexadectet-list {
-    type string {
-      pattern '[0-9a-fA-F]{0,4}(:[0-9a-fA-F]{0,4})*';
+  grouping hidden-topology-link {
+    leaf topology {
+      type leafref {
+        path "/topologies/topology/name";
+      }
+      tailf:link "/topologies/topology[name=current()/../../topology]/name";
+      tailf:hidden full;
+      config false;
     }
   }
+
   container topologies {
     uses topology-libvirt-grouping;
     uses libvirt-hypervisor-grouping;
+    uses base-config-service-grouping;
+    uses igp-service-grouping;
+    uses bgp-service-grouping;
+    uses mpls-service-grouping;
+    uses segment-routing-service-grouping;
+    uses traffic-generator-service-grouping;
+    uses managed-topology;
   }
 
   augment "/topologies/topology" {
-    container ip-connectivity {
-      presence true;
+    uses ip-connectivity-service-grouping;
+  }
+
+  grouping managed-topology {
+    list managed-topology {
+      key topology;
+
+      ncs:servicepoint managed-topology;
       uses ncs:service-data;
-      ncs:servicepoint ip-connectivity;
+      uses ncs:nano-plan-data;
 
-      container loopback-interfaces {
-        list loopback {
-          key id;
-          leaf id {
-            type uint8;
-          }
-          leaf ipv4-subnet-start {
-            type tailf:octet-list {
-              tailf:value-length 3;
-            }
-            mandatory true;
-          }
-          leaf ipv6-subnet-start {
-            when "../../../ipv6";
-            type hexadectet-list {
-              pattern '.*(:.*){0,4}';
-            }
-            mandatory true;
-          }
+      uses ip-connectivity-grouping;
+      uses base-config-grouping;
 
-          leaf primary {
-            type empty;
-            must "count(../../loopback/primary)=1" {
-              error-message "Exactly 1 loopback interface must be primary";
-            }
-          }
-        }
+      container igp {
+        uses hidden-topology-link;
+        uses igp-grouping;
       }
-
-      container physical-interfaces {
-        leaf ipv4-subnet-start {
-          type tailf:octet-list {
-            tailf:value-length 1;
-          }
-          default 10;
-        }
-        leaf ipv6-subnet-start {
+      container bgp {
+        uses hidden-topology-link;
+        uses bgp-grouping;
+      }
+      container mpls {
+        when "../igp/name";
+        uses mpls-grouping;
+      }
+      container segment-routing {
+        when "../igp/name";
+        uses segment-routing-grouping;
+        container srv6 {
           when "../../ipv6";
-          type hexadectet-list {
-            pattern '.*(:.*){0,2}';
-          }
-          default 2001;
+          presence true;
+          uses srv6-grouping;
         }
       }
-
-      leaf ipv6 {
-        type empty;
+      container traffic-generator {
+        uses hidden-topology-link;
+        uses traffic-generator-grouping;
       }
     }
   }
 
-  augment "/topologies" {
-    uses base-config-grouping;
-    uses igp-grouping;
-    uses mpls-grouping;
-    uses bgp-grouping;
-    uses segment-routing-grouping;
-    uses traffic-generator-grouping;
-  }
 }
-

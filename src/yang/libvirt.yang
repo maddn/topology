@@ -193,12 +193,12 @@ submodule libvirt {
           mandatory true;
         }
         leaf ned-id {
-          type union {
-            type string;
+          //type union {
+          //  type string;
             type identityref {
               base ned:cli-ned-id;
             }
-          }
+          //}
         }
       }
     }

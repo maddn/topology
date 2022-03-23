@@ -1,0 +1,26 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"
+                 servicepoint="managed-topology"
+                 componenttype="topology:initial-config"
+                 state="topology:ip-connectivity">
+
+  <topologies xmlns="http://example.com/topology">
+    <topology>
+      <name>{topology}</name>
+      <ip-connectivity>
+        <ipv6 when="{ipv6}"/>
+        <loopback-interfaces>
+          <loopback foreach="{loopback-interfaces/loopback}">
+            <id>{id}</id>
+            <ipv4-subnet-start>{ipv4-subnet-start}</ipv4-subnet-start>
+            <ipv6-subnet-start>{ipv6-subnet-start}</ipv6-subnet-start>
+            <primary when="{primary}"/>
+          </loopback>
+        </loopback-interfaces>
+        <physical-interfaces>
+          <ipv4-subnet-start>{physical-interfaces/ipv4-subnet-start}</ipv4-subnet-start>
+          <ipv6-subnet-start>{physical-interfaces/ipv6-subnet-start}</ipv6-subnet-start>
+        </physical-interfaces>
+      </ip-connectivity>
+    </topology>
+  </topologies>
+</config-template>

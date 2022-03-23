@@ -2,6 +2,7 @@
 from ncs.application import Application
 from virt.libvirt_get_objects import LibvirtGetObjects
 from virt.libvirt_action import LibvirtAction
+from virt.topology_status import CheckTopologyStatus
 from topology.device_name_cb import Daemon as DeviceNameCallbackDaemon
 
 
@@ -17,6 +18,7 @@ class Main(Application):
         self.log.info('Main RUNNING')
         self.register_action('libvirt-get-objects', LibvirtGetObjects)
         self.register_action('libvirt-action', LibvirtAction)
+        self.register_action('check-topology-status', CheckTopologyStatus)
 
         self.device_name_cb = DeviceNameCallbackDaemon(app=self)
         self.device_name_cb.start()
