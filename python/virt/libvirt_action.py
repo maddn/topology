@@ -652,24 +652,27 @@ class Topology():
         self._volume.load_day0_templates(self._topology.devices.device)
         self._domain.load_device_templates(self._topology.devices.device)
 
-    def action(self, action):
+    def action(self, action, device_name=None):
         output = self._output.libvirt_action.create()
         output.action = action
 
-        if any(self._dev_defs[device.definition].device_type == 'XRv-9000'
-                for device in self._topology.devices.device):
-            for (idx, network_id) in enumerate(XRV9K_EXTRA_MGMT_NETWORKS):
+        if device_name is None:
+            if any(self._dev_defs[device.definition].device_type == 'XRv-9000'
+                    for device in self._topology.devices.device):
+                for (idx, network_id) in enumerate(XRV9K_EXTRA_MGMT_NETWORKS):
+                    self._extra_network.action(
+                            action, output, network_id, (0xff, 0xff-idx))
+
+            for (idx, network) in enumerate(self._topology.networks.network):
                 self._extra_network.action(
-                        action, output, network_id, (0xff, 0xff-idx))
+                        action, output, network.name, (0xfe, 0xff-idx))
 
-        for (idx, network) in enumerate(self._topology.networks.network):
-            self._extra_network.action(
-                    action, output, network.name, (0xfe, 0xff-idx))
-
-        for link in self._topology.links.link:
-            self._link_network.action(action, output, link)
+            for link in self._topology.links.link:
+                self._link_network.action(action, output, link)
 
         for device in self._topology.devices.device:
+            if device_name is not None and device.device_name != device_name:
+                continue
             if self._dev_defs[device.definition].device_type == 'XRv-9000':
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
@@ -716,11 +719,11 @@ class LibvirtAction(Action):
         if name == 'start':
             action = 'create'
         elif name == 'stop':
-            libvirt_topology.action('shutdown')
+            libvirt_topology.action('shutdown', input.device)
             libvirt_topology.wait_for_shutdown()
             action = 'destroy'
 
-        libvirt_topology.action(action)
+        libvirt_topology.action(action, input.device)
         update_status_after_action(topology, action)
 
         if name == 'start':

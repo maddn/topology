@@ -17,6 +17,18 @@ submodule topology-libvirt-subgroupings {
     }
   }
 
+  grouping libvirt-action-input-grouping {
+    leaf force {
+      type boolean;
+    }
+    leaf device {
+      type string;
+      tailf:non-strict-leafref {
+        path "../../../devices/device/device-name";
+      }
+    }
+  }
+
   grouping libvirt-action-output-grouping {
     list libvirt-action {
       leaf action {

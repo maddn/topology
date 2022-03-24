@@ -36,9 +36,7 @@ submodule topology-libvirt {
           action define {
             tailf:actionpoint libvirt-action;
             input {
-              leaf force {
-                type boolean;
-              }
+              uses libvirt-action-input-grouping;
             }
             output {
               uses libvirt-action-output-grouping;
@@ -46,6 +44,9 @@ submodule topology-libvirt {
           }
           action undefine {
             tailf:actionpoint libvirt-action;
+            input {
+              uses libvirt-action-input-grouping;
+            }
             output {
               uses libvirt-action-output-grouping;
             }
@@ -53,9 +54,7 @@ submodule topology-libvirt {
           action start {
             tailf:actionpoint libvirt-action;
             input {
-              leaf force {
-                type boolean;
-              }
+              uses libvirt-action-input-grouping;
             }
             output {
               uses libvirt-action-output-grouping;
@@ -63,6 +62,9 @@ submodule topology-libvirt {
           }
           action stop {
             tailf:actionpoint libvirt-action;
+            input {
+              uses libvirt-action-input-grouping;
+            }
             output {
               uses libvirt-action-output-grouping;
             }
