@@ -2,6 +2,7 @@ submodule base-config {
   yang-version 1.1;
   belongs-to topology { prefix topology; }
 
+  import ietf-inet-types { prefix inet; }
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
@@ -24,6 +25,52 @@ submodule base-config {
     }
     leaf login-banner {
       type string;
+    }
+
+    container logging {
+      presence true;
+      container syslog-server {
+        leaf ip-address {
+          type inet:ipv4-address;
+        }
+        leaf port {
+          type inet:port-number;
+        }
+      }
+    }
+
+    leaf ntp-server {
+      type inet:ipv4-address;
+    }
+
+    container snmp-server {
+      presence true;
+      list host {
+        key ip-address;
+        leaf ip-address {
+          type inet:ipv4-address;
+        }
+        leaf port {
+          type inet:port-number;
+        }
+        leaf community-string {
+          type string;
+        }
+      }
+    }
+
+    container grpc {
+      presence true;
+      leaf port {
+        type inet:port-number;
+      }
+    }
+
+    leaf interface-bandwidth {
+      type uint32;
+    }
+    leaf lldp {
+      type empty;
     }
 
     container static-routes {

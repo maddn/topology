@@ -7,6 +7,25 @@
     <base-config>
       <topology>{topology}</topology>
       <login-banner>{login-banner}</login-banner>
+      <logging when="{logging}">
+        <syslog-server>
+          <ip-address>{logging/syslog-server/ip-address}</ip-address>
+          <port>{logging/syslog-server/port}</port>
+        </syslog-server>
+      </logging>
+      <ntp-server>{ntp-server}</ntp-server>
+      <snmp-server when="{snmp-server}">
+        <host foreach="{snmp-server/host}">
+          <ip-address>{ip-address}</ip-address>
+          <port>{port}</port>
+          <community-string>{community-string}</community-string>
+        </host>
+      </snmp-server>
+      <grpc when="{grpc}">
+        <port>57400</port>
+      </grpc>
+      <lldp when="{lldp}"/>
+      <interface-bandwidth>{interface-bandwidth}</interface-bandwidth>
       <static-routes>
         <route foreach="{static-routes/route}">
           <source-device>{source-device}</source-device>

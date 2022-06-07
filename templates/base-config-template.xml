@@ -9,16 +9,27 @@
     <?end?>
   <?endmacro?>
 
+  <?macro InterfaceBaseConfig device_name interface_id?>
+    <device tags="nocreate">
+      <name>{$device_name}</name>
+      <config>
+        <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <GigabitEthernet tags="merge">
+            <id>0/0/0/{$interface_id}</id>
+            <bandwidth>{/interface-bandwidth}</bandwidth>
+            <lldp when="{/lldp}"/>
+            <load-interval>30</load-interval>
+          </GigabitEthernet>
+        </interface>
+      </config>
+    </device>
+  <?endmacro?>
+
   <devices xmlns="http://tail-f.com/ns/ncs">
     <device tags="nocreate">
       <name>{deref(topology)/../devices/device/device-name}</name>
       <config tags="merge">
         <hostname xmlns="http://tail-f.com/ned/cisco-ios-xr">{device-name}</hostname>
-        <line xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <console>
-            <width>0</width>
-          </console>
-        </line>
         <banner xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <login>
             <start-marker>$</start-marker>
@@ -26,13 +37,172 @@
             <end-marker>$</end-marker>
           </login>
         </banner>
+
+        <logging when="{/logging}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <trap>informational</trap>
+          <events>
+            <level>informational</level>
+            <link-status>software-interfaces</link-status>
+          </events>
+          <buffered>
+            <size>10000000</size>
+          </buffered>
+          <host>
+            <address>{/logging/syslog-server/ip-address}</address>
+            <vrf>default</vrf>
+            <port>{/logging/syslog-server/port}</port>
+          </host>
+          <console>disable</console>
+          <hostnameprefix>{device-name}</hostnameprefix>
+        </logging>
+        <service when="{/logging}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <timestamps>
+            <debug>
+              <datetime>
+                <msec/>
+              </datetime>
+            </debug>
+            <log>
+              <datetime>
+                <localtime/>
+                <msec/>
+                <show-timezone/>
+                <year/>
+              </datetime>
+            </log>
+          </timestamps>
+        </service>
+
+        <line xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <console>
+            <exec-timeout>
+              <minutes>0</minutes>
+              <seconds>0</seconds>
+            </exec-timeout>
+            <width>0</width>
+            <absolute-timeout>0</absolute-timeout>
+            <session-timeout>
+              <minutes>0</minutes>
+            </session-timeout>
+          </console>
+          <default>
+            <exec-timeout>
+              <minutes>0</minutes>
+              <seconds>0</seconds>
+            </exec-timeout>
+            <absolute-timeout>0</absolute-timeout>
+            <session-timeout>
+              <minutes>0</minutes>
+            </session-timeout>
+          </default>
+        </line>
+        <vty-pool xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <default>
+            <first-vty>0</first-vty>
+            <last-vty>50</last-vty>
+          </default>
+        </vty-pool>
+
+        <telnet xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <vrf>
+            <name>default</name>
+            <telnet-server-list>
+              <af>ipv4</af>
+              <server>
+                <max-servers>10</max-servers>
+              </server>
+            </telnet-server-list>
+          </vrf>
+        </telnet>
+        <ssh xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <server>
+            <netconf>
+              <vrf>
+                <name>default</name>
+              </vrf>
+            </netconf>
+            <rate-limit>600</rate-limit>
+            <session-limit>110</session-limit>
+            <v2/>
+            <vrf>
+              <name>default</name>
+            </vrf>
+          </server>
+        </ssh>
+        <netconf-yang xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <agent>
+            <ssh/>
+          </agent>
+        </netconf-yang>
+        <grpc when="{/grpc}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <port>{/grpc/port}</port>
+          <no-tls/>
+          <address-family>ipv4</address-family>
+        </grpc>
+
+        <ntp xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <server>
+            <server-list>
+              <name>{/ntp-server}</name>
+            </server-list>
+          </server>
+        </ntp>
+
+        <snmp-server when="{/snmp-server}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <ifindex>persist</ifindex>
+          <host foreach="{/snmp-server/host}">
+            <address>{ip-address}</address>
+            <type>traps</type>
+            <community-string>{community-string}</community-string>
+            <version>2c</version>
+            <udp-port>{port}</udp-port>
+          </host>
+          <community>
+            <name>cisco</name>
+            <RO/>
+          </community>
+          <trap-source>
+            <Loopback>0</Loopback>
+          </trap-source>
+          <traps>
+            <traps-list>
+              <name>snmp linkdown</name>
+            </traps-list>
+            <traps-list>
+              <name>snmp linkup</name>
+            </traps-list>
+          </traps>
+        </snmp-server>
+
       </config>
     </device>
+
+    <?foreach {deref(topology)/../links/link}?>
+      <?expand InterfaceBaseConfig
+        device_name=a-end-device
+        interface_id=a-end-interface-id
+      ?>
+      <?expand InterfaceBaseConfig
+        device_name=z-end-device
+        interface_id=z-end-interface-id
+      ?>
+    <?end?>
+    <?foreach {deref(topology)/../networks/network}?>
+      <?foreach {devices}?>
+        <?expand InterfaceBaseConfig
+          device_name=.
+          interface_id=../interface-id
+        ?>
+      <?end?>
+    <?end?>
 
     <?foreach {static-routes/route}?>
       <?set SOURCE_DEVICE_ID={deref(source-device)/../id}?>
       <?set DESTINATION_DEVICE_ID={deref(destination-device)/../id}?>
-      <?expand GetSortedDeviceIds device_id_1=$SOURCE_DEVICE_ID device_id_2=$DESTINATION_DEVICE_ID?>
+      <?expand GetSortedDeviceIds
+        device_id_1=$SOURCE_DEVICE_ID
+        device_id_2=$DESTINATION_DEVICE_ID
+      ?>
       <?set LINK_SUBNET={concat(
         deref(../../topology)/../ip-connectivity/physical-interfaces/ipv4-subnet-start,
         '.', $LOWER_DEVICE_ID, '.', $HIGHER_DEVICE_ID)}?>
