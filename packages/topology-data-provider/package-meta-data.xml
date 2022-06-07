@@ -1,15 +1,12 @@
 <ncs-package xmlns="http://tail-f.com/ns/ncs-packages">
-  <name>topology</name>
+  <name>topology-data-provider</name>
   <package-version>1.0</package-version>
-  <description>Generated Python package</description>
+  <description>Skeleton for a simple data provider</description>
   <ncs-min-version>5.6</ncs-min-version>
-  <required-package>
-    <name>topology-data-provider</name>
-  </required-package>
   <component>
     <name>main</name>
     <application>
-      <python-class-name>topology.main.Main</python-class-name>
+      <python-class-name>topology_data_provider.main.Main</python-class-name>
     </application>
   </component>
 </ncs-package>

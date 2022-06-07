@@ -4,29 +4,30 @@ all: fxs
 # Include standard NCS examples build definitions and rules
 include $(NCS_DIR)/src/ncs/build/include.ncs.mk
 
-YANG_FILES = $(wildcard yang/*.yang)
-SRC = $(and $(YANG_FILES),$(notdir $(shell grep -L "belongs-to" $(YANG_FILES))))
-DIRS = ../load-dir java/src/$(JDIR)/$(NS)
-FXS = $(SRC:%.yang=../load-dir/%.fxs)
+YANG = $(wildcard yang/*.yang)
+SRC  = $(and $(YANG),$(notdir $(shell grep -L "belongs-to" $(YANG))))
+DIRS = ../load-dir
+FXS  = $(SRC:%.yang=../load-dir/%.fxs)
 
 ## Uncomment and patch the line below if you have a dependency to a NED
 ## or to other YANG files
 # YANGPATH += ../../<ned-name>/src/ncsc-out/modules/yang \
 # 	../../<pkt-name>/src/yang
 
-YANGPATH +=	yang
-
+YANGPATH   +=	yang
 NCSCPATH   = $(YANGPATH:%=--yangpath %)
 YANGERPATH = $(YANGPATH:%=--path %)
 
 fxs: $(DIRS) $(FXS)
+.PHONY: fxs
 
 $(DIRS):
 	mkdir -p $@
 
 ../load-dir/%.fxs: yang/%.yang
-	$(NCSC)  `ls $*-ann.yang  > /dev/null 2>&1 && echo "-a $*-ann.yang"` \
-             $(NCSCPATH) -c -o $@ $<
+	$(NCSC) `ls $*-ann.yang  > /dev/null 2>&1 && echo "-a $*-ann.yang"` \
+		$(NCSCPATH) \
+		-c -o $@ $<
 
 clean:
 	rm -rf $(DIRS)
