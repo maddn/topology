@@ -42,6 +42,15 @@
     <device>
       <name>{devices}</name>
       <config>
+        <ipv4 when="{/traffic-engineering}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <unnumbered>
+            <mpls>
+              <traffic-eng>
+                <Loopback>{$LOOPBACK_ID}</Loopback>
+              </traffic-eng>
+            </mpls>
+          </unnumbered>
+        </ipv4>
 
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
@@ -53,7 +62,7 @@
                     <mpls when="{/traffic-engineering}">
                       <traffic-eng>
                         <router-id>
-                          <Loopback>{deref(../topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}</Loopback>
+                          <Loopback>{$LOOPBACK_ID}</Loopback>
                         </router-id>
                       </traffic-eng>
                     </mpls>
