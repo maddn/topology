@@ -2,7 +2,6 @@ submodule topology-base {
   yang-version 1.1;
   belongs-to topology { prefix topology; }
 
-  import ietf-inet-types { prefix inet; }
   import tailf-common { prefix tailf; }
 
   grouping topology-base-grouping {
@@ -86,9 +85,11 @@ submodule topology-base {
             type uint8;
             mandatory true;
           }
-          leaf ip-address-start {
-            type inet:ipv4-address;
-            default '10.11.12.0';
+          leaf ipv4-subnet-start {
+            type tailf:octet-list {
+              tailf:value-length 3;
+            }
+            default '10.11.12';
           }
           leaf-list devices {
             type string;

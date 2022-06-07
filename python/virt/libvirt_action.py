@@ -74,6 +74,11 @@ def nso_device_onboard(device):
         template.apply('nso-device-template', template_vars)
         trans.apply()
 
+def force_maagic_leaf_val2str(maagic_node, leaf_name):
+    #pylint: disable=protected-access
+    leaf_node = maagic_node._children.get_by_yang(leaf_name)
+    return leaf_node.get_value_object().val2str(leaf_node._cs_node)
+
 
 class NetworkManager():
     def __init__(self, topology):
@@ -85,7 +90,8 @@ class NetworkManager():
                 (self._devices[device], network.interface_id): network.name
                 for network in topology.networks.network
                 for device in network.devices}
-        self._networks = {network.name: network.ip_address_start
+        self._networks = {network.name:
+                f'{force_maagic_leaf_val2str(network, "ipv4-subnet-start")}.0'
                 for network in topology.networks.network}
 
         self._link_networks = {}
