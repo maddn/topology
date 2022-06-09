@@ -53,6 +53,9 @@
               <net>
                 <id>49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00</id>
               </net>
+              <distribute when="{count(../../bgp[topology=/../name]/link-state/routers[.=current()]) > 0}">
+                <link-state/>
+              </distribute>
               <address-family>
                 <ipv4>
                   <unicast>
