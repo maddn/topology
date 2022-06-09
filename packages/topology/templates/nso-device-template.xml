@@ -2,7 +2,7 @@
   <devices xmlns="http://tail-f.com/ns/ncs">
     <?set-root-node {deref(definition)/..}?>
     <device tags="merge">
-      <name>{$NAME}</name>
+      <name>{device-name}</name>
       <address>{management-interface/ip-address}</address>
       <authgroup>{/authgroup}</authgroup>
       <device-type>

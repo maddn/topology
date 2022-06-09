@@ -67,11 +67,8 @@ def write_oper_data(path, leaf_value_pairs):
 
 def nso_device_onboard(device):
     with maapi.single_write_trans('admin', 'python') as trans:
-        device_context = maagic.get_node(trans, device._path)
-        template_vars = ncs.template.Variables()
-        template_vars.add('NAME', device_context.device_name)
-        template = ncs.template.Template(device_context)
-        template.apply('nso-device-template', template_vars)
+        template = ncs.template.Template(trans, device._path)
+        template.apply('nso-device-template', None)
         trans.apply()
 
 def force_maagic_leaf_val2str(maagic_node, leaf_name):
