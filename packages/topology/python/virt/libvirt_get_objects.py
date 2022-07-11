@@ -32,29 +32,28 @@ class LibvirtGetObjects(Action):
     def cb_action(self, uinfo, name, kp, input, output, trans):
         self.log.info('action name: ', name)
         hypervisor = maagic.get_node(trans, kp[1:])
+        trans.maapi.install_crypto_keys()
 
-        libvirt_conn = LibvirtConnection()
-        libvirt_conn.connect(hypervisor.url)
+        with LibvirtConnection(hypervisor) as libvirt_conn:
+            if name == 'domains':
+                libvirt_conn.populate_domains()
+                dict_dict_to_yang_list(libvirt_conn.domains, output.domain)
 
-        if name == 'domains':
-            libvirt_conn.populate_domains()
-            dict_dict_to_yang_list(libvirt_conn.domains, output.domain)
+            elif name == 'volumes':
+                libvirt_conn.populate_volumes()
+                for pool_name, volumes in libvirt_conn.volumes.items():
+                    pool_node = create_list_item(pool_name, output.storage_pool)
+                    dict_dict_to_yang_list(volumes, pool_node.volume)
 
-        elif name == 'volumes':
-            libvirt_conn.populate_volumes()
-            for pool_name, volumes in libvirt_conn.volumes.items():
-                pool_node = create_list_item(pool_name, output.storage_pool)
-                dict_dict_to_yang_list(volumes, pool_node.volume)
+            elif name == 'networks':
+                def _networks_to_yang(networks, yang_list):
+                    for network_name, network in networks.items():
+                        network_node = create_list_item(network_name, yang_list)
+                        if 'bridge-name' in network:
+                            network_node.bridge_name = network['bridge-name']
+                        list_dict_to_yang_list(
+                                network['interfaces'], network_node.interface)
 
-        elif name == 'networks':
-            def _networks_to_yang(networks, yang_list):
-                for network_name, network in networks.items():
-                    network_node = create_list_item(network_name, yang_list)
-                    if 'bridge-name' in network:
-                        network_node.bridge_name = network['bridge-name']
-                    list_dict_to_yang_list(
-                            network['interfaces'], network_node.interface)
-
-            libvirt_conn.populate_networks(include_ifaces=True)
-            _networks_to_yang(libvirt_conn.networks, output.network)
-            _networks_to_yang(libvirt_conn.bridges, output.external_bridge)
+                libvirt_conn.populate_networks(include_ifaces=True)
+                _networks_to_yang(libvirt_conn.networks, output.network)
+                _networks_to_yang(libvirt_conn.bridges, output.external_bridge)

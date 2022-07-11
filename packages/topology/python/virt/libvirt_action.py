@@ -712,22 +712,21 @@ class LibvirtAction(Action):
                 '../libvirt/hypervisor')[hypervisor_name]
 
         trans.maapi.install_crypto_keys()
-        libvirt_conn = LibvirtConnection()
-        libvirt_conn.connect(hypervisor.url)
-        libvirt_conn.populate_cache()
+        with LibvirtConnection(hypervisor) as libvirt_conn:
+            libvirt_conn.populate_cache()
 
-        libvirt_topology = Topology(libvirt_conn, topology,
-                hypervisor, self.log, output, uinfo.username)
+            libvirt_topology = Topology(libvirt_conn, topology,
+                    hypervisor, self.log, output, uinfo.username)
 
-        if name == 'start':
-            action = 'create'
-        elif name == 'stop':
-            libvirt_topology.action('shutdown', input.device)
-            libvirt_topology.wait_for_shutdown()
-            action = 'destroy'
+            if name == 'start':
+                action = 'create'
+            elif name == 'stop':
+                libvirt_topology.action('shutdown', input.device)
+                libvirt_topology.wait_for_shutdown()
+                action = 'destroy'
 
-        libvirt_topology.action(action, input.device)
-        update_status_after_action(topology, action)
+            libvirt_topology.action(action, input.device)
+            update_status_after_action(topology, action)
 
-        if name == 'start':
-            schedule_topology_ping(kp[1:])
+            if name == 'start':
+                schedule_topology_ping(kp[1:])

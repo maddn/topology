@@ -43,15 +43,25 @@ submodule libvirt {
         leaf name {
           type string;
         }
-        leaf url {
+        leaf host {
           type string;
           mandatory true;
+        }
+        leaf transport {
+          type enumeration {
+            enum "tls";
+            enum "tcp";
+            enum "ssh";
+            enum "libssh";
+            enum "unix";
+          }
+          default "libssh";
         }
         leaf username {
           type string;
         }
         leaf password {
-          type string;
+          type tailf:aes-256-cfb-128-encrypted-string;
         }
         container management-network {
           leaf bridge {

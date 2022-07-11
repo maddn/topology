@@ -2,20 +2,62 @@
 from collections import defaultdict
 from xml.etree.ElementTree import fromstring
 import libvirt
+_ncs = __import__('_ncs')
 
 
 class LibvirtConnection():
-    def __init__(self):
+    def __init__(self, hypervisor):
         self.conn = None
         self.bridges = defaultdict(lambda: defaultdict(dict, interfaces=[]))
         self.networks = {}
         self.domains = {}
         self.volumes = {} # by pool
 
-    def connect(self, url):
-        self.conn = libvirt.open(url)
+        self._username = hypervisor.username
+        username_str = f'{self._username}@' if self._username else ''
+
+        parameters_str = ''
+        if hypervisor.transport == 'libssh':
+            parameters_str = '?known_hosts_verify=ignore'
+        if hypervisor.transport == 'ssh':
+            parameters_str = '?no_verify=1'
+
+        self._url = (f'qemu+{hypervisor.transport}://'
+                     f'{username_str}{hypervisor.host}/system{parameters_str}')
+        self._password = _ncs.decrypt(hypervisor.password) if (
+                hypervisor.password is not None) else None
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.conn is not None:
+            self.disconnect()
+
+    def _user_interaction_callback(self, credentials, _):
+        for credential in credentials:
+            if credential[0] == libvirt.VIR_CRED_USERNAME:
+                credential[4] = self._username
+            elif credential[0] in [
+                    libvirt.VIR_CRED_PASSPHRASE,
+                    libvirt.VIR_CRED_NOECHOPROMPT]:
+                credential[4] = self._password
+            else:
+                return -1
+        return 0
+
+    def connect(self):
+        auth = [[libvirt.VIR_CRED_USERNAME,
+                 libvirt.VIR_CRED_PASSPHRASE,
+                 libvirt.VIR_CRED_NOECHOPROMPT
+                ], self._user_interaction_callback, None]
+        self.conn = libvirt.openAuth(self._url, auth, 0)
         if self.conn is None:
-            raise Exception(f'Failed to open connection to {url}')
+            raise Exception(f'Failed to open connection to {self._url}')
+
+    def disconnect(self):
+        self.conn.close()
 
     def populate_cache(self):
         self.populate_domains()
