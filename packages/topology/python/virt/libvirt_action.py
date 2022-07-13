@@ -2,6 +2,7 @@
 from collections import defaultdict
 from io import BytesIO
 from ipaddress import IPv4Address
+from passlib.hash import md5_crypt
 from time import sleep
 from xml.etree.ElementTree import fromstring, tostring
 from xml.dom.minidom import parseString
@@ -10,7 +11,9 @@ import base64
 import crypt
 import os
 import re
+import subprocess
 
+import fs
 import pycdlib
 
 import ncs
@@ -39,7 +42,7 @@ def generate_volume_name(device_name):
     return f'{device_name}.qcow2'
 
 def generate_day0_volume_name(device_name):
-    return f'{device_name}-day0.iso'
+    return f'{device_name}-day0.img'
 
 def generate_iface_dev_name(device_id, other_id):
     return f'veth-{device_id}-{other_id}'
@@ -211,6 +214,15 @@ class DomainXmlBuilder():
             'base-image-name': base_image_name,
             'bus': 'virtio'})
 
+    def _get_raw_disk_xml(self, volume_name, pool_name):
+        return self._templates.apply_xml_template('disk.xml', {
+            'disk-device-type': 'disk',
+            'file-format': 'raw',
+            'storage-pool': pool_name,
+            'volume-name': volume_name,
+            'target-dev': 'vdb',
+            'bus': 'virtio'})
+
     def _get_cdrom_xml(self, volume_name, pool_name):
         return self._templates.apply_xml_template('disk.xml', {
             'disk-device-type': 'cdrom',
@@ -262,8 +274,12 @@ class DomainXmlBuilder():
         self._domain_xml_devices.append(self._get_disk_xml(
             generate_volume_name(self._device_name), storage_pool, base_image))
 
-    def add_day0_disk(self, storage_pool):
+    def add_day0_cdrom(self, storage_pool):
         self._domain_xml_devices.append(self._get_cdrom_xml(
+            generate_day0_volume_name(self._device_name), storage_pool))
+
+    def add_day0_disk(self, storage_pool):
+        self._domain_xml_devices.append(self._get_raw_disk_xml(
             generate_day0_volume_name(self._device_name), storage_pool))
 
     def add_data_ifaces(self, include_null_interfaces):
@@ -403,6 +419,81 @@ class Volume(LibvirtObject):
         for template in day0_templates:
             self._templates.load_template('images', template)
 
+    def _create_raw_disk_image(self, file_name):
+        size = 1024 * 1024 #1048576
+        bytes_per_sector = 512
+        sectors_per_track = 63
+        heads = 2
+
+        sectors = size / bytes_per_sector #2048
+        actual_sectors = int(sectors // sectors_per_track * sectors_per_track) #32*63 = 2016
+        actual_size = actual_sectors * bytes_per_sector #1032192
+        cylinders = int(actual_sectors / sectors_per_track / heads) #16
+        first_sector = sectors_per_track * 1 #63
+
+        #dd if=/dev/zero of=test.img count=2016
+        self._log.info(f'Creating empty disk image using temporary disk file '
+                       f'{file_name}')
+        with open(file_name, 'wb') as binary_file:
+            binary_file.write(b'\x00' * actual_size)
+
+        #fdisk --cylinders 16 --heads 2 --sectors 63 test.img
+        self._log.info('Creating partition table using fdisk')
+        with subprocess.Popen(['fdisk',
+                    '--cylinders', str(cylinders),
+                    '--heads', str(heads),
+                    '--sectors', str(sectors_per_track),
+                    file_name],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                text=True) as fdisk:
+            fdisk.communicate(
+                    f'n\n' #Add partition
+                    f'p\n' #Partition type (primary)
+                    f'1\n' #Partition number
+                    f'{first_sector}\n' #First sector
+                    f'{actual_sectors-1}\n' #Last sector
+                    f't\n' #Change partition type
+                    f'01\n' #01 FAT12
+                    f'a\n' #Toggle boot flag
+                    f'w\n' #Write table and exit
+                )
+
+        #mkfs.fat -F 12 -g 16/63 -h 1 -R 8 -s 8 -v --offset 63 ./test.img
+        self._log.info('Formatting partition using mkfs.fat')
+        subprocess.run(['mkfs.fat',
+                '-F', '12', #FAT size
+                '-g', f'{heads}/{sectors_per_track}', #Geometry
+                '-h', '1', #Hiddens sectors
+                '-R', '8', #Reserved sectors
+                '-s', '8', #Sectors per cluster
+                '--offset', f'{first_sector}',
+                file_name],
+            stdout=subprocess.DEVNULL, check=True)
+
+        return first_sector*bytes_per_sector
+
+    def _create_ios_day0_disk_image(self, file_name, variables):
+        day0_str = self._templates.apply_template(file_name, variables)
+        tmp_disk_file = \
+                f'tmp-{generate_day0_volume_name(variables["device-name"])}'
+
+        offset = self._create_raw_disk_image(tmp_disk_file)
+
+        self._log.info('Writing day0 file to partition')
+        self._log.info(f'ios_config.txt:\n{day0_str}')
+        with fs.open_fs(f'fat://{tmp_disk_file}?'
+                        f'offset={offset}') as flash_drive:
+            flash_drive.writetext('/ios_config.txt', day0_str)
+
+        with open(tmp_disk_file, 'rb') as binary_file:
+            disk_byte_str = binary_file.read()
+
+        self._log.info(f'Deleting temporary disk file {tmp_disk_file}')
+        os.remove(tmp_disk_file)
+
+        return disk_byte_str
+
     def _add_iso_file(self, iso, file_string, file_name):
         self._log.info(f'{file_name}:\n{file_string}')
         byte_str = file_string.encode()
@@ -476,6 +567,8 @@ class Volume(LibvirtObject):
             'username': mapping.remote_name,
             'password': crypt.crypt(_ncs.decrypt(mapping.remote_password),
                 crypt.mksalt(crypt.METHOD_SHA512)),
+            'password-md5': md5_crypt.using(salt_size=4).hash(
+                _ncs.decrypt(mapping.remote_password)),
             **self._resource_mgr.mgmt_network_variables}
 
         if dev_def.day0_upload_file:
@@ -484,26 +577,29 @@ class Volume(LibvirtObject):
             variables['file-content'] = base64.b64encode(byte_array).decode()
 
         if dev_def.device_type == 'XRv-9000':
-            iso_byte_str = self._create_iosxr_day0_iso_image(
+            image_byte_str = self._create_iosxr_day0_iso_image(
                     dev_def.day0_file, variables)
-        else:
-            iso_byte_str = self._create_cloud_init_iso_image(
+        elif dev_def.device_type == 'IOSv':
+            image_byte_str = self._create_ios_day0_disk_image(
+                    dev_def.day0_file, variables)
+        elif dev_def.device_type == 'Linux':
+            image_byte_str = self._create_cloud_init_iso_image(
                     device_id, dev_def.day0_file, variables)
 
         pool = self._libvirt.conn.storagePoolLookupByName(dev_def.storage_pool)
         volume_xml_str = self._templates.apply_template('volume.xml', {
             'name': volume_name,
-            'capacity': len(iso_byte_str),
+            'capacity': len(image_byte_str),
             'format-type': 'raw'})
 
         self._log.info(f'Creating day0 volume {volume_name}')
         self._log.info(volume_xml_str)
         volume = pool.createXML(volume_xml_str)
 
-        self._log.info(f'Uploading day0 iso to volume {volume_name}')
+        self._log.info(f'Uploading day0 image to volume {volume_name}')
         stream = self._libvirt.conn.newStream()
-        volume.upload(stream, 0, len(iso_byte_str))
-        stream.send(iso_byte_str)
+        volume.upload(stream, 0, len(image_byte_str))
+        stream.send(image_byte_str)
         stream.finish()
         self._output.volumes.create(volume_name)
 
@@ -584,11 +680,14 @@ class Domain(LibvirtObject):
         xml_builder.add_disk(dev_def.storage_pool, dev_def.base_image
                 if dev_def.base_image_type == 'backing-store' else None)
         if dev_def.day0_file is not None:
-            xml_builder.add_day0_disk(dev_def.storage_pool)
+            if dev_def.device_type == 'IOSv':
+                xml_builder.add_day0_disk(dev_def.storage_pool)
+            else:
+                xml_builder.add_day0_cdrom(dev_def.storage_pool)
 
         (mgmt_ip_address, mac_address, iface_dev_name
-                ) = xml_builder.add_mgmt_iface('e1000'
-                        if dev_def.device_type == 'XRv-9000' else 'virtio')
+                ) = xml_builder.add_mgmt_iface('e1000' if dev_def.device_type
+                        in ('XRv-9000', 'IOSv') else 'virtio')
         write_oper_data(device.management_interface._path, [
                 ('ip-address', mgmt_ip_address),
                 ('mac-address', mac_address),
@@ -685,7 +784,9 @@ class Topology():
     def wait_for_shutdown(self):
         timer = 0
         while any(self._domain.is_active(device)
-                  for device in self._topology.devices.device) and timer < 60:
+                  for device in self._topology.devices.device
+                  if self._dev_defs[device.definition].device_type != 'IOSv'
+                  ) and timer < 60:
             sleep(10)
             timer += 10
 

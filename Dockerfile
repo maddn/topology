@@ -6,6 +6,8 @@ RUN apt-get update \
      ant \
      build-essential \
      default-jre-headless \
+     dosfstools \
+     fdisk \
      iputils-ping \
      less \
      libexpat1 \
@@ -17,6 +19,7 @@ RUN apt-get update \
      python3 \
      python3-dev \
      python3-pip \
+     python3-setuptools \
      procps \
      syslog-ng \
      tcpdump \
@@ -24,7 +27,7 @@ RUN apt-get update \
      vim-tiny \
      xsltproc \
      xmlstarlet \
-  && pip3 install libvirt-python pycdlib \
+  && pip3 install libvirt-python passlib pycdlib pyfatfs \
   && apt-get -qy purge pkg-config python3-pip python3-dev \
   && apt-get -qy autoremove \
   && apt-get clean \

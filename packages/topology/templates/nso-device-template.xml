@@ -11,7 +11,8 @@
         </cli>
       </device-type>
       <ssh-algorithms>
-        <public-key>rsa-sha2-256</public-key>
+        <public-key when="{/device-type='XRv-9000'}">rsa-sha2-256</public-key>
+        <public-key when="{/device-type='IOSv'}">ssh-rsa</public-key>
       </ssh-algorithms>
       <trace>pretty</trace>
       <state>

@@ -1,0 +1,40 @@
+<domain type='kvm'>
+  <name>{device-name}</name>
+  <memory unit='MiB'>{memory}</memory>
+  <currentMemory unit='MiB'>{memory}</currentMemory>
+  <vcpu placement='static'>{vcpus}</vcpu>
+  <cpu mode='host-passthrough'/>
+  <os>
+    <type arch='x86_64' machine='pc-i440fx-rhel7.0.0'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+  <devices>
+    <emulator>/usr/libexec/qemu-kvm</emulator>
+
+    <!-- virsh console instead of telnet for first serial port -->
+    <console type="pty">
+      <target type="serial" port="0"/>
+    </console>
+    <!-- Access: XR Console -->
+    <serial type='pty'>
+       <target port="0"/>
+     </serial>
+
+    <!-- Access: XR Aux (telnet localhost 16101) -->
+    <serial type='tcp'>
+       <source mode="bind" host="0.0.0.0" service="161{id:02d}"/>
+       <protocol type="telnet"/>
+       <target port="1"/>
+    </serial>
+
+    <memballoon model='none'/>
+  </devices>
+</domain>
+

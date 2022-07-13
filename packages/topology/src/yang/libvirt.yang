@@ -156,7 +156,8 @@ submodule libvirt {
         leaf device-type {
           type enumeration {
             enum XRv-9000;
-            enum Generic;
+            enum IOSv;
+            enum Linux;
           }
           mandatory true;
         }
