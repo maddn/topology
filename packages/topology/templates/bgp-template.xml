@@ -1,6 +1,6 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
                  servicepoint="bgp">
-  <?set DEFAULT_LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
+  <?set PRIMARY_LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
   <?set IPV6={boolean(deref(topology)/../ip-connectivity/ipv6)}?>
   <?set-root-node {/}?>
   <devices xmlns="http://tail-f.com/ns/ncs">
@@ -9,7 +9,7 @@
       <?set ROLE={local-name(..)}?>
       <?set LOOPBACK_ID={../loopback-id}?>
       <?if {$LOOPBACK_ID=""}?>
-        <?set LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+        <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
       <?end?>
 
       <config>
@@ -35,7 +35,7 @@
               <?foreach {../../route-reflector/routers}?>
                 <?set RR_LOOPBACK_ID={../loopback-id}?>
                 <?if {$RR_LOOPBACK_ID=""}?>
-                  <?set RR_LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+                  <?set RR_LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
                 <?end?>
                 <neighbor>
                   <id>{string(/devices/device[name=current()]/config/interface/Loopback[id=$RR_LOOPBACK_ID]/ipv4/address/ip)}</id>
@@ -75,7 +75,7 @@
       <name>{route-reflector/routers}</name>
       <?set LOOPBACK_ID={../loopback-id}?>
       <?if {$LOOPBACK_ID=""}?>
-        <?set LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+        <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
       <?end?>
 
       <config>
@@ -101,7 +101,7 @@
               <?foreach {../../provider-edge/routers | ../../link-state/routers}?>
                 <?set PE_LOOPBACK_ID={../loopback-id}?>
                 <?if {$PE_LOOPBACK_ID=""}?>
-                  <?set PE_LOOPBACK_ID={$DEFAULT_LOOPBACK_ID}?>
+                  <?set PE_LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
                 <?end?>
                 <neighbor>
                   <id>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PE_LOOPBACK_ID]/ipv4/address/ip)}</id>

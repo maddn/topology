@@ -46,7 +46,7 @@
           <unnumbered>
             <mpls>
               <traffic-eng>
-                <Loopback>{$LOOPBACK_ID}</Loopback>
+                <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
               </traffic-eng>
             </mpls>
           </unnumbered>
@@ -62,7 +62,7 @@
                     <mpls when="{/traffic-engineering}">
                       <traffic-eng>
                         <router-id>
-                          <Loopback>{$LOOPBACK_ID}</Loopback>
+                          <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
                         </router-id>
                       </traffic-eng>
                     </mpls>
@@ -103,7 +103,7 @@
               <?set-root-node {/}?>
               <peer>
                 <source>
-                  <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+                  <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
                 </source>
                 <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
                 <ipv4>

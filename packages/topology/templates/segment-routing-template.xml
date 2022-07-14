@@ -74,7 +74,7 @@
                 </ipv6>
               </address-family>
               <interface>
-                <name>Loopback{$LOOPBACK_ID}</name>
+                <name>Loopback{$PRIMARY_LOOPBACK_ID}</name>
                 <address-family tags="merge">
                   <ipv4>
                     <unicast>
@@ -132,7 +132,7 @@
             <pcc>
               <?set-root-node {/}?>
               <source-address>
-                <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+                <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
               </source-address>
 
               <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>

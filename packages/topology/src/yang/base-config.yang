@@ -75,7 +75,7 @@ submodule base-config {
 
     container static-routes {
       list route {
-        key "source-device destination-device loopback-interface";
+        key "source-device destination-device loopback-id";
         leaf source-device {
           type string;
           tailf:non-strict-leafref {
@@ -99,10 +99,11 @@ submodule base-config {
               "directly connect (with an entry in the topology links list.)";
           }
         }
-        leaf loopback-interface {
+        leaf loopback-id {
           type uint8;
           tailf:non-strict-leafref {
-            path "deref(../../../topology)/../ip-connectivity/loopback-interfaces/loopback/id";
+            path "deref(../../../topology)/.." +
+                 "/ip-connectivity/loopback-interfaces/loopback/id";
           }
         }
         leaf return-route {
@@ -112,6 +113,22 @@ submodule base-config {
             enum none;
           }
           default source-subnet;
+        }
+      }
+
+      container loopback-to-management {
+        leaf device {
+          type string;
+          tailf:non-strict-leafref {
+            path "deref(../../../topology)/../devices/device/device-name";
+          }
+        }
+        leaf loopback-id {
+          type uint8;
+          tailf:non-strict-leafref {
+            path "deref(../../../topology)/.." +
+                 "/ip-connectivity/loopback-interfaces/loopback/id";
+          }
         }
       }
     }

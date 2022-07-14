@@ -3,9 +3,9 @@
 
   <?macro GetPCEVariables?>
     <?set PCE_LOOPBACK_ID={../base-config[topology=current()/topology]/pce/loopback-id}?>
-    <?set LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
+    <?set PRIMARY_LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
     <?if {$PCE_LOOPBACK_ID=""}?>
-      <?set PCE_LOOPBACK_ID={$LOOPBACK_ID}?>
+      <?set PCE_LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
     <?end?>
   <?endmacro?>
 
@@ -174,6 +174,42 @@
           </traps>
         </snmp-server>
 
+        <!-- IOS Devices -->
+        <hostname xmlns="urn:ios">{device-name}</hostname>
+        <ip xmlns="urn:ios">
+          <domain>
+            <name>nso-topology</name>
+          </domain>
+          <ssh>
+            <version>2</version>
+          </ssh>
+        </ip>
+        <line xmlns="urn:ios">
+          <console>
+            <first>0</first>
+            <exec-timeout>
+              <minutes>0</minutes>
+              <seconds>0</seconds>
+            </exec-timeout>
+            <width>0</width>
+          </console>
+          <vty>
+            <first>0</first>
+            <last>4</last>
+            <exec-timeout>
+              <minutes>720</minutes>
+              <seconds>0</seconds>
+            </exec-timeout>
+            <login>
+              <local/>
+            </login>
+            <transport>
+              <input>ssh</input>
+            </transport>
+            <width>0</width>
+          </vty>
+        </line>
+
       </config>
     </device>
 
@@ -216,7 +252,7 @@
                 <ipv4>
                   <unicast>
                     <routes-ip>
-                      <net>{deref(loopback-interface)/../ipv4-subnet-start}.{$DESTINATION_DEVICE_ID}/32</net>
+                      <net>{deref(loopback-id)/../ipv4-subnet-start}.{$DESTINATION_DEVICE_ID}/32</net>
                       <address>{$LINK_SUBNET}.{$DESTINATION_DEVICE_ID}</address>
                     </routes-ip>
                   </unicast>
@@ -235,11 +271,11 @@
                 <ipv4>
                   <unicast>
                     <routes-ip when="{return-route='source-device'}">
-                      <net>{deref(loopback-interface)/../ipv4-subnet-start}.{$SOURCE_DEVICE_ID}/32</net>
+                      <net>{deref(loopback-id)/../ipv4-subnet-start}.{$SOURCE_DEVICE_ID}/32</net>
                       <address>{$LINK_SUBNET}.{$SOURCE_DEVICE_ID}</address>
                     </routes-ip>
                     <routes-ip when="{return-route='source-subnet'}">
-                      <net>{deref(loopback-interface)/../ipv4-subnet-start}.0/24</net>
+                      <net>{deref(loopback-id)/../ipv4-subnet-start}.0/24</net>
                       <address>{$LINK_SUBNET}.{$SOURCE_DEVICE_ID}</address>
                     </routes-ip>
                   </unicast>
@@ -265,6 +301,28 @@
             <secret>{password}</secret>
           </password>
         </pce>
+      </config>
+    </device>
+
+    <!-- IOS Devices -->
+    <?set-root-node {.}?>
+    <device>
+      <name>{static-routes/loopback-to-management/device}</name>
+      <?set LOOPBACK_ID={loopback-id}?>
+      <?if {$LOOPBACK_ID=""}?>
+        <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
+      <?end?>
+      <?set LOOPBACK_SUBNET_START={deref(/topology)/../ip-connectivity/loopback-interfaces/loopback[id=$LOOPBACK_ID]/ipv4-subnet-start}?>
+      <config>
+        <ip xmlns="urn:ios">
+          <route>
+            <ip-route-forwarding-list foreach="{deref(/topology)/../devices/device[device-name!=current()/device]}">
+              <prefix>{$LOOPBACK_SUBNET_START}.{current()/id}</prefix>
+              <mask>255.255.255.255</mask>
+              <forwarding-address>{management-interface/ip-address}</forwarding-address>
+            </ip-route-forwarding-list>
+          </route>
+        </ip>
       </config>
     </device>
   </devices>

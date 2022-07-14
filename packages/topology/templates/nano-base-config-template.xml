@@ -30,9 +30,13 @@
         <route foreach="{static-routes/route}">
           <source-device>{source-device}</source-device>
           <destination-device>{destination-device}</destination-device>
-          <loopback-interface>{loopback-interface}</loopback-interface>
+          <loopback-id>{loopback-id}</loopback-id>
           <return-route>{return-route}</return-route>
         </route>
+        <loopback-to-management>
+          <device>{static-routes/loopback-to-management/device}</device>
+          <loopback-id>{static-routes/loopback-to-management/loopback-id}</loopback-id>
+        </loopback-to-management>
       </static-routes>
       <pce when="{pce}">
         <router>{pce/router}</router>
