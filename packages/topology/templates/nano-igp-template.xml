@@ -9,6 +9,18 @@
       <topology>{/topology}</topology>
       <devices>{devices}</devices>
       <is-is when="{is-is}"/>
+      <ospf when="{ospf}">
+        <include-management-network>{include-management-network}</include-management-network>
+      </ospf>
+    </igp>
+    <igp>
+      <name>{second-igp/name}</name>
+      <topology>{/topology}</topology>
+      <devices>{devices}</devices>
+      <is-is when="{is-is}"/>
+      <ospf when="{ospf}">
+        <include-management-network>{include-management-network}</include-management-network>
+      </ospf>
     </igp>
   </topologies>
 </config-template>

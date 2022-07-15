@@ -47,7 +47,7 @@
       <name>{devices}</name>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <isis>
+          <isis when="{../is-is}">
             <tag>
               <name>{string(../name)}</name>
               <net>
@@ -93,6 +93,32 @@
               </interface>
             </tag>
           </isis>
+        </router>
+
+        <!-- IOS Devices -->
+        <router xmlns="urn:ios">
+          <ospf when="{../ospf}">
+            <id>{string(../name)}</id>
+            <redistribute when="{../../base-config[topology=/../name]/static-routes/loopback-to-management/device=current()}">
+              <static>
+                <metric-type>1</metric-type>
+                <subnets/>
+              </static>
+            </redistribute>
+            <network>
+              <ip>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.0</ip>
+              <mask>255.255.255.0</mask>
+              <area>0</area>
+            </network>
+            <?if {../ospf/include-management-network='true'}?>
+              <?set-context-node {deref(current())/..}?>
+              <network>
+                <ip>{substring(management-interface/ip-address, 1, string-length(management-interface/ip-address)-string-length(id)-1)}.0</ip>
+                <mask>255.255.255.0</mask>
+                <area>0</area>
+              </network>
+            <?end?>
+          </ospf>
         </router>
       </config>
     </device>

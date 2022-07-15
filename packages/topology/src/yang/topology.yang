@@ -82,6 +82,10 @@ module topology {
         uses hidden-topology-link;
         uses traffic-generator-grouping;
       }
+      container second-igp {
+        uses hidden-topology-link;
+        uses igp-grouping;
+      }
     }
   }
 

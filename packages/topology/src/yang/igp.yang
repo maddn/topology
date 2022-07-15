@@ -33,10 +33,15 @@ submodule igp {
       }
     }
     choice routing-protocol {
-      when "name";
-      mandatory true;
       container is-is {
         presence true;
+      }
+      container ospf {
+        presence true;
+        leaf include-management-network {
+          type boolean;
+          default true;
+        }
       }
     }
   }
