@@ -288,18 +288,27 @@
     <?end?>
 
     <?expand GetPCEVariables?>
-    <?set-root-node {/}?>
     <device>
       <name>{pce/router}</name>
+      <?set-root-node {/devices/device[name=current()/router]}?>
       <config>
         <pce xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <address>
-            <ipv4>{/devices/device[name=current()/router]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+            <ipv4>{/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
           </address>
           <password when="{password}">
             <type>clear</type>
             <secret>{password}</secret>
           </password>
+          <api when="{password}">
+            <user>
+              <name>{string(deref(/authgroup)/../default-map/remote-name)}</name>
+              <password>
+                <type>clear</type>
+                <secret>{password}</secret>
+              </password>
+            </user>
+          </api>
         </pce>
       </config>
     </device>
