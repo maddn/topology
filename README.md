@@ -47,8 +47,8 @@ automatically when using Docker.
 
 ### Docker
 
-A complete Docker image for this project can be built using the `docker-build`
-Make target, and started using the `docker-start` target. The Dockerfile will
+A complete Docker image for this project can be built using the `docker‑build`
+Make target, and started using the `docker‑start` target. The Dockerfile will
 create a Linux container with NSO installed, and all the dependencies required
 to run this project.
 
@@ -65,7 +65,7 @@ To build and run the Docker container, follow these steps:
    git clone https://github.com/maddn/topology.git
    ```
 
-2. Copy the NSO installer binary to the `nso-install-file` directory.
+2. Copy the NSO installer binary to the `nso‑install‑file` directory.
    ```shell
    cp nso-5.6.3.1.linux.x86_64.installer.bin topology/nso-install-file
    ```
@@ -87,20 +87,20 @@ To build and run the Docker container, follow these steps:
    cp id_ed25519.pub topology/system/root/.ssh
    ```
 
-5. Run the `docker-build` make target.
+5. Run the `docker‑build` make target.
    ```shell
    cd topology
    make docker-build
    ```
 
-6. Run the `docker-start` make target.
+6. Run the `docker‑start` make target.
    ```shell
    make docker-start
    ```
 
 After the container has started, the NSO Web UI can be accessed on standard
 HTTP port 80, and the CLI on the standard SSH port 22. A bash shell can be
-started using the `docker-shell` Make target.
+started using the `docker‑shell` Make target.
 
 
 ### Existing NSO Instance
@@ -174,9 +174,9 @@ associated [hypervisor](#hypervisors).
 
 | List     | Description |
 | :------- | :---------- |
-| Devices  | A device is created with a numeric `id` and a `prefix`. The `id` is used extensively by the services and libvirt actions to generate resource names such as networks, MAC addresses and IP addresses. The `device-name` is automatically populated by combining the `prefix` and `id`. Optionally the device can refer to a [device-definition](#device-definitions) if the device is to be created using libvirt. |
-| Links    | These are point-to-point links between two devices in the `device` list (`a-end-device` and `z-end-device`). When defining a topology to be created in libvirt, the interface ids are refined as operational data and will be automatically populated. |
-| Networks | A network connects multiple devices to a single network using the same `interface-id` on each device. |
+| Devices  | A device is created with a numeric `id` and a `prefix`. The `id` is used extensively by the services and libvirt actions to generate resource names such as networks, MAC addresses and IP addresses. The `device‑name` is automatically populated by combining the `prefix` and `id`. Optionally the device can refer to a [device-definition](#device-definitions) if the device is to be created using libvirt. |
+| Links    | These are point-to-point links between two devices in the `device` list (`a‑end‑device` and `z‑end‑device`). When defining a topology to be created in libvirt, the interface ids are refined as operational data and will be automatically populated. |
+| Networks | A network connects multiple devices to a single network using the same `interface‑id` on each device. |
 
 
 ## Services
@@ -198,13 +198,13 @@ can easily be extended to support new configuration.
 This service extends the topology model and will configure IPv4 and IPv6
 addresses on the topology interfaces. The interfaces are configured as follows:
 
-| <nobr>For Each</nobr> | Configure |
-| :-------------------- | :-------- |
-| Device   | A loopback interface for each entry in the `loopback-interfaces` list with an IPv4 address in the format <nobr>`{ipv4-subnet-start}.device-id`</nobr>. An optional IPv6 address is configured in similar format. |
-| Link     | An IPv4 address on each of the two interfaces (<nobr>`a-end-interface/id`</nobr> and <nobr>`z-end-interface/id`</nobr>) in the format <nobr>`{physical-interfaces/ipv4-subnet-start}.x.y.device-id`</nobr> where `x` is the lower device id and `y` is the higher. An optional IPv6 address is configured in similar format. |
-| Network  | An IPv4 address for each entry in the `devices` list on the device `interface-id` in the format <nobr>`{physical-interfaces/ipv4-subnet-start}.device-id`</nobr>. An optional IPv6 address is configured in similar format. |
+| For Each | Configure |
+| :------- | :-------- |
+| Device   | A loopback interface for each entry in the `loopback‑interfaces` list with an IPv4 address in the format `{ipv4‑subnet‑start}.device‑id`. An optional IPv6 address is configured in similar format. |
+| Link     | An IPv4 address on each of the two interfaces (`a‑end‑interface/id` and `z‑end‑interface/id`) in the format `{physical‑interfaces/ipv4‑subnet‑start}.x.y.device‑id` where `x` is the lower device id and `y` is the higher. An optional IPv6 address is configured in similar format. |
+| Network  | An IPv4 address for each entry in the `devices` list on the device `interface‑id` in the format `{physical‑interfaces/ipv4‑subnet‑start}.device‑id`. An optional IPv6 address is configured in similar format. |
 
-The `loopback-interfaces` list allows one interface to be selected as the
+The `loopback‑interfaces` list allows one interface to be selected as the
 `primary` interface. This will be the default loopback interface used by the
 other services if one isn't explicitly given (for example for BGP and PCE
 peering).
@@ -222,9 +222,9 @@ device configuration that would typically be found in a golden config. This
 includes login-banner, SNMP, NTP, default terminal line settings, interface
 bandwidth and LLDP. In addition, the service will:
 
-- Set the hostname to the `device-name`.
+- Set the hostname to the `device‑name`.
 - Create static routes between the loopback interfaces of two devices for each
-  route in the <nobr>`static-routes/routes`</nobr> list.
+  route in the `static‑routes/routes` list.
 - Create static routes between the management and loopback interfaces of each
   device in the topology.
 - Create PCE configuration on the router identified as the PCE.
@@ -238,11 +238,11 @@ bandwidth and LLDP. In addition, the service will:
 This service configures BGP neighbours based on their role. A topology device
 can be added to one of the following role lists:
 
-| Device Role                    | Description |
-| :----------------------------- | :---------- |
-| <nobr>`route-reflector`</nobr> | A neighbour will be configured with a VPNv4 (and optional VPNv6) address family for each `provider-edge` router, and a link-state address family for each `link-state` router.
-| <nobr>`provider-edge`</nobr>   | A VPNv4 (and optional VPNv6) neighbour will be configured to each `route-reflector` |
-| <nobr>`link‑state`<nobr>       | A link-state neighbour will be configured to each `route-refector` |
+| Device Role       | Description |
+| :---------------- | :---------- |
+| `route‑reflector` | A neighbour will be configured with a VPNv4 (and optional VPNv6) address family for each `provider‑edge` router, and a link-state address family for each `link‑state` router.
+| `provider‑edge`   | A VPNv4 (and optional VPNv6) neighbour will be configured to each `route‑reflector` |
+| `link‑state`      | A link-state neighbour will be configured to each `route‑refector` |
 
 
 ### IGP
@@ -253,7 +253,7 @@ can be added to one of the following role lists:
 This service will configure IS-IS on each topology device in the IGP `devices`
 leaf-list. For each device, it will add each interface that is connected to
 another device in same IGP to the IS-IS domain. It will set the metric on the
-interface using the `igp-metric` on the topology link.
+interface using the `igp‑metric` on the topology link.
 
 For IOS devices, basic OSPF can be configured with a loopback network and
 optionally the management network.
@@ -282,7 +282,7 @@ This service will enable segment routing on each device in the IGP, by
 configuring the following on each device:
 
 - A prefix sid on the primary loopback interface calculated as
-  `{prefix-sid-start} + device-id`.
+  `{prefix‑sid‑start} + device‑id`.
 - TI-LFA on each interface connected to another device in the IGP.
 - The segment-routing global-block.
 - For traffic engineering, the PCE client.
@@ -316,17 +316,16 @@ using `ssh` transport with SSH keys configured on the NSO client and KVM server
 for passwordless authentication. See the [libvirt
 documentation](https://libvirt.org/uri.html) for more information.
 
-The `hypervisor` also has the `management-network` parameters. The `bridge`
+The `hypervisor` also has the `management‑network` parameters. The `bridge`
 must already exist on the host machine. The first interface of each device will
 be attached to this bridge.
 
 Devices are allocated their management IP address in the format
-`{ip-address-start} + device-id`, and the <nobr>`ip-address`</nobr> attribute
-in the device's [day0-file](#day-0-configuration) is substituted with this
-value.
+`{ip‑address‑start} + device‑id`, and the `ip‑address` attribute in the
+device's [day0-file](#day-0-configuration) is substituted with this value.
 
 The MAC addresses generated for all resources in the topology will start with
-`mac-address-start` (the first three hexadectets).
+`mac‑address‑start` (the first three hexadectets).
 
 The hypervisor also contains `get` actions to retrieve the domains, networks
 and volumes currently configured on the host. See [Current Libvirt
@@ -339,56 +338,56 @@ Topology](#current-libvirt-topology)
 > [libvirt.yang](packages/topology/src/yang/libvirt.yang) |
 > Path | `/topologies/libvirt/device-definition`
 
-A `device-definition` describes how to create the domain on libvirt. The
+A `device‑definition` describes how to create the domain on libvirt. The
 definition references an initial libvirt XML [template](#template) which is
 used to build the final domain XML definition using the other leaves in the
-`device-definition`.
+`device‑definition`.
 
 
 ### Template
 
-The `template` leaf in the `device-definition` must be the name of an XML
+The `template` leaf in the `device‑definition` must be the name of an XML
 file (without the `.xml` extension), which exists in the
 [images](packages/topology/python/virt/images) directory. This file should
 contain the initial libvirt XML domain definition without any disks or
 interfaces (these are automatically added). Attributes in curly braces - i.e.
-`{attribute-name}` - are substituted as follows:
+`{attribute‑name}` - are substituted as follows:
 
 | Name          | Description                                     |
 | :------------ | :---------------------------------------------- |
-| `device-name` | The name of the device                          |
-| `vcpus`       | The number of CPUs from the `device-definition` |
-| `memory`      | The memory in MB from the `device-definition`   |
+| `device‑name` | The name of the device                          |
+| `vcpus`       | The number of CPUs from the `device‑definition` |
+| `memory`      | The memory in MB from the `device‑definition`   |
 
 
 ### Base Image
 
-A volume is created from the `base-image` given in the `device-definition`. The
-image must already exist in the `storage-pool` on the libvirt host. If the
+A volume is created from the `base‑image` given in the `device‑definition`. The
+image must already exist in the `storage‑pool` on the libvirt host. If the
 image format is not `qcow2`, the `clone` option must be chosen for the
-`base-image-type` leaf, which will create a full clone of the base
-image (the default option is to use the base image as a `backing-store`).
+`base‑image‑type` leaf, which will create a full clone of the base
+image (the default option is to use the base image as a `backing‑store`).
 
 The volume is attached to the domain as the first disk.
 
 
 ### Day 0 Configuration
 
-If the `device-definition` has the `day0-file` leaf populated, a day 0 volume
+If the `device‑definition` has the `day0‑file` leaf populated, a day 0 volume
 will be created, containing an image with the day 0 configuration.
 
-The day 0 configuration is generated using the `day0-file` as a template, this
+The day 0 configuration is generated using the `day0‑file` as a template, this
 file must exist in the [images](packages/topology/python/virt/images)
-directory. Attributes in curly braces - i.e. `{attribute-name}` - are
+directory. Attributes in curly braces - i.e. `{attribute‑name}` - are
 substituted as follows:
 
 | Name              | Description                                                                          |
 | :---------------- | :----------------------------------------------------------------------------------- |
-| `ip-address`      | The allocated management IP address                                                  |
-| `gateway-address` | The `gateway-address` from the `hypervisor` configuration (useful for static routes) |
-| `username`        | Username from the `device-definition` `authgroup`                                    |
+| `ip‑address`      | The allocated management IP address                                                  |
+| `gateway‑address` | The `gateway‑address` from the `hypervisor` configuration (useful for static routes) |
+| `username`        | Username from the `device‑definition` `authgroup`                                    |
 | `password`        | SHA-512 password hash (Cisco type 10 and Linux `/etc/shadow` ) from the `authgroup`  |
-| `password-md5`    | MD5 password hash with a salt size of 4 (Cisco type 5) from the `authgroup`          |
+| `password‑md5`    | MD5 password hash with a salt size of 4 (Cisco type 5) from the `authgroup`          |
 
 The format of the generated volume will depend on the [device
 type](#device-type)
@@ -400,34 +399,34 @@ credentials, management IP address and any required routes.
 
 ### Device Type
 
-The `device-type` leaf in the `device-definition` identifies how to generate
+The `device‑type` leaf in the `device‑definition` identifies how to generate
 the day 0 configuration for that kind of device, and if any additional logic is
 required to fully configure the device. The following table describes what is
 done for each supported type:
 
-| Name                  | Description |
-| :-------------------- | :---------- |
-| <nobr>XRv-9000</nobr> | The day 0 configuration is written to a file called `iosxr_config.txt` inside an ISO image and attached to the domain as a `cdrom`.<br/>The second and third interfaces on the domain are assigned to two additional management networks (`ctrl` and `host`)
-| IOSv                  | The day 0 configuration is written to a file called `ios_config.txt` inside a RAW disk image with a single 1MB FAT12 partition and attached to the domain as the second disk.
-| Linux                 | The day 0 configuration uses [cloud-init](https://cloudinit.readthedocs.io/en/latest/index.html). `meta-data` and `network-config` files are included automatically. All interfaces are configured (including data interfaces - NSO can't manage Linux devices to configure them later). The `day0-file` should be a valid YAML cloud-init user-data file whose first line is `#cloud-config`. These three files are written to an ISO image and attached to the domain as a `cdrom`. For more information see the [cloud-init NoCloud documentation](https://cloudinit.readthedocs.io/en/latest/topics/datasources/nocloud.html). 
+| Name     | Description |
+| :------- | :---------- |
+| XRv‑9000 | The day 0 configuration is written to a file called `iosxr_config.txt` inside an ISO image and attached to the domain as a `cdrom`.<br/>The second and third interfaces on the domain are assigned to two additional management networks (`ctrl` and `host`)
+| IOSv     | The day 0 configuration is written to a file called `ios_config.txt` inside a RAW disk image with a single 1MB FAT12 partition and attached to the domain as the second disk.
+| Linux    | The day 0 configuration uses [cloud-init](https://cloudinit.readthedocs.io/en/latest/index.html). `meta‑data` and `network‑config` files are included automatically. All interfaces are configured (including data interfaces - NSO can't manage Linux devices to configure them later). The `day0‑file` should be a valid YAML cloud-init user-data file whose first line is `#cloud-config`. These three files are written to an ISO image and attached to the domain as a `cdrom`. For more information see the [cloud-init NoCloud documentation](https://cloudinit.readthedocs.io/en/latest/topics/datasources/nocloud.html). 
 
 The following table contains a summary of the day 0 configuration for each
 device type:
 
-| Type                  | Volume Format | Device Type | Day 0 Target File  | Additional Files             |
-| :-------------------- | :------------ | :---------- | :----------------- | ---------------------------- |
-| <nobr>XRv-9000</nobr> | ISO 9660      | cdrom       | `iosxr_config.txt` |
-| IOSv                  | FAT12         | disk        | `ios_config.txt`   |
-| Linux                 | ISO 9660      | cdrom       | `user-data`        | `meta-data` `network-config` |
+| Type     | Volume Format | Device Type | Day 0 Target File  | Additional Files             |
+| :------- | :------------ | :---------- | :----------------- | :--------------------------- |
+| XRv‑9000 | ISO 9660      | cdrom       | `iosxr_config.txt` |
+| IOSv     | FAT12         | disk        | `ios_config.txt`   |
+| Linux    | ISO 9660      | cdrom       | `user‑data`        | `meta‑data` `network‑config` |
 
 
 ### Managed Devices
 
-If the `ned-id` leaf is populated in the `device-definition` then the device is
+If the `ned‑id` leaf is populated in the `device‑definition` then the device is
 automatically added to NSO when it is defined.
 
 When the topology is started, NSO will ping the device until it becomes
-reachable and then run the `sync-from` action.
+reachable and then run the `sync‑from` action.
 
 The current status of each device can be seen in the `status` leaf of the
 topology device.
@@ -453,22 +452,22 @@ libvirt:
 
   | Resource        | Name                  |
   | :-------------- | :-------------------- |
-  | Libvirt Network | `net-{x}-{y}`         |
-  | Host Bridge     | `vbr-{x}-{y}`         |
+  | Libvirt Network | `net‑{x}‑{y}`         |
+  | Host Bridge     | `vbr‑{x}‑{y}`         |
   | MAC Address     | `02:c1:5c:00:{x}:{y}` |
 
 - An additional isolated network is created for each device to connect any
   unused interfaces to.
 
   | Resource        | Name                         |
-  | :-------------- | ---------------------------- |
-  | Libvirt Network | `net-{device-id}-null`       |
-  | Host Bridge     | `vbr-{device-id}-null`       |
-  | MAC Address     | `02:c1:5c:00:{device-id}:00` |
+  | :-------------- | :--------------------------- |
+  | Libvirt Network | `net‑{device‑id}‑null`       |
+  | Host Bridge     | `vbr‑{device‑id}‑null`       |
+  | MAC Address     | `02:c1:5c:00:{device‑id}:00` |
 
-- For each device, a volume is created from the `base-image` as described in
+- For each device, a volume is created from the `base‑image` as described in
   the [Base Image](#base-image) section, and an optional day 0 volume is
-  created from the `day0-file` as described in the [Day 0
+  created from the `day0‑file` as described in the [Day 0
   Configuration](#day-0-configuration) section. These volumes are attached to
   the domain.
 
@@ -482,9 +481,9 @@ libvirt:
   host.
 
   | Resource    | Name                                     |
-  | ----------- | ---------------------------------------- |
-  | Host Device | `veth-{device-id}-{interface-id}`        |
-  | MAC Address | `02:c1:5c:01:{device-id}:{interface-id}` |
+  | :---------- | :--------------------------------------- |
+  | Host Device | `veth‑{device‑id}‑{interface‑id}`        |
+  | MAC Address | `02:c1:5c:01:{device‑id}:{interface‑id}` |
 
 
 ### Current Libvirt Topology
@@ -518,9 +517,9 @@ interfaces are identified as link networks.
 > [managed-topology-nano-plan.yang](packages/topology/src/yang/managed-topology-nano-plan.yang) |
 > Plan Path | `/topologies/managed-topology/plan`
 
-The `managed-topology` nano service will automatically define and start a
+The `managed‑topology` nano service will automatically define and start a
 toplogy (if not already done) and once the topology `status` is `ready` it will
-create the above services. The `managed-topology` YANG model contains the same
+create the above services. The `managed‑topology` YANG model contains the same
 nodes as the individual services.
 
 This service automates the process to define, start and configure an entire
