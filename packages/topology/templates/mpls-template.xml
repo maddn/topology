@@ -9,13 +9,13 @@
         <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <ldp when="{/ldp}">
             <interface>
-              <name>GigabitEthernet0/0/0/{$interface_id}</name>
+              <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
             </interface>
           </ldp>
 
           <traffic-eng when="{/traffic-engineering}">
             <interface>
-              <name>GigabitEthernet0/0/0/{$interface_id}</name>
+              <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
               <attribute-names>
                 <name>{affinity}</name>
               </attribute-names>
@@ -25,7 +25,7 @@
 
         <rsvp xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{/rsvp}">
           <interface>
-            <name>GigabitEthernet0/0/0/{$interface_id}</name>
+            <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
             <bandwidth/>
           </interface>
         </rsvp>
@@ -129,8 +129,8 @@
     <?foreach {deref(topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
         <?set-root-node {/topologies/mpls[igp=$IGP_NAME]}?>
-        <?expand LinkEndpointMPLS device_name=a-end-device interface_id=a-end-interface-id?>
-        <?expand LinkEndpointMPLS device_name=z-end-device interface_id=z-end-interface-id?>
+        <?expand LinkEndpointMPLS device_name=a-end-device interface_id=a-end-interface/id?>
+        <?expand LinkEndpointMPLS device_name=z-end-device interface_id=z-end-interface/id?>
       <?end?>
     <?end?>
   </devices>

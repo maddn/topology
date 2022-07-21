@@ -63,6 +63,18 @@ submodule topology-libvirt-subgroupings {
     }
   }
 
+  grouping libvirt-interface-grouping {
+    leaf host-interface {
+      type string;
+    }
+    leaf mac-address {
+      type yang:mac-address;
+    }
+    leaf ip-address {
+      type inet:ipv4-address;
+    }
+  }
+
   grouping libvirt-device-grouping {
     leaf definition {
       type leafref {

@@ -15,7 +15,7 @@
       <config>
         <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <GigabitEthernet tags="merge">
-            <id>0/0/0/{$interface_id}</id>
+            <id>0/0/0/{string($interface_id)}</id>
             <bandwidth>{/interface-bandwidth}</bandwidth>
             <lldp when="{/lldp}"/>
             <load-interval>30</load-interval>
@@ -216,18 +216,18 @@
     <?foreach {deref(topology)/../links/link}?>
       <?expand InterfaceBaseConfig
         device_name=a-end-device
-        interface_id=a-end-interface-id
+        interface_id=a-end-interface/id
       ?>
       <?expand InterfaceBaseConfig
         device_name=z-end-device
-        interface_id=z-end-interface-id
+        interface_id=z-end-interface/id
       ?>
     <?end?>
     <?foreach {deref(topology)/../networks/network}?>
-      <?foreach {devices}?>
+      <?foreach {devices/device}?>
         <?expand InterfaceBaseConfig
           device_name=.
-          interface_id=../interface-id
+          interface_id=../../interface-id
         ?>
       <?end?>
     <?end?>

@@ -84,12 +84,15 @@ class NetworkManager():
     def __init__(self, topology):
         self._devices = {device.device_name:int(device.id)
                          for device in topology.devices.device}
+        self._device_names = {int(device.id):device.device_name
+                              for device in topology.devices.device}
         self._max_device_id = max(self._devices.values())
 
         self._network_ifaces = {
-                (self._devices[device], network.interface_id): network.name
+                (self._devices[device.name], network.interface_id): (
+                        network.name, network._path)
                 for network in topology.networks.network
-                for device in network.devices}
+                for device in network.devices.device}
         self._networks = {network.name:
                 f'{force_maagic_leaf_val2str(network, "ipv4-subnet-start")}.0'
                 for network in topology.networks.network}
@@ -100,8 +103,7 @@ class NetworkManager():
                           self._devices[link.a_end_device])) #z-end-interface-id
             device_ids = sort_link_device_ids(iface_ids)
             self._link_networks[device_ids] = (
-                generate_network_id(*device_ids),
-                iface_ids)
+                generate_network_id(*device_ids), link._path, iface_ids)
 
     def _get_link_device_ids(self, link):
         return sort_link_device_ids((self._devices[link.a_end_device],
@@ -109,7 +111,7 @@ class NetworkManager():
 
     def get_link_network(self, link):
         device_ids = self._get_link_device_ids(link)
-        return (*self._link_networks[device_ids], device_ids)
+        return (self._link_networks[device_ids][0], device_ids)
 
     def get_network(self, network_id):
         return self._networks[network_id]
@@ -117,7 +119,25 @@ class NetworkManager():
     def get_iface_network_id(self, device_id, iface_id):
         return self._network_ifaces.get((device_id, iface_id),
                 self._link_networks.get(
-                    sort_link_device_ids((device_id, iface_id)), [None])[0])
+                    sort_link_device_ids((device_id, iface_id)), [None]))[0]
+
+    def write_iface_oper_data(self, device_id, iface_id, data):
+        (_, path) = self._network_ifaces.get(
+                (device_id, iface_id), (None, None))
+        if path:
+            path = f'{path}/devices' \
+                   f'/device{{{self._device_names[device_id]}}}/interface'
+        else:
+            (_, path, link_iface_ids) = self._link_networks.get(
+                    sort_link_device_ids((device_id, iface_id)),
+                    (None, None, None))
+            if path:
+                if iface_id == link_iface_ids[0]:
+                    path = f'{path}/a-end-interface'
+                else:
+                    path = f'{path}/z-end-interface'
+        if path:
+            write_oper_data(path, data)
 
     def get_num_device_ifaces(self):
         return self._max_device_id + 1
@@ -288,10 +308,19 @@ class DomainXmlBuilder():
                     self._device_id, iface_id)
 
             if network_id is not None or include_null_interfaces:
+                iface_dev_name = self._generate_iface_dev_name(iface_id)
+                mac_address = self._generate_mac_address(iface_id)
+
                 self._domain_xml_devices.append(self._get_iface_xml(
                     network_id or generate_network_id(self._device_id, None),
-                    self._generate_iface_dev_name(iface_id),
-                    self._generate_mac_address(iface_id), 'virtio'))
+                    iface_dev_name, mac_address, 'virtio'))
+
+                if network_id:
+                    self._network_mgr.write_iface_oper_data(
+                        self._device_id, iface_id, [
+                                ('id', iface_id),
+                                ('host-interface', iface_dev_name),
+                                ('mac-address', mac_address)])
 
 
 class LibvirtObject(): #pylint: disable=too-few-public-methods
@@ -329,7 +358,8 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
     def _load_templates(self):
         self._templates.load_template('templates', 'network.xml')
 
-    def _define_network(self, network_id, mac_address, isolated=False):
+    def _define_network(self, network_id, mac_address, isolated=False,
+            path=None):
         network_name = generate_network_name(network_id)
         bridge_name = generate_bridge_name(network_id)
         if network_name not in self._libvirt.networks:
@@ -345,10 +375,14 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
             self._log.info(network_xml_str)
             self._libvirt.conn.networkDefineXML(network_xml_str)
             self._output.networks.create(network_name)
-        return bridge_name
+            if path:
+                write_oper_data(path, [
+                    ('host-bridge', bridge_name),
+                    ('mac-address', mac_address)])
 
-    def _action(self, action, *args):
-        network_id, *_ = args
+    def _action(self, action, *args): #network_id, path
+        network_id, *args = args
+        path = args[0] if args else None
         if action in ['undefine', 'create', 'destroy']:
             network_name = generate_network_name(network_id)
             if network_name in self._libvirt.networks:
@@ -357,6 +391,10 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
                     self._log.info(f'Running {action} on network {network_name}')
                     network_action_method = getattr(network, action)
                     network_action_method()
+                    if action == 'undefine' and path:
+                        write_oper_data(path, [
+                            ('host-bridge', None),
+                            ('mac-address', None)])
                     self._output.networks.create(network_name)
                     return True
         return False
@@ -364,28 +402,14 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
 
 class LinkNetwork(Network):
     def define(self, link):
-        (network_id, (a_end_iface_id, z_end_iface_id), device_ids
-                ) = self._network_mgr.get_link_network(link)
+        (network_id, device_ids) = self._network_mgr.get_link_network(link)
         mac_address = self._resource_mgr.generate_mac_address(*device_ids)
-        host_bridge = self._define_network(network_id, mac_address)
-        write_oper_data(link._path, [
-            ('host-bridge', host_bridge),
-            ('mac-address', mac_address),
-            ('a-end-interface-id', a_end_iface_id),
-            ('z-end-interface-id', z_end_iface_id)])
-
-    def undefine(self, link):
-        if self._action('undefine', link):
-            write_oper_data(link._path, [
-                ('host-bridge', None),
-                ('mac-address', None),
-                ('a-end-interface-id', None),
-                ('z-end-interface-id', None)])
+        self._define_network(network_id, mac_address, path=link._path)
 
     def _action(self, action, *args):
         link, = args
-        (network_id, _, _) = self._network_mgr.get_link_network(link)
-        return super()._action(action, network_id)
+        (network_id, _) = self._network_mgr.get_link_network(link)
+        return super()._action(action, network_id, link._path)
 
 
 class IsolatedNetwork(Network):
@@ -401,9 +425,9 @@ class IsolatedNetwork(Network):
 
 
 class ExtraNetwork(Network):
-    def define(self, network_id, mac_octets):
+    def define(self, network_id, path, mac_octets):
         mac_address = self._resource_mgr.generate_mac_address(*mac_octets)
-        self._define_network(network_id, mac_address)
+        self._define_network(network_id, mac_address, path=path)
 
 
 class Volume(LibvirtObject):
@@ -519,19 +543,23 @@ class Volume(LibvirtObject):
             network_id = self._network_mgr.get_iface_network_id(
                     device_id, iface_id)
 
-            if network_id is not None:
-                ip_address_start = self._network_mgr.get_network(network_id)
+            if network_id is None:
+                continue
 
-                if ip_address_start is not None:
-                    network_config += self._templates.apply_template(
-                        'ethernet.yaml', {
-                            'iface-id': iface_id,
-                            'ip-address': generate_ip_address(
-                                ip_address_start, device_id),
-                            'mac-address': self._resource_mgr.\
-                                    generate_mac_address(
-                                        device_id, iface_id, True)
-                        })
+            ip_address_start = self._network_mgr.get_network(network_id)
+            if ip_address_start is None:
+                continue
+
+            ip_address = generate_ip_address(ip_address_start, device_id)
+            network_config += self._templates.apply_template(
+                'ethernet.yaml', {
+                    'iface-id': iface_id,
+                    'ip-address': ip_address,
+                    'mac-address': self._resource_mgr.\
+                            generate_mac_address(device_id, iface_id, True)
+                    })
+            self._network_mgr.write_iface_oper_data(device_id, iface_id, [
+                ('ip-address', ip_address)])
         return network_config
 
     def _create_cloud_init_iso_image(self, device_id, file_name, variables):
@@ -715,6 +743,14 @@ class Domain(LibvirtObject):
                     ('mac-address', None),
                     ('host-interface', None)])
 
+            for iface_id in range(self._network_mgr.get_num_device_ifaces()):
+                self._network_mgr.write_iface_oper_data(
+                    device.id, iface_id, [
+                            ('id', None),
+                            ('ip-address', None),
+                            ('host-interface', None),
+                            ('mac-address', None)])
+
     def is_active(self, device):
         device_name = device.device_name
         if device_name in self._libvirt.domains:
@@ -763,11 +799,11 @@ class Topology():
                     for device in self._topology.devices.device):
                 for (idx, network_id) in enumerate(XRV9K_EXTRA_MGMT_NETWORKS):
                     self._extra_network.action(
-                            action, output, network_id, (0xff, 0xff-idx))
+                            action, output, network_id, None, (0xff, 0xff-idx))
 
             for (idx, network) in enumerate(self._topology.networks.network):
-                self._extra_network.action(
-                        action, output, network.name, (0xfe, 0xff-idx))
+                self._extra_network.action(action, output, network.name,
+                        network._path, (0xfe, 0xff-idx))
 
             for link in self._topology.links.link:
                 self._link_network.action(action, output, link)

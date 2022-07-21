@@ -10,7 +10,7 @@
             <tag>
               <name>{string(/name)}</name>
               <interface>
-                <name>GigabitEthernet0/0/0/{$interface_id}</name>
+                <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
                 <circuit-type>level-2-only</circuit-type>
                 <point-to-point/>
                 <address-family>
@@ -37,8 +37,8 @@
 
     <?foreach {deref(topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
-        <?expand LinkEndpointIGP device_name=a-end-device interface_id=a-end-interface-id?>
-        <?expand LinkEndpointIGP device_name=z-end-device interface_id=z-end-interface-id?>
+        <?expand LinkEndpointIGP device_name=a-end-device interface_id=a-end-interface/id?>
+        <?expand LinkEndpointIGP device_name=z-end-device interface_id=z-end-interface/id?>
       <?end?>
     <?end?>
 

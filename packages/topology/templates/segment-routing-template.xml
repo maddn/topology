@@ -10,7 +10,7 @@
             <tag tags="merge">
               <name>{string(/igp)}</name>
               <interface>
-                <name>GigabitEthernet0/0/0/{$interface_id}</name>
+                <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
                 <address-family tags="merge">
                   <ipv4>
                     <unicast>
@@ -184,8 +184,8 @@
     <?foreach {deref(/topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
         <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
-        <?expand LinkEndpointSR device_name=a-end-device interface_id=a-end-interface-id?>
-        <?expand LinkEndpointSR device_name=z-end-device interface_id=z-end-interface-id?>
+        <?expand LinkEndpointSR device_name=a-end-device interface_id=a-end-interface/id?>
+        <?expand LinkEndpointSR device_name=z-end-device interface_id=z-end-interface/id?>
       <?end?>
     <?end?>
   </devices>

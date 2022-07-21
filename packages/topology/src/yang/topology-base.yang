@@ -49,8 +49,10 @@ submodule topology-base {
               path "../../../devices/device/device-name";
             }
           }
-          leaf a-end-interface-id {
-            type uint8;
+          container a-end-interface {
+            leaf id {
+              type uint8;
+            }
           }
           leaf z-end-device {
             type string;
@@ -62,8 +64,10 @@ submodule topology-base {
               path "../../../devices/device/device-name";
             }
           }
-          leaf z-end-interface-id {
-            type uint8;
+          container z-end-interface {
+            leaf id {
+              type uint8;
+            }
           }
           leaf igp-metric {
             type uint32;
@@ -91,10 +95,15 @@ submodule topology-base {
             }
             default '10.11.12';
           }
-          leaf-list devices {
-            type string;
-            tailf:non-strict-leafref {
-              path "../../../devices/device/device-name";
+          container devices {
+            list device {
+              key name;
+              leaf name {
+                type string;
+                tailf:non-strict-leafref {
+                  path "../../../../../devices/device/device-name";
+                }
+              }
             }
           }
         }

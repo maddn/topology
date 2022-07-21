@@ -13,16 +13,36 @@ submodule topology-libvirt {
 
   grouping topology-libvirt-grouping {
     uses topology-base-grouping {
-      refine "topology/links/link/a-end-interface-id" {
+      refine "topology/links/link/a-end-interface" {
         config false;
         tailf:cdb-oper {
           tailf:persistent true;
         }
       }
-      refine "topology/links/link/z-end-interface-id" {
+      refine "topology/links/link/z-end-interface" {
         config false;
         tailf:cdb-oper {
           tailf:persistent true;
+        }
+      }
+
+      augment "topology/links/link/a-end-interface" {
+        uses libvirt-interface-grouping;
+      }
+      augment "topology/links/link/z-end-interface" {
+        uses libvirt-interface-grouping;
+      }
+
+      augment "topology/networks/network/devices/device" {
+        container interface {
+          config false;
+          tailf:cdb-oper {
+            tailf:persistent true;
+          }
+          leaf id {
+            type uint8;
+          }
+          uses libvirt-interface-grouping;
         }
       }
 
