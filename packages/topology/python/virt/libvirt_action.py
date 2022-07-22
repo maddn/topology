@@ -74,6 +74,11 @@ def nso_device_onboard(device):
         template.apply('nso-device-template', None)
         trans.apply()
 
+def nso_device_delete(device):
+    with maapi.single_write_trans('admin', 'python') as trans:
+        trans.safe_delete(f'/devices/device{{{device.device_name}}}')
+        trans.apply()
+
 def force_maagic_leaf_val2str(maagic_node, leaf_name):
     #pylint: disable=protected-access
     leaf_node = maagic_node._children.get_by_yang(leaf_name)
@@ -750,6 +755,9 @@ class Domain(LibvirtObject):
                             ('ip-address', None),
                             ('host-interface', None),
                             ('mac-address', None)])
+
+            if self._dev_defs[device.definition].ned_id is not None:
+                nso_device_delete(device)
 
     def is_active(self, device):
         device_name = device.device_name

@@ -32,8 +32,15 @@ submodule managed-topology-nano-plan {
       ncs:state "ncs:init" {
         ncs:create {
           ncs:post-action-node
-              "/topologies/topology[name=$SERVICE/topology]/libvirt" {
+              "/topologies/topology[name=$TOPOLOGY]/libvirt" {
             ncs:action-name "define";
+            ncs:sync;
+          }
+        }
+        ncs:delete {
+          ncs:post-action-node
+              "/topologies/topology[name=$TOPOLOGY]/libvirt" {
+            ncs:action-name "undefine";
             ncs:sync;
           }
         }
@@ -41,8 +48,15 @@ submodule managed-topology-nano-plan {
       ncs:state "defined" {
         ncs:create {
           ncs:post-action-node
-              "/topologies/topology[name=$SERVICE/topology]/libvirt" {
+              "/topologies/topology[name=$TOPOLOGY]/libvirt" {
             ncs:action-name "start";
+            ncs:sync;
+          }
+        }
+        ncs:delete {
+          ncs:post-action-node
+              "/topologies/topology[name=$TOPOLOGY]/libvirt" {
+            ncs:action-name "stop";
             ncs:sync;
           }
         }
@@ -66,8 +80,7 @@ submodule managed-topology-nano-plan {
         ncs:create {
           ncs:pre-condition {
             ncs:monitor
-                "/topologies/topology[name=$SERVICE/topology]
-                 /devices/device[id=$ID]" {
+                "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
               ncs:trigger-expr "status!='undefined'";
             }
           }
@@ -77,8 +90,7 @@ submodule managed-topology-nano-plan {
         ncs:create {
           ncs:pre-condition {
             ncs:monitor
-                "/topologies/topology[name=$SERVICE/topology]
-                 /devices/device[id=$ID]" {
+                "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
               ncs:trigger-expr "status!='defined'";
             }
           }
@@ -88,8 +100,7 @@ submodule managed-topology-nano-plan {
         ncs:create {
           ncs:pre-condition {
             ncs:monitor
-                "/topologies/topology[name=$SERVICE/topology]
-                 /devices/device[id=$ID]" {
+                "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
               ncs:trigger-expr "status!='not-reachable'";
             }
           }
@@ -99,8 +110,7 @@ submodule managed-topology-nano-plan {
         ncs:create {
           ncs:pre-condition {
             ncs:monitor
-                "/topologies/topology[name=$SERVICE/topology]
-                 /devices/device[id=$ID]" {
+                "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
               ncs:trigger-expr "status='ready'";
             }
           }
@@ -234,6 +244,9 @@ submodule managed-topology-nano-plan {
     ncs:plan-outline-ref managed-topology-plan;
 
     ncs:selector {
+      ncs:variable "TOPOLOGY" {
+        ncs:value-expr "topology";
+      }
       ncs:create-component "'self'" {
         ncs:component-type-ref "ncs:self";
       }
@@ -243,7 +256,7 @@ submodule managed-topology-nano-plan {
 
       ncs:multiplier {
         ncs:foreach
-            "/topologies/topology[name=$SERVICE/topology]/devices/device" {
+            "/topologies/topology[name=$TOPOLOGY]/devices/device" {
           ncs:when
             "/topologies/libvirt
              /device-definition[name=current()/definition]/ned-id";
