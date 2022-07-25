@@ -91,7 +91,6 @@ class NetworkManager():
                          for device in topology.devices.device}
         self._device_names = {int(device.id):device.device_name
                               for device in topology.devices.device}
-        self._max_device_id = max(self._devices.values())
 
         self._network_ifaces = {
                 (self._devices[device.name], network.interface_id): (
@@ -109,6 +108,11 @@ class NetworkManager():
             device_ids = sort_link_device_ids(iface_ids)
             self._link_networks[device_ids] = (
                 generate_network_id(*device_ids), link._path, iface_ids)
+
+        self._max_iface_id = max(
+                max(max(iface_ids)
+                    for (_, _, iface_ids) in self._link_networks.values()),
+                max(iface_id for (_, iface_id) in self._network_ifaces))
 
     def _get_link_device_ids(self, link):
         return sort_link_device_ids((self._devices[link.a_end_device],
@@ -145,7 +149,7 @@ class NetworkManager():
             write_oper_data(path, data)
 
     def get_num_device_ifaces(self):
-        return self._max_device_id + 1
+        return self._max_iface_id + 1
 
 
 class ResourceManager():
