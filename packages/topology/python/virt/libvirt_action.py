@@ -311,7 +311,7 @@ class DomainXmlBuilder():
         self._domain_xml_devices.append(self._get_raw_disk_xml(
             generate_day0_volume_name(self._device_name), storage_pool))
 
-    def add_data_ifaces(self, include_null_interfaces):
+    def add_data_ifaces(self, include_null_interfaces, model_type):
         for iface_id in range(self._network_mgr.get_num_device_ifaces()):
             network_id = self._network_mgr.get_iface_network_id(
                     self._device_id, iface_id)
@@ -322,7 +322,7 @@ class DomainXmlBuilder():
 
                 self._domain_xml_devices.append(self._get_iface_xml(
                     network_id or generate_network_id(self._device_id, None),
-                    iface_dev_name, mac_address, 'virtio'))
+                    iface_dev_name, mac_address, model_type))
 
                 if network_id:
                     self._network_mgr.write_iface_oper_data(
@@ -733,7 +733,8 @@ class Domain(LibvirtObject):
         if dev_def.device_type == 'XRv-9000':
             xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS)
 
-        xml_builder.add_data_ifaces(dev_def.device_type == 'XRv-9000')
+        xml_builder.add_data_ifaces(dev_def.device_type == 'XRv-9000',
+                'e1000' if dev_def.device_type == 'XRv-9000' else 'virtio')
 
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
         self._log.info(domain_xml_str)
