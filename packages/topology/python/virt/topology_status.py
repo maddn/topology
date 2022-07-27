@@ -20,8 +20,11 @@ def update_status(node, status):
         trans.set_elem(status, f'{node._path}/status')
         trans.apply()
 
-def update_status_after_action(node, action):
-    update_status(node, ACTION_STATUS_MAP[action])
+def update_status_after_action(node, action, unmanaged=False):
+    if unmanaged and action == 'create':
+        update_status(node, 'unmanaged')
+    else:
+        update_status(node, ACTION_STATUS_MAP[action])
 
 def schedule_topology_ping(keypath):
     with maapi.single_write_trans('admin', 'python') as trans:

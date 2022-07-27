@@ -824,11 +824,12 @@ class Topology():
         for device in self._topology.devices.device:
             if device_name is not None and device.device_name != device_name:
                 continue
-            if self._dev_defs[device.definition].device_type == 'XRv-9000':
+            dev_def = self._dev_defs[device.definition]
+            if dev_def.device_type == 'XRv-9000':
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)
-            update_status_after_action(device, action)
+            update_status_after_action(device, action, dev_def.ned_id is None)
 
     def wait_for_shutdown(self):
         timer = 0
