@@ -849,7 +849,7 @@ class LibvirtAction(Action):
         topology = maagic.get_node(trans, kp[1:])
 
         action = name
-        if action in ('start', 'define') and not input.force:
+        if action in ('start', 'define') and not (input.device or input.force):
             if (action == 'start' and topology.status != 'defined' or
                 action == 'define' and topology.status != 'undefined'):
                 return

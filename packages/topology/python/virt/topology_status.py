@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import time
 import ncs
 from ncs import maapi, maagic, OPERATIONAL
 from ncs.dp import Action
@@ -37,11 +38,8 @@ def schedule_topology_ping(keypath):
 
 def unschedule_topology_ping(topology_name):
     with maapi.single_write_trans('admin', 'python') as trans:
-        root = maagic.get_root(trans)
-        schedule_name = f'ping-topology-{topology_name}'
-        if schedule_name in root.scheduler.task:
-            del root.scheduler.task[schedule_name]
-            trans.apply()
+        trans.safe_delete(f'/scheduler/task{{ping-topology-{topology_name}}}')
+        trans.apply()
 
 
 class TopologyStatus():
@@ -98,6 +96,7 @@ class TopologyStatus():
             for device in reachable_devices:
                 self.fetch_ssh_host_keys(device, root)
 
+        time.sleep(2)
         with maapi.single_read_trans('admin', 'python') as trans:
             root = maagic.get_root(trans)
             for device in reachable_devices:
