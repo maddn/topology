@@ -66,11 +66,13 @@ module topology {
         uses bgp-grouping;
       }
       container mpls {
-        when "../igp/name";
+        must "../igp/name";
+        presence true;
         uses mpls-grouping;
       }
       container segment-routing {
-        when "../igp/name";
+        must "../igp/name";
+        presence true;
         uses segment-routing-grouping;
         container srv6 {
           when "../../ipv6";

@@ -288,7 +288,7 @@ submodule managed-topology-nano-plan {
         ncs:create-component "'mpls'" {
           ncs:pre-condition {
             ncs:monitor "$SERVICE/mpls" {
-              ncs:trigger-expr "count(child::*)>0";
+              ncs:trigger-expr ".";
             }
           }
           ncs:component-type-ref "mpls";
@@ -296,7 +296,7 @@ submodule managed-topology-nano-plan {
         ncs:create-component "'segment-routing'" {
           ncs:pre-condition {
             ncs:monitor "$SERVICE/segment-routing" {
-              ncs:trigger-expr "count(child::*)>0";
+              ncs:trigger-expr ".";
             }
           }
           ncs:component-type-ref "segment-routing";
