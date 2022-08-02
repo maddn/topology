@@ -109,10 +109,9 @@ class NetworkManager():
             self._link_networks[device_ids] = (
                 generate_network_id(*device_ids), link._path, iface_ids)
 
-        self._max_iface_id = max(
-                max(max(iface_ids)
-                    for (_, _, iface_ids) in self._link_networks.values()),
-                max(iface_id for (_, iface_id) in self._network_ifaces))
+        self._max_iface_id = max((0, *(max(iface_ids)
+                 for (_, _, iface_ids) in self._link_networks.values()),
+                 *(iface_id for (_, iface_id) in self._network_ifaces)))
 
     def _get_link_device_ids(self, link):
         return sort_link_device_ids((self._devices[link.a_end_device],
