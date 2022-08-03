@@ -34,3 +34,12 @@ docker-wait-started:
 	kill $${LOGS_PID}
 
 .PHONY: docker-build docker-start docker-stop docker-shell docker-run docker-wait-started
+
+topology_dir = $(shell basename $(CURDIR))
+../%.tar.gz:
+	cd .. ; \
+	tar -cvf $(basename $(@F)) \
+	  --exclude='.git' \
+	  --exclude='*.swp' \
+	  $(topology_dir); \
+	gzip -9 $(basename $(@F))
