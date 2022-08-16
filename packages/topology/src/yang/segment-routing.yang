@@ -5,6 +5,10 @@ submodule segment-routing {
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
+  description
+    "This submodule contains the segment-routing service which can enable
+     various segment routing features on the devices in the IGP domain.";
+
   typedef sid {
     type uint32 {
       range "16000..1048575";
@@ -49,9 +53,8 @@ submodule segment-routing {
 
   grouping segment-routing-grouping {
     container srgb {
-      tailf:info
-        "Segement Routing Global Block. These bounds are used to
-         configure the SRGB on each router";
+      tailf:info "Segement Routing Global Block.";
+      description "These bounds are used to configure the SRGB on each router";
       leaf lower-bound {
         type sid;
         default 16000;
@@ -65,13 +68,19 @@ submodule segment-routing {
     leaf prefix-sid-start {
       type sid;
       default 16000;
+      tailf:info
+        "This value is added to the device ID to calculate the prefix-sid";
     }
     leaf pce {
       type empty;
+      tailf:info "Configure the PCE peer from the base-config service.";
     }
 
     list flex-algo {
       key id;
+      description
+        "Create flex-algo including prefix-sid-algorithm on the primary
+         loopback interface and flex-algo affinity on each link interface.";
       leaf id {
         type flex-algo;
       }
@@ -86,6 +95,7 @@ submodule segment-routing {
       leaf srv6-locator {
         when "../../srv6";
         type string;
+        tailf:info "Create an SRv6 locator for the flex-algo";
       }
     }
   }

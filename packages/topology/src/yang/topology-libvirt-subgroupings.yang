@@ -21,12 +21,15 @@ submodule topology-libvirt-subgroupings {
   grouping libvirt-action-input-grouping {
     leaf force {
       type boolean;
+      tailf:info
+        "Run the action even if the topology is not in the expected state.";
     }
     leaf device {
       type string;
       tailf:non-strict-leafref {
         path "../../../devices/device/device-name";
       }
+      tailf:info "Only run the action on a single device.";
     }
   }
 
@@ -104,6 +107,7 @@ submodule topology-libvirt-subgroupings {
       tailf:cdb-oper {
         tailf:persistent true;
       }
+      description "Updated by the check-topology-status action.";
     }
   }
 

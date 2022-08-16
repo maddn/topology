@@ -5,6 +5,10 @@ submodule ip-connectivity {
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
+  description
+    "This submodule contains the ip-connectivity service which will configure
+     IPv4 and IPv6 addresses on the loopback and topology link interfaces.";
+
   typedef hexadectet-list {
     type string {
       pattern '[0-9a-fA-F]{0,4}(:[0-9a-fA-F]{0,4})*';
@@ -26,14 +30,22 @@ submodule ip-connectivity {
     container loopback-interfaces {
       list loopback {
         key id;
+        description
+          "A loopback interface will be configured on every device in the
+           topology for each entry in this list.";
         leaf id {
           type uint8;
+          tailf:info "The loopback interface id.";
         }
         leaf ipv4-subnet-start {
           type tailf:octet-list {
             tailf:value-length 3;
           }
           mandatory true;
+          tailf:info "First three octets of the loopback interface subnet.";
+          description
+            "This value will be combined with the device id to generate the
+             loopback interface IP address.";
         }
         leaf ipv6-subnet-start {
           when "../../../ipv6";
@@ -41,33 +53,53 @@ submodule ip-connectivity {
             pattern '.*(:.*){0,4}';
           }
           mandatory true;
+          tailf:info "First four hexadectets of the loopback interface subnet.";
+          description
+            "This leaf will be combined with the device id to generate the
+             loopback interface IP address.";
         }
         leaf primary {
           type empty;
           must "count(../../loopback/primary)=1" {
             error-message "Exactly 1 loopback interface must be primary";
           }
+          description
+            "This leaf is used by other services to determine which loopback
+             interface to use when one isn't explicitly chosen (for example
+             for BGP or PCE peering).";
         }
       }
     }
 
     container physical-interfaces {
+      description
+        "IPv4 and IPv6 addresses are configured on each topology link interface
+         in the /24 or /112 subnet, generated using the leaves in this
+         container with the lowest link device id (x) and highest link device
+         id (y). The device id is added to this subnet to generate the
+         interface address on each device.";
       leaf ipv4-subnet-start {
         type tailf:octet-list {
           tailf:value-length 1;
         }
         default 10;
+        tailf:info "First octets of the link interface subnet.";
+        description "Subnet is generated as {ipv4-subnet-start}.{x}.{y}.0/24";
       }
       leaf ipv6-subnet-start {
         when "../../ipv6";
         type hexadectet-list {
           pattern '.*(:.*){0,2}';
         }
+        tailf:info "First two hexadectets of the link interface subnet.";
         default 2001;
+        description "Subnet is generated as {ipv6-subnet-start}::{x}:{y}:0/112";
       }
     }
+
     leaf ipv6 {
       type empty;
+      tailf:info "Configure IPv6 addresses on each interface.";
     }
   }
 }

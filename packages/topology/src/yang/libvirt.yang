@@ -22,6 +22,10 @@ submodule libvirt {
     prefix ned;
   }
 
+  description
+    "This submodule contains the libvirt models for hypervisors and device
+     defintions (used to define a domain on libvirt).";
+
   grouping libvirt-get-network-grouping {
     leaf name {
       type string;
@@ -40,12 +44,17 @@ submodule libvirt {
     container libvirt {
       list hypervisor {
         key name;
+        description
+         "Connection and management information for the hypervisor.
+          Libvirt must be installed on this host.";
         leaf name {
           type string;
         }
         leaf host {
           type string;
           mandatory true;
+          tailf:info
+            "Used with transport leaf to generate the libvirt connection URI.";
         }
         leaf transport {
           type enumeration {
@@ -55,10 +64,18 @@ submodule libvirt {
             enum "libssh";
             enum "unix";
           }
-          default "libssh";
+          default "ssh";
+          description
+            "Refer to the libvirt connection URI documentation for
+             information about each transport type.";
         }
         leaf username {
           type string;
+          description
+            "These credentials will be returned by the authentication callback
+             used by libvirt. Note: the SSH transport type does not support
+             password authentication and must use SSH keys for paswordless
+             authentication.";
         }
         leaf password {
           type tailf:aes-256-cfb-128-encrypted-string;
@@ -67,18 +84,30 @@ submodule libvirt {
           leaf bridge {
             type string;
             default 'l3v1';
+            tailf:info "This bridge must exist on the libvirt host.";
+            description
+              "The first interface of each device will be attached to this
+               bridge.";
           }
           leaf ip-address-start {
             type inet:ipv4-address;
             default '198.18.1.60';
+            tailf:info
+              "Added to the device ID to generate the management IP address.";
           }
           leaf gateway-address {
             type inet:ipv4-address;
             default '198.18.1.1';
+            tailf:info "To be used in day0-file templates.";
+            description
+              "This leaf can be referenced in day0-file templates to create
+               static routes to ensure NSO can reach the device once it has
+               booted.";
           }
           leaf dns-server-address {
             type inet:ipv4-address;
             default '198.18.133.1';
+            tailf:info "To be used in day0-file templates.";
           }
         }
         leaf mac-address-start {
@@ -86,9 +115,13 @@ submodule libvirt {
             tailf:value-length 3;
           }
           default '02:c1:5c';
+          tailf:info "All generated MAC addresses will start with this value.";
         }
 
         container get {
+          description
+            "These actions retrieve the current live configuration from the
+             hypervisor, regardless of any topologies defined in NSO.";
           action domains {
             tailf:actionpoint libvirt-get-objects;
             output {
@@ -120,6 +153,9 @@ submodule libvirt {
               }
               list external-bridge {
                 uses libvirt-get-network-grouping;
+                description
+                  "Any host bridges used directly by domains with no network
+                   configured in libvirt i.e. the management bridge.";
               }
             }
           }
@@ -140,6 +176,7 @@ submodule libvirt {
                   }
                   leaf allocation {
                     type uint32;
+                    description "Storage currently used.";
                   }
                 }
               }
@@ -150,16 +187,26 @@ submodule libvirt {
 
       list device-definition {
         key name;
+        description "Parameters for defining a device in libvirt.";
         leaf name {
           type string;
         }
         leaf device-type {
           type enumeration {
-            enum XRv-9000;
-            enum IOSv;
-            enum Linux;
+            enum XRv-9000 {
+              tailf:info "ISO image for day 0. Two extra management interfaces.";
+            }
+            enum IOSv {
+              tailf:info "FAT disk image for day 0.";
+            }
+            enum Linux {
+              tailf:info "ISO image using cloud-init for day 0.";
+            }
           }
           mandatory true;
+          description
+            "Determines how to generate the day 0 image and any other
+             configuration required for the device.";
         }
         leaf vcpus {
           type uint16;
@@ -172,19 +219,32 @@ submodule libvirt {
         leaf template {
           type string;
           mandatory true;
+          description
+            "The name of the libvirt XML template file. Disk and interfaces are
+             automatically added when a device is defined.";
+           tailf:info
+             "Libvirt XML file (omitting .xml) present in the images directory.";
         }
         leaf storage-pool {
           type string;
           mandatory true;
+          tailf:info
+            "Disk and day 0 image for each device are created in this pool.";
         }
         leaf base-image {
           type string;
           mandatory true;
+          tailf:info "This file must exist in the storage-pool";
         }
         leaf base-image-type {
           type enumeration {
-            enum backing-store;
-            enum clone;
+            enum backing-store {
+              tailf:info "Use for qcow2 images only";
+            }
+            enum clone {
+              tailf:info
+                "A full clone of the base-image is created for each device.";
+            }
           }
           default backing-store;
         }
@@ -193,9 +253,14 @@ submodule libvirt {
         }
         leaf day0-file {
           type string;
+           tailf:info
+             "Template in the images directory. If empty, no day 0 is used.";
         }
         leaf day0-upload-file {
           type string;
+          description
+            "The contents of this file are base64 encoded into the file-content
+             attribute to use in day 0 templates.";
         }
         leaf authgroup {
           type leafref {
@@ -210,6 +275,8 @@ submodule libvirt {
               base ned:cli-ned-id;
             }
           //}
+          tailf:info
+            "Device will be created and synced in NSO using this ned-id.";
         }
       }
     }

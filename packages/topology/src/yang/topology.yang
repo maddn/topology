@@ -19,6 +19,13 @@ module topology {
   include traffic-generator;
   include managed-topology-nano-plan;
 
+  description
+    "This module includes the topology model, libvirt extensions and models
+     for each network service. These are each defined in seperate submodules
+     and used in the topologies container below. This module also defines the
+     managed-topology model which uses the groupings from each network service
+     submodule";
+
   grouping hidden-topology-link {
     leaf topology {
       type leafref {

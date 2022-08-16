@@ -6,6 +6,12 @@ submodule base-config {
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
+  description
+    "This submodule contains the base-config service which configures each
+     device in the topology with common standalone features typically found in
+     a golden config. This service can also configure static routes between
+     devices in the topology.";
+
   grouping base-config-service-grouping {
     list base-config {
       key topology;
@@ -25,10 +31,13 @@ submodule base-config {
     }
     leaf login-banner {
       type string;
+      tailf:info
+        "This login-banner will be configured on every device in the topology.";
     }
 
     container logging {
       presence true;
+      tailf:info "Configures some default logging parameters on each device.";
       container syslog-server {
         leaf ip-address {
           type inet:ipv4-address;
@@ -68,19 +77,26 @@ submodule base-config {
 
     leaf interface-bandwidth {
       type uint32;
+      tailf:info "Bandwidth for every topology link and network interface.";
     }
     leaf lldp {
       type empty;
+      tailf:info "Enable LLDP on every topology link and network interface.";
     }
 
     container static-routes {
       list route {
         key "source-device destination-device loopback-id";
+        description
+          "Configure a static route to the loopback address of a directly
+           connected device, and a optionally a return route on the
+           destination-device.";
         leaf source-device {
           type string;
           tailf:non-strict-leafref {
             path "deref(../../../topology)/../devices/device/device-name";
           }
+          tailf:info "The device the route will be configured on.";
         }
         leaf destination-device {
           type string;
@@ -98,6 +114,8 @@ submodule base-config {
             error-message "source-device and destination-device must be " +
               "directly connect (with an entry in the topology links list.)";
           }
+          description
+            "The next hop is automatically looked up from the topology links.";
         }
         leaf loopback-id {
           type uint8;
@@ -107,9 +125,16 @@ submodule base-config {
           }
         }
         leaf return-route {
+          tailf:info "Create a return route on the destination-device.";
           type enumeration {
-            enum source-device;
-            enum source-subnet;
+            enum source-device {
+              tailf:info
+                "Create a return route to the source loopback address.";
+            }
+            enum source-subnet {
+              tailf:info
+                "Create a return route to the source loopback subnet.";
+            }
             enum none;
           }
           default source-subnet;
@@ -122,6 +147,9 @@ submodule base-config {
           tailf:non-strict-leafref {
             path "deref(../../../topology)/../devices/device/device-name";
           }
+          description
+            "Create routes on this device from the loopback to management
+             address of each device in the topology;";
         }
         leaf loopback-id {
           type uint8;

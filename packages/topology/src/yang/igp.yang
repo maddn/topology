@@ -5,6 +5,10 @@ submodule igp {
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
+  description
+    "This submodule contains the IGP service which will create an IS-IS or
+     limited OSPF domain on the chosen routers in the topology.";
+
   grouping igp-service-grouping {
     list igp {
       key name;
@@ -31,13 +35,18 @@ submodule igp {
       tailf:non-strict-leafref {
         path "deref(../topology)/../devices/device/device-name";
       }
+      tailf:info "The devices in the IGP domain.";
     }
     choice routing-protocol {
       container is-is {
         presence true;
+        description
+          "Configures IS-IS on each device, and will add the interfaces that
+           are connected to other routers in the IGP devices list.";
       }
       container ospf {
         presence true;
+        description "Configures very basic OSPF on IOS devices.";
         leaf include-management-network {
           type boolean;
           default true;

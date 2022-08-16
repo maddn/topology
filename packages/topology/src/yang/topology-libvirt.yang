@@ -8,22 +8,30 @@ submodule topology-libvirt {
 
   // Additional groupings are in a seperate submodule due to an NSO bug.
   // If the groupings are in the same submodule they are missing from the
-  // compiled moduled.
+  // compiled module.
   include topology-libvirt-subgroupings;
 
+  description
+    "This submodule contains the libvirt extensions to the topology model.";
+
   grouping topology-libvirt-grouping {
+    description
+      "This grouping refines and augments the topology-base-grouping so the
+       topology model can be used with libvirt.";
     uses topology-base-grouping {
       refine "topology/links/link/a-end-interface" {
         config false;
         tailf:cdb-oper {
           tailf:persistent true;
         }
+        description "The interface is automatically assigned.";
       }
       refine "topology/links/link/z-end-interface" {
         config false;
         tailf:cdb-oper {
           tailf:persistent true;
         }
+        description "The interface is automatically assigned.";
       }
 
       augment "topology/links/link/a-end-interface" {
@@ -52,9 +60,14 @@ submodule topology-libvirt {
             type leafref {
               path "/topologies/libvirt/hypervisor/name";
             }
+            description "The hypervisor the topology will run on";
           }
           action define {
             tailf:actionpoint libvirt-action;
+            description
+              "Convert the topology devices, links and networks into libvirt
+               XML for corresponding domains, storage and networks and push to
+               the hypervisor.";
             input {
               uses libvirt-action-input-grouping;
             }
@@ -64,6 +77,9 @@ submodule topology-libvirt {
           }
           action undefine {
             tailf:actionpoint libvirt-action;
+            description
+              "Undefine the corresponding domains, volumes and networks for
+               this topology on the hypervisor.";
             input {
               uses libvirt-action-input-grouping;
             }
@@ -73,6 +89,9 @@ submodule topology-libvirt {
           }
           action start {
             tailf:actionpoint libvirt-action;
+            description
+              "Start the corresponding domains, volumes and networks for this
+               topology on the hypervisor.";
             input {
               uses libvirt-action-input-grouping;
             }
@@ -82,6 +101,9 @@ submodule topology-libvirt {
           }
           action stop {
             tailf:actionpoint libvirt-action;
+            description
+              "Stop the corresponding domains, volumes and networks for this
+               topology on the hypervisor.";
             input {
               uses libvirt-action-input-grouping;
             }
@@ -93,11 +115,18 @@ submodule topology-libvirt {
 
         action check-topology-status {
           tailf:actionpoint check-topology-status;
+          description
+            "Checks if the topology devices are reachable, and synchronizes
+             them into NSO. Updates the device and topology status leaves.";
           input {
             leaf frequency {
               type enumeration {
-                enum run-now;
-                enum schedule;
+                enum run-now {
+                  tailf:info "Run once immediately";
+                }
+                enum schedule {
+                  tailf:info "Run every 2 minutes until all devices are ready.";
+                }
               }
               default run-now;
             }
@@ -120,6 +149,7 @@ submodule topology-libvirt {
           tailf:cdb-oper {
             tailf:persistent true;
           }
+          description "Updated by the check-topology-status action.";
         }
       }
 

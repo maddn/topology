@@ -4,6 +4,13 @@ submodule topology-base {
 
   import tailf-common { prefix tailf; }
 
+  description
+    "This submodule defines the base topology model. It is intended that the
+     model can be used on its own with the network services in this package.
+     Currently this model is refined in the topology-libvirt submodule to add
+     the libvirt nodes, and that is the version included in the final topology
+     model.";
+
   grouping topology-base-grouping {
     list topology {
       key name;
@@ -21,10 +28,15 @@ submodule topology-base {
           leaf id {
             type uint8;
             mandatory true;
+            tailf:info
+              "Used in device and resource names such as IP and MAC addresses.";
+            description
+              "Recommended to keep this value in sequence starting at 1.";
           }
           leaf prefix {
             type string;
             mandatory true;
+            tailf:info "Prefixed to the ID to generate the device name.";
           }
           leaf device-name {
             type string;
@@ -37,6 +49,7 @@ submodule topology-base {
       }
 
       container links {
+        description "Point to point links between devices in the toplogy.";
         list link {
           key "a-end-device z-end-device";
           leaf a-end-device {
@@ -80,6 +93,7 @@ submodule topology-base {
       }
 
       container networks {
+        description "Networks connecting multiple devices in the topology.";
         list network {
           key name;
           leaf name {
@@ -88,14 +102,19 @@ submodule topology-base {
           leaf interface-id {
             type uint8;
             mandatory true;
+            tailf:info
+              "The same interface ID is used for each device in the network.";
           }
           leaf ipv4-subnet-start {
             type tailf:octet-list {
               tailf:value-length 3;
             }
+            tailf:info
+              "First three octets of the network subnet.";
             default '10.11.12';
           }
           container devices {
+            description "The devices in the network.";
             list device {
               key name;
               leaf name {

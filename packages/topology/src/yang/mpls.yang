@@ -2,7 +2,12 @@ submodule mpls {
   yang-version 1.1;
   belongs-to topology { prefix topology; }
 
+  import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
+
+  description
+    "This submodule contains the MPLS service which will configure MPLS on the
+     devices in the IGP domain.";
 
   grouping mpls-service-grouping {
     list mpls {
@@ -23,14 +28,21 @@ submodule mpls {
   grouping mpls-grouping {
     leaf ldp {
       type empty;
+      tailf:info
+        "Enable LDP on each interface connected to another device in the IGP.";
     }
     leaf rsvp {
       type empty;
+      tailf:info
+        "Enable RSVP on each interface connected to another device in the IGP.";
     }
     container traffic-engineering {
       presence true;
+      tailf:info
+        "Enable TE on each interface connected to another device in the IGP.";
       leaf pce {
         type empty;
+        tailf:info "Configure the PCE peer from the base-config service.";
       }
     }
   }

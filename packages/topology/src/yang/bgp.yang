@@ -5,12 +5,19 @@ submodule bgp {
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
+  description
+    "This submodule contains the BGP service which will configure BGP
+     neighbours based on their role.";
+
   grouping bgp-routers-grouping {
     leaf loopback-id {
       type uint8;
       tailf:non-strict-leafref {
-        path "deref(../../topology)/../ip-connectivity/loopback-interfaces/loopback/id";
+        path "deref(../../topology)/.." +
+             "/ip-connectivity/loopback-interfaces/loopback/id";
       }
+      tailf:info
+        "The IP address of this interface will be the neighbour address.";
     }
     leaf-list routers {
       type string;
@@ -43,12 +50,24 @@ submodule bgp {
     }
     container route-reflector {
       uses bgp-routers-grouping;
+      description
+        "On each device in the routers list, a VPNv4 (and optional VPNv6)
+         neighbour will be configured for each router in provider‑edge/routers
+         list, and a link-state neighbour will be configured for each router in
+         the link‑state/routers list.";
     }
     container provider-edge {
       uses bgp-routers-grouping;
+      description
+        "On each device in the routers list, a VPNv4 (and optional VPNv6)
+         neighbour will be configured to each router in the
+         route‑reflector/routers list.";
     }
     container link-state {
       uses bgp-routers-grouping;
+      description
+        "On each device in the routers list, a link-state neighbour will be
+         configured to each router in the route‑reflector/routers list.";
     }
   }
 }
