@@ -74,7 +74,7 @@ submodule libvirt {
           description
             "These credentials will be returned by the authentication callback
              used by libvirt. Note: the SSH transport type does not support
-             password authentication and must use SSH keys for paswordless
+             password authentication and must use SSH keys for passwordless
              authentication.";
         }
         leaf password {

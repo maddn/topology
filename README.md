@@ -17,7 +17,7 @@ In addition the topology model is
 to optionally define and create the topology in KVM using libvirt.
 
 
-## Getting Started
+## Installation
 
 The easiest way to get started is to clone this repository, then build and run
 a Docker image using the Make targets. See [docker](#docker) for full
@@ -492,7 +492,7 @@ The current libvirt topology for a hypervisor can be retrieved using the CLI
 command `libvirt topology list`.
 
 ```
-> libvirt topology list
+admin@ncs# libvirt topology list
 Possible completions:
   domains      List domains
   hypervisor   The hypervisor to connect to. If omitted the first hypervisor in the list is used
@@ -517,7 +517,7 @@ interfaces are identified as link networks.
 > [managed-topology-nano-plan.yang](packages/topology/src/yang/managed-topology-nano-plan.yang) |
 > Plan Path | `/topologies/managed-topology/plan`
 
-The `managed‑topology` nano service will automatically define and start a
+The `managed‑topology` nano service will automatically `define` and `start` a
 toplogy (if not already done) and once the topology `status` is `ready` it will
 create the above services. The `managed‑topology` YANG model contains the same
 nodes as the individual services.
@@ -525,3 +525,474 @@ nodes as the individual services.
 This service automates the process to define, start and configure an entire
 topology. The `plan` shows the status of each device and when each of the
 services is deployed.
+
+
+## Getting Started - Example Topology
+
+A sample [`topology`](#topology-xml) definition and
+[`managed-topology`](#managed-topology-service-xml) called `simple-lab` are
+included in the [examples](examples) directory.
+
+### Topology Overview
+
+The `simple-lab` topology contains five IOS XRv 9000 routers. Nodes 1 to 4 are
+in an IS-IS IGP domain with MPLS configured. Nodes 3 and 4 are PE devices and
+node 5 is the route relector.
+
+The diagram below shows the topology connections with the interfaces and IP
+addresses that NSO will allocate.
+```
+
+                                          ┌────────────┐
+                                          │            │
+                                          │   node-5   │
+                                          │   -(RR)-   │
+                                          │ 198.10.1.5 │
+                                          │            │
+                                          └────────────┘
+                                   GigE 0/0/0/1 │ 10.1.5.5
+                                                │
+                                                │
+················································│·················································
+:                                               │                                                :
+:                                  GigE 0/0/0/5 │ 10.1.5.1                                       :
+:                                         ┌────────────┐                                         :
+:                                         │            │                                         :
+:                            GigE 0/0/0/3 │   node-1   │ GigE 0/0/0/4                            :
+:               ┌─────────────────────────│   ------   │─────────────────────────┐               :
+:               │                10.1.3.1 │ 198.10.1.1 │ 10.1.4.1                │               :
+:               │                         │            │                         │               :
+:               │                         └────────────┘                         │               :
+:               │                   GigE 0/0/0/2 │ 10.1.2.1                      │               :
+:               │                                │                               │               :
+:               │                                │                               │               :
+:  GigE 0/0/0/1 │ 10.1.3.3                       │                      10.1.4.4 │ GigE 0/0/0/1  :
+:        ┌────────────┐                          │                         ┌────────────┐        :
+:        │            │                          │                         │            │        :
+:        │   node-3   │                          │                         │   node-4   │        :
+:        │   -(PE)-   │                          │                         │   -(PE)-   │        :
+:        │ 198.10.1.3 │                          │                         │ 198.10.1.4 │        :
+:        │            │                          │                         │            │        :
+:        └────────────┘                          │                         └────────────┘        :
+:  GigE 0/0/0/2 │ 10.2.3.3                       │                      10.2.4.4 │ GigE 0/0/0/2  :
+:               │                                │                               │               :
+:               │                                │                               │               :
+:               │                   GigE 0/0/0/1 │ 10.1.2.2                      │               :
+:               │                         ┌────────────┐                         │               :
+:               │                         │            │                         │               :
+:               │                10.2.3.2 │   node-2   │ 10.2.4.2                │               :
+:               └─────────────────────────│   ------   │─────────────────────────┘               :
+:                            GigE 0/0/0/3 │ 198.10.1.2 │ GigE 0/0/0/4                            :
+:                                         │            │                                         :
+:                                         └────────────┘                                         :
+:                                                                                                :
+:                                         IGP -- IS-IS 1                                         :
+:                                                                                                :
+··································································································
+```
+
+### Topology XML
+
+> XML file | [simple-lab-topology.xml](examples/simple-lab-topology.xml)
+
+The `simple-lab-topology.xml` file contains the `topology`, `authgroup`,
+`hypervisor` and `device-definition`. Update the `kvm` hypervisor with the
+details for the KVM host, and update the `XRv-9000` device definition with the
+`base-image`. Ensure the `day0-file` has the correct routes so that NSO can
+connect to the device once it has booted.
+
+The topology definition can be loaded into NSO using the CLI `load merge`
+command.
+
+```
+admin@ncs# load merge simple-lab-topology.xml
+Loading.
+3.09 KiB parsed in 0.03 sec (101.48 KiB/sec)
+
+admin@ncs# commit
+Commit complete.
+```
+
+NSO will not define the topology on the hypervisor until the `define` action is
+executed or a [`managed-topology`](#managed-topology-service-xml) service is
+created which uses this topology.
+
+When running NSO using the Docker build, this file can be copied to the
+`/system/root` directory before building the docker image so it will be
+available to load from the home directory.
+
+Below is a snippet of the XML showing how the topology device and links are
+defined.
+
+```xml
+<topology>
+  <name>simple-lab</name>
+  <devices>
+    <device>
+      <id>1</id>
+      <prefix>node</prefix>
+    </device>
+    <device>
+      <id>2</id>
+      <prefix>node</prefix>
+    </device>
+    <device>
+      <id>3</id>
+      <prefix>node</prefix>
+    </device>
+    <device>
+      <id>4</id>
+      <prefix>node</prefix>
+    </device>
+    <device>
+      <id>5</id>
+      <prefix>node</prefix>
+    </device>
+  </devices>
+  <links>
+  <link>
+    <a-end-device>node-1</a-end-device>
+    <z-end-device>node-2</z-end-device>
+  </link>
+  <link>
+    <a-end-device>node-3</a-end-device>
+    <z-end-device>node-1</z-end-device>
+    <affinity>top</affinity>
+  </link>
+  <link>
+    <a-end-device>node-1</a-end-device>
+    <z-end-device>node-4</z-end-device>
+    <affinity>top</affinity>
+  </link>
+  <link>
+    <a-end-device>node-4</a-end-device>
+    <z-end-device>node-2</z-end-device>
+    <affinity>bottom</affinity>
+  </link>
+  <link>
+    <a-end-device>node-2</a-end-device>
+    <z-end-device>node-3</z-end-device>
+    <affinity>bottom</affinity>
+  </link>
+  <link>
+    <a-end-device>node-1</a-end-device>
+    <z-end-device>node-5</z-end-device>
+  </link>
+  </links>
+</topology>
+```
+
+### Managed Topology Service XML
+
+> XML file | [simple-lab-service.xml](examples/simple-lab-service.xml)
+
+The `simple-lab-service.xml` file contains the `managed-topology` service which
+defines the services to configure on the topology routers. This includes the
+loopback interface, IS-IS, MPLS, BGP and a static route between node-1 and
+node-5.
+
+The `managed-topology` service can be loaded into NSO using the CLI `load
+merge` command.
+
+```
+admin@ncs# load merge simple-lab-service.xml
+Loading.
+1.21 KiB parsed in 0.01 sec (63.40 KiB/sec)
+
+admin@ncs# commit
+Commit complete.
+```
+
+Once the transaction is committed, NSO will `define` and `start` the topology
+on the KVM host defined above. After all the devices have booted, NSO will
+configure them with the above services. The progress can be monitored using the
+[service plan](#service-plan).
+
+If running NSO using the Docker build, this file can be copied to the
+`/system/root` directory before building the docker image so it will be
+available to load from the home directory.
+
+The content of the XML file is shown below.
+
+```xml
+<managed-topology>
+  <topology>simple-lab</topology>
+  <loopback-interfaces>
+    <loopback>
+      <id>0</id>
+      <ipv4-subnet-start>198.10.1</ipv4-subnet-start>
+      <primary/>
+    </loopback>
+  </loopback-interfaces>
+  <login-banner>Hello World!</login-banner>
+  <logging/>
+  <ntp-server>198.18.128.1</ntp-server>
+  <interface-bandwidth>10000</interface-bandwidth>
+  <lldp/>
+  <static-routes>
+    <route>
+      <source-device>node-1</source-device>
+      <destination-device>node-5</destination-device>
+      <loopback-id>0</loopback-id>
+    </route>
+  </static-routes>
+  <igp>
+    <name>1</name>
+    <devices>node-1</devices>
+    <devices>node-2</devices>
+    <devices>node-3</devices>
+    <devices>node-4</devices>
+    <is-is/>
+  </igp>
+  <bgp>
+    <as-number>65000</as-number>
+    <route-reflector>
+      <routers>node-5</routers>
+    </route-reflector>
+    <provider-edge>
+      <routers>node-3</routers>
+      <routers>node-4</routers>
+    </provider-edge>
+  </bgp>
+  <mpls>
+    <ldp/>
+    <rsvp/>
+  </mpls>
+</managed-topology>
+```
+
+### Allocated Resources
+
+The topology model is updated with the management IP addresses, MAC addresses
+and host interfaces that have been allocated by the `define` action. It is
+then updated with link and network interface IPv4 addresses allocated by the
+`ip-connectivity` service.
+
+These are stored as operational data and can be seen using the CLI show
+command below.
+
+```
+admin@ncs# show topologies topology simple-lab
+    DEVICE                                  HOST
+ID  NAME    IP ADDRESS   MAC ADDRESS        INTERFACE    STATUS
+-----------------------------------------------------------------
+1   node-1  198.18.1.41  02:c1:5c:01:01:ff  veth-1-l3v1  ready
+2   node-2  198.18.1.42  02:c1:5c:01:02:ff  veth-2-l3v1  ready
+3   node-3  198.18.1.43  02:c1:5c:01:03:ff  veth-3-l3v1  ready
+4   node-4  198.18.1.44  02:c1:5c:01:04:ff  veth-4-l3v1  ready
+5   node-5  198.18.1.45  02:c1:5c:01:05:ff  veth-5-l3v1  ready
+
+A END   Z END       HOST                          IP            HOST                          IP        HOST
+DEVICE  DEVICE  ID  INTERFACE  MAC ADDRESS        ADDRESS   ID  INTERFACE  MAC ADDRESS        ADDRESS   BRIDGE   MAC ADDRESS
+------------------------------------------------------------------------------------------------------------------------------------
+node-1  node-2  2   veth-1-2   02:c1:5c:01:01:02  10.1.2.1  1   veth-2-1   02:c1:5c:01:02:01  10.1.2.2  vbr-1-2  02:c1:5c:00:01:02
+node-1  node-4  4   veth-1-4   02:c1:5c:01:01:04  10.1.4.1  1   veth-4-1   02:c1:5c:01:04:01  10.1.4.4  vbr-1-4  02:c1:5c:00:01:04
+node-1  node-5  5   veth-1-5   02:c1:5c:01:01:05  10.1.5.1  1   veth-5-1   02:c1:5c:01:05:01  10.1.5.5  vbr-1-5  02:c1:5c:00:01:05
+node-2  node-3  3   veth-2-3   02:c1:5c:01:02:03  10.2.3.2  2   veth-3-2   02:c1:5c:01:03:02  10.2.3.3  vbr-2-3  02:c1:5c:00:02:03
+node-3  node-1  1   veth-3-1   02:c1:5c:01:03:01  10.1.3.3  3   veth-1-3   02:c1:5c:01:01:03  10.1.3.1  vbr-1-3  02:c1:5c:00:01:03
+node-4  node-2  2   veth-4-2   02:c1:5c:01:04:02  10.2.4.4  4   veth-2-4   02:c1:5c:01:02:04  10.2.4.2  vbr-2-4  02:c1:5c:00:02:04
+
+               |------------ A End Interface -------------||------------ Z End Interface -------------||-------- Network ---------|
+```
+
+In addition, the `libvirt topology list` command can be used to see what is
+currently defined and running on the libvirt host.
+
+```
+admin@ncs# libvirt topology list
+
+Devices:
+    node-3:  vCPUs [2]  Memory [12288 MB]  [ACTIVE]
+    node-1:  vCPUs [2]  Memory [12288 MB]  [ACTIVE]
+    node-4:  vCPUs [2]  Memory [12288 MB]  [ACTIVE]
+    node-2:  vCPUs [2]  Memory [12288 MB]  [ACTIVE]
+    node-5:  vCPUs [2]  Memory [12288 MB]  [ACTIVE]
+
+Link Networks:
+    net-1-5 [vbr-1-5]: node-1 veth-1-5 <--> node-5 veth-5-1
+    net-1-3 [vbr-1-3]: node-3 veth-3-1 <--> node-1 veth-1-3
+    net-1-4 [vbr-1-4]: node-1 veth-1-4 <--> node-4 veth-4-1
+    net-1-2 [vbr-1-2]: node-1 veth-1-2 <--> node-2 veth-2-1
+    net-2-4 [vbr-2-4]: node-4 veth-4-2 <--> node-2 veth-2-4
+    net-2-3 [vbr-2-3]: node-3 veth-3-2 <--> node-2 veth-2-3
+
+Other Networks:
+    net-ctrl [vbr-ctrl]:
+       node-3 veth-3-ctrl
+       node-1 veth-1-ctrl
+       node-4 veth-4-ctrl
+       node-2 veth-2-ctrl
+       node-5 veth-5-ctrl
+    net-host [vbr-host]:
+       node-3 veth-3-host
+       node-1 veth-1-host
+       node-4 veth-4-host
+       node-2 veth-2-host
+       node-5 veth-5-host
+    net-1-null [vbr-1-null]:
+       node-1 veth-1-0
+       node-1 veth-1-1
+    net-2-null [vbr-2-null]:
+       node-2 veth-2-0
+       node-2 veth-2-2
+       node-2 veth-2-5
+    net-3-null [vbr-3-null]:
+       node-3 veth-3-0
+       node-3 veth-3-3
+       node-3 veth-3-4
+       node-3 veth-3-5
+    net-4-null [vbr-4-null]:
+       node-4 veth-4-0
+       node-4 veth-4-3
+       node-4 veth-4-4
+       node-4 veth-4-5
+    net-5-null [vbr-5-null]:
+       node-5 veth-5-0
+       node-5 veth-5-2
+       node-5 veth-5-3
+       node-5 veth-5-4
+       node-5 veth-5-5
+
+External Bridges:
+    l3v1:
+       node-3 veth-3-l3v1
+       node-1 veth-1-l3v1
+       node-4 veth-4-l3v1
+       node-2 veth-2-l3v1
+       node-5 veth-5-l3v1
+
+Unused Networks:
+    default [virbr0]
+
+Storage Pools:
+    vms:
+        xrv9k-fullk9-x-7.7.1.qcow2   Capacity [46080 MB]  Allocation [3453 MB]
+        node-1.qcow2                 Capacity [46080 MB]  Allocation [477 MB]
+        node-1-day0.img              Capacity [0 MB]      Allocation [0 MB]
+        node-2.qcow2                 Capacity [46080 MB]  Allocation [471 MB]
+        node-2-day0.img              Capacity [0 MB]      Allocation [0 MB]
+        node-3.qcow2                 Capacity [46080 MB]  Allocation [480 MB]
+        node-3-day0.img              Capacity [0 MB]      Allocation [0 MB]
+        node-4.qcow2                 Capacity [46080 MB]  Allocation [479 MB]
+        node-4-day0.img              Capacity [0 MB]      Allocation [0 MB]
+        node-5.qcow2                 Capacity [46080 MB]  Allocation [465 MB]
+        node-5-day0.img              Capacity [0 MB]      Allocation [0 MB]
+```
+
+### Service Plan
+
+The `managed-topology` service plan has a component for each device in the
+topology. Each component has states to show when the device is `reachable` and
+`synced` in NSO. There are also components for each service to be configured on
+the topology. The plan can be viewed graphically in the NSO Web UI where it is
+automatically updated as the service progresses, or using the CLI as shown
+below.
+
+```
+admin@ncs# show topologies managed-topology simple-lab plan component | \
+> de-select back-track | de-select goal | de-select state service-reference
+                                                                                 POST ACTION
+TYPE              NAME            STATE            STATUS   WHEN                 STATUS
+-------------------------------------------------------------------------------------------------
+self              self            init             reached  2022-07-27T12:38:07  -
+                                  ready            reached  2022-07-27T12:52:33  -
+libvirt-topology  topology        init             reached  2022-07-27T12:38:07  create-reached
+                                  defined          reached  2022-07-27T12:38:12  create-reached
+                                  ready            reached  2022-07-27T12:52:33  -
+libvirt-device    node-1          init             reached  2022-07-27T12:38:07  -
+                                  defined          reached  2022-07-27T12:38:09  -
+                                  started          reached  2022-07-27T12:38:16  -
+                                  reachable        reached  2022-07-27T12:52:00  -
+                                  synced           reached  2022-07-27T12:52:12  -
+                                  ready            reached  2022-07-27T12:52:12  -
+libvirt-device    node-2          init             reached  2022-07-27T12:38:07  -
+                                  defined          reached  2022-07-27T12:38:10  -
+                                  started          reached  2022-07-27T12:38:18  -
+                                  reachable        reached  2022-07-27T12:52:00  -
+                                  synced           reached  2022-07-27T12:52:18  -
+                                  ready            reached  2022-07-27T12:52:18  -
+libvirt-device    node-3          init             reached  2022-07-27T12:38:07  -
+                                  defined          reached  2022-07-27T12:38:10  -
+                                  started          reached  2022-07-27T12:38:20  -
+                                  reachable        reached  2022-07-27T12:52:00  -
+                                  synced           reached  2022-07-27T12:52:26  -
+                                  ready            reached  2022-07-27T12:52:26  -
+libvirt-device    node-4          init             reached  2022-07-27T12:38:07  -
+                                  defined          reached  2022-07-27T12:38:11  -
+                                  started          reached  2022-07-27T12:38:22  -
+                                  reachable        reached  2022-07-27T12:50:31  -
+                                  synced           reached  2022-07-27T12:50:50  -
+                                  ready            reached  2022-07-27T12:50:50  -
+libvirt-device    node-5          init             reached  2022-07-27T12:38:07  -
+                                  defined          reached  2022-07-27T12:38:12  -
+                                  started          reached  2022-07-27T12:38:23  -
+                                  reachable        reached  2022-07-27T12:52:00  -
+                                  synced           reached  2022-07-27T12:52:33  -
+                                  ready            reached  2022-07-27T12:52:33  -
+initial-config    initial-config  init             reached  2022-07-27T12:52:33  -
+                                  ip-connectivity  reached  2022-07-27T12:52:33  -
+                                  base-config      reached  2022-07-27T12:52:33  -
+                                  ready            reached  2022-07-27T12:52:33  -
+igp               igp             init             reached  2022-07-27T12:52:33  -
+                                  config           reached  2022-07-27T12:52:33  -
+                                  ready            reached  2022-07-27T12:52:33  -
+mpls              mpls            init             reached  2022-07-27T12:52:33  -
+                                  config           reached  2022-07-27T12:52:33  -
+                                  ready            reached  2022-07-27T12:52:33  -
+bgp               bgp             init             reached  2022-07-27T12:52:33  -
+                                  config           reached  2022-07-27T12:52:33  -
+                                  ready            reached  2022-07-27T12:52:33  -
+```
+
+**Note:** The `libvirt-topology` `init` and `defined` states use a
+`post-action-node` to automatically run the libvirt `define` and `start`
+actions.
+
+### Topology Verification
+
+Once the topology devices have been configured, connectivity can be verified
+on the routers directly.
+
+The following are examples of show commands that verify the configuration is
+working as expected. These have been ran on node-3. This node is in the IS-IS
+domain and has a BGP neighbour (node-5).
+
+1. Verify the IS-IS topology has been learnt.
+
+```
+RP/0/RP0/CPU0:node-3#show isis topology
+Wed Jul 27 12:58:40.953 UTC
+
+IS-IS 1 paths to IPv4 Unicast (Level-1) routers
+System Id          Metric    Next-Hop           Interface       SNPA
+node-3             --
+
+IS-IS 1 paths to IPv4 Unicast (Level-2) routers
+System Id          Metric    Next-Hop           Interface       SNPA
+node-1             10        node-1             Gi0/0/0/1       *PtoP*
+node-2             10        node-2             Gi0/0/0/2       *PtoP*
+node-3             --
+node-4             20        node-1             Gi0/0/0/1       *PtoP*
+node-4             20        node-2             Gi0/0/0/2       *PtoP*
+```
+
+2. Verify the MPLS interfaces are configured.
+
+```
+RP/0/RP0/CPU0:node-3#show mpls interfaces
+Wed Jul 27 12:59:14.089 UTC
+Interface                  LDP      Tunnel   Static   Enabled
+-------------------------- -------- -------- -------- --------
+GigabitEthernet0/0/0/2     Yes      No       No       Yes
+GigabitEthernet0/0/0/1     Yes      No       No       Yes
+```
+
+3. Verify the BGP session has been established with the route reflector.
+
+```
+RP/0/RP0/CPU0:node-3#show bgp neighbors brief
+Wed Jul 27 12:59:46.655 UTC
+
+Neighbor        Spk    AS Description                          Up/Down  NBRState
+198.10.1.5        0 65000                                      00:06:04 Established
+```
