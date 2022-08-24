@@ -2,17 +2,16 @@
 from collections import defaultdict
 from io import BytesIO
 from ipaddress import IPv4Address
-from passlib.hash import md5_crypt
 from time import sleep
 from xml.etree.ElementTree import fromstring, tostring
 from xml.dom.minidom import parseString
-
 import base64
 import crypt
 import os
 import re
 import subprocess
 
+from passlib.hash import md5_crypt
 import fs
 import pycdlib
 
