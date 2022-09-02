@@ -101,6 +101,11 @@ class LibvirtConnection():
                     target = iface.find('target')
                     dev = target.get('dev') if target is not None else 'none'
                     source_dict = getattr(self, f'{iface_type}s')
-                    source_dict[source.get(iface_type)]['interfaces'].append({
+                    name = source.get(iface_type)
+                    if name not in source_dict and iface_type == 'network':
+                        name = f'***missing*** {name}'
+                        if name not in source_dict:
+                            source_dict[name] = {'interfaces': []}
+                    source_dict[name]['interfaces'].append({
                         'domain-name': domain.name(),
                         'host-interface': dev})
