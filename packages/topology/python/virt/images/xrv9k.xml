@@ -3,9 +3,17 @@
   <memory unit='MiB'>{memory}</memory>
   <currentMemory unit='MiB'>{memory}</currentMemory>
   <vcpu placement='static'>{vcpus}</vcpu>
-  <cpu mode='host-passthrough'/>
+  <cpu mode='custom' match='exact' check='full'>
+    <model fallback='forbid'>Westmere</model>
+    <feature policy='require' name='vmx'/>
+    <feature policy='require' name='vme'/>
+    <feature policy='require' name='pclmuldq'/>
+    <feature policy='require' name='x2apic'/>
+    <feature policy='require' name='hypervisor'/>
+    <feature policy='require' name='arat'/>
+  </cpu>
   <os>
-    <type arch='x86_64' machine='pc-i440fx-rhel7.0.0'>hvm</type>
+    <type arch='x86_64' machine='pc-i440fx-jammy'>hvm</type>
     <boot dev='hd'/>
   </os>
   <features>
@@ -26,7 +34,7 @@
     <suspend-to-disk enabled='no'/>
   </pm>
   <devices>
-    <emulator>/usr/libexec/qemu-kvm</emulator>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
 
     <!-- virsh console instead of telnet for first serial port -->
     <console type="pty">

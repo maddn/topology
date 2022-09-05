@@ -256,7 +256,7 @@ class DomainXmlBuilder():
             'file-format': 'raw',
             'storage-pool': pool_name,
             'volume-name': volume_name,
-            'target-dev': 'vdc',
+            'target-dev': 'hdc',
             'bus': 'ide'})
 
     def _get_iface_xml(self, network_id, dev_name, mac_address, model_type,
