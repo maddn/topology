@@ -6,15 +6,21 @@ submodule topology-libvirt-subgroupings {
   import ietf-inet-types { prefix inet; }
   import tailf-common { prefix tailf; }
 
-  typedef status {
+  typedef provisioning-status {
     type enumeration {
       enum undefined;
       enum defined;
-      enum reachable;
+      enum started;
       enum ready;
-      enum not-reachable;
       enum sync-error;
       enum unmanaged;
+    }
+  }
+
+  typedef operational-status {
+    type enumeration {
+      enum reachable;
+      enum not-reachable;
     }
   }
 
@@ -100,14 +106,22 @@ submodule topology-libvirt-subgroupings {
         type string;
       }
     }
-    leaf status {
-      type status;
+    leaf provisioning-status {
+      type provisioning-status;
       default undefined;
       config false;
       tailf:cdb-oper {
         tailf:persistent true;
       }
       description "Updated by the check-topology-status action.";
+    }
+    leaf operational-status {
+      type operational-status;
+      default not-reachable;
+      config false;
+      tailf:cdb-oper {
+        tailf:persistent true;
+      }
     }
   }
 

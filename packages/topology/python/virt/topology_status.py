@@ -7,25 +7,32 @@ _ncs = __import__('_ncs')
 
 ACTION_STATUS_MAP = {
     'define': 'defined',
-    'create': 'not-reachable',
+    'create': 'started',
     'shutdown': 'defined',
     'destroy': 'defined',
     'undefine': 'undefined'}
 
-def get_status(node):
-    with maapi.single_read_trans('admin', 'python', db=OPERATIONAL) as trans:
-        return maagic.get_node(trans, node._path).status
-
-def update_status(node, status):
+def update_operational_status(node, status):
     with maapi.single_write_trans('admin', 'python', db=OPERATIONAL) as trans:
-        trans.set_elem(status, f'{node._path}/status')
+        trans.set_elem(status, f'{node._path}/operational-status')
         trans.apply()
 
-def update_status_after_action(node, action, unmanaged=False):
+def update_provisioning_status(node, status):
+    with maapi.single_write_trans('admin', 'python', db=OPERATIONAL) as trans:
+        trans.set_elem(status, f'{node._path}/provisioning-status')
+        trans.apply()
+
+def update_status_after_action(node, action):
+    update_provisioning_status(node, ACTION_STATUS_MAP[action])
+
+def update_device_status_after_action(node, action, unmanaged=False):
     if unmanaged and action == 'create':
-        update_status(node, 'unmanaged')
+        update_provisioning_status(node, 'unmanaged')
+        update_operational_status(node, 'reachable')
     else:
-        update_status(node, ACTION_STATUS_MAP[action])
+        update_status_after_action(node, action)
+        if action in ('shutdown', 'destroy', 'undefine'):
+            update_operational_status(node, 'not-reachable')
 
 def schedule_topology_ping(keypath):
     with maapi.single_write_trans('admin', 'python') as trans:
@@ -49,20 +56,21 @@ class TopologyStatus():
 
     def update_device_status(self, topology_device, status):
         self.device_states[topology_device.device_name] = status
-        update_status(topology_device, status)
+        update_provisioning_status(topology_device, status)
 
     def ping_device(self, topology_device, root):
         device_name = topology_device.device_name
+        self.device_states[device_name] = topology_device.provisioning_status
         nso_device = root.devices.device[device_name]
         self.log.info(f'Pinging {device_name}...')
         device_ping = nso_device.ping()
         self.log.info(device_ping.result)
         if ' 0% packet loss' not in device_ping.result:
-            self.update_device_status(topology_device, 'not-reachable')
+            update_operational_status(topology_device, 'not-reachable')
             return False
 
-        if topology_device.status == 'not-reachable':
-            self.update_device_status(topology_device, 'reachable')
+        if topology_device.operational_status == 'not-reachable':
+            update_operational_status(topology_device, 'reachable')
         return True
 
     def fetch_ssh_host_keys(self, topology_device, root):
@@ -88,7 +96,7 @@ class TopologyStatus():
             for device in topology.devices.device
             if root.topologies.libvirt.device_definition[
                     device.definition].ned_id is not None and
-                device.status != 'ready' and
+                device.provisioning_status != 'ready' and
                 self.ping_device(device, root) ]
 
         with maapi.single_read_trans('admin', 'python') as trans:
@@ -109,9 +117,9 @@ class TopologyStatus():
                  for status in self.device_states.values()):
             topology_status = 'sync-error'
         else:
-            topology_status = 'not-reachable'
+            topology_status = 'started'
 
-        update_status(topology, topology_status)
+        update_provisioning_status(topology, topology_status)
         return self.device_states
 
 

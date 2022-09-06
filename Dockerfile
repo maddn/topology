@@ -27,7 +27,7 @@ RUN apt-get update \
      vim-tiny \
      xsltproc \
      xmlstarlet \
-  && pip3 install libvirt-python passlib pycdlib pyfatfs \
+  && pip3 install libvirt-python passlib pycdlib pyfatfs setproctitle \
   && apt-get -qy purge pkg-config python3-pip python3-dev \
   && apt-get -qy autoremove \
   && apt-get clean \

@@ -3,6 +3,7 @@ from ncs.application import Application
 from virt.libvirt_get_objects import LibvirtGetObjects
 from virt.libvirt_action import LibvirtAction
 from virt.topology_status import CheckTopologyStatus
+from monitor.operational_status import OperationalStateMonitor
 
 
 # ---------------------------------------------
@@ -14,6 +15,7 @@ class Main(Application):
         self.register_action('libvirt-get-objects', LibvirtGetObjects)
         self.register_action('libvirt-action', LibvirtAction)
         self.register_action('check-topology-status', CheckTopologyStatus)
+        self.register_action('operational-state-monitor', OperationalStateMonitor)
 
     def teardown(self):
         self.log.info('Main FINISHED')

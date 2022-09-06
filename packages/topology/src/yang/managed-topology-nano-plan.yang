@@ -70,6 +70,18 @@ submodule managed-topology-nano-plan {
                        /state[name='ncs:ready'][status!='reached'])=0";
             }
           }
+          ncs:post-action-node
+              "/topologies/topology[name=$TOPOLOGY]/operational-state-monitor" {
+            ncs:action-name "start";
+            ncs:sync;
+          }
+        }
+        ncs:delete {
+          ncs:post-action-node
+              "/topologies/topology[name=$TOPOLOGY]/operational-state-monitor" {
+            ncs:action-name "stop";
+            ncs:sync;
+          }
         }
       }
     }
@@ -81,7 +93,7 @@ submodule managed-topology-nano-plan {
           ncs:pre-condition {
             ncs:monitor
                 "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
-              ncs:trigger-expr "status!='undefined'";
+              ncs:trigger-expr "provisioning-status!='undefined'";
             }
           }
         }
@@ -91,7 +103,7 @@ submodule managed-topology-nano-plan {
           ncs:pre-condition {
             ncs:monitor
                 "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
-              ncs:trigger-expr "status!='defined'";
+              ncs:trigger-expr "provisioning-status!='defined'";
             }
           }
         }
@@ -101,7 +113,7 @@ submodule managed-topology-nano-plan {
           ncs:pre-condition {
             ncs:monitor
                 "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
-              ncs:trigger-expr "status!='not-reachable'";
+              ncs:trigger-expr "operational-status!='not-reachable'";
             }
           }
         }
@@ -111,7 +123,7 @@ submodule managed-topology-nano-plan {
           ncs:pre-condition {
             ncs:monitor
                 "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]" {
-              ncs:trigger-expr "status='ready'";
+              ncs:trigger-expr "provisioning-status='ready'";
             }
           }
         }

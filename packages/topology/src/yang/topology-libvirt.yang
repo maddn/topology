@@ -113,6 +113,59 @@ submodule topology-libvirt {
           }
         }
 
+        container state-events {
+          config false;
+          tailf:cdb-oper {
+            tailf:persistent true;
+          }
+          list event {
+            leaf timestamp {
+              type string;
+            }
+            leaf device {
+              type leafref {
+                path "../../../devices/device/device-name";
+              }
+            }
+            leaf event-type {
+              type enumeration {
+                enum online;
+                enum offline;
+                enum warn;
+              }
+            }
+            leaf ping-missed-packets {
+              type string;
+            }
+          }
+        }
+
+        container operational-state-monitor {
+          action start {
+            tailf:actionpoint operational-state-monitor;
+          }
+          action stop {
+            tailf:actionpoint operational-state-monitor;
+          }
+          action clear {
+            tailf:actionpoint operational-state-monitor;
+          }
+          action status {
+            tailf:actionpoint operational-state-monitor;
+            output {
+              leaf status {
+                type enumeration {
+                  enum running;
+                  enum not-running;
+                }
+              }
+              leaf process-pid {
+                type uint32;
+              }
+            }
+          }
+        }
+
         action check-topology-status {
           tailf:actionpoint check-topology-status;
           description
@@ -137,13 +190,13 @@ submodule topology-libvirt {
                 type string;
               }
               leaf status {
-                type status;
+                type provisioning-status;
               }
             }
           }
         }
-        leaf status {
-          type status;
+        leaf provisioning-status {
+          type provisioning-status;
           default undefined;
           config false;
           tailf:cdb-oper {

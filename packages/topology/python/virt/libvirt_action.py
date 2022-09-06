@@ -20,7 +20,8 @@ from ncs.dp import Action
 from ncs import maapi, maagic, OPERATIONAL
 from virt.libvirt_connection import LibvirtConnection
 from virt.topology_status import \
-        update_status_after_action, schedule_topology_ping
+        update_device_status_after_action, update_status_after_action, \
+        schedule_topology_ping
 
 _ncs = __import__('_ncs')
 
@@ -827,7 +828,8 @@ class Topology():
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)
-            update_status_after_action(device, action, dev_def.ned_id is None)
+            update_device_status_after_action(device,
+                    action, dev_def.ned_id is None)
 
     def wait_for_shutdown(self):
         timer = 0
@@ -848,8 +850,10 @@ class LibvirtAction(Action):
 
         action = name
         if action in ('start', 'define') and not (input.device or input.force):
-            if (action == 'start' and topology.status != 'defined' or
-                action == 'define' and topology.status != 'undefined'):
+            if (action == 'start' and
+                    topology.provisioning_status != 'defined' or
+                action == 'define' and
+                    topology.provisioning_status != 'undefined'):
                 return
 
         hypervisor_name = topology.libvirt.hypervisor
