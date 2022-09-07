@@ -79,10 +79,9 @@ def nso_device_delete(device):
         trans.safe_delete(f'/devices/device{{{device.device_name}}}')
         trans.apply()
 
-def force_maagic_leaf_val2str(maagic_node, leaf_name):
-    #pylint: disable=protected-access
-    leaf_node = maagic_node._children.get_by_yang(leaf_name)
-    return leaf_node.get_value_object().val2str(leaf_node._cs_node)
+def force_maagic_leaf_val2str(node, leaf_name):
+    value = maagic.get_trans(node).get_elem(f'{node._path}/{leaf_name}')
+    return value.val2str(_ncs.cs_node_cd(node._cs_node, leaf_name))
 
 
 class NetworkManager():
