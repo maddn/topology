@@ -72,6 +72,12 @@ for I in $(seq 60); do
     ncs --wait-started 10 && break
 done
 
+# post-start scripts
+for file in $(ls /etc/ncs/post-ncs-start.d/*.sh 2>/dev/null); do
+    echo "run-nso.sh: running post start script ${file}"
+    ${file}
+done
+
 echo "run-nso.sh: startup complete"
 
 # wait forever on the ncs process, we run ncs in background and wait on it like
