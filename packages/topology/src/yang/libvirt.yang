@@ -117,6 +117,12 @@ submodule libvirt {
           default '02:c1:5c';
           tailf:info "All generated MAC addresses will start with this value.";
         }
+        leaf external-bridge {
+          type string;
+          default 'l2v1';
+          tailf:info
+            "Default external bridge for links to devices on another host.";
+        }
 
         container get {
           description

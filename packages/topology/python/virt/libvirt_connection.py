@@ -5,13 +5,44 @@ import libvirt
 _ncs = __import__('_ncs')
 
 
+class HypervisorManager():
+    def __init__(self, hypervisors, topology):
+        self._libvirt_connections = {
+                hypervisor.name: LibvirtConnection(hypervisor)
+                for hypervisor in hypervisors }
+        self._external_bridges = {
+                hypervisor.name: hypervisor.external_bridge
+                for hypervisor in hypervisors }
+        self._hypervisors = {
+                int(device.id): device.hypervisor or topology.libvirt.hypervisor
+                for device in topology.devices.device}
+
+    def get_libvirt(self, hypervisor_name):
+        libvirt_conn = self._libvirt_connections[hypervisor_name]
+        if libvirt_conn.conn is None:
+            libvirt_conn.connect()
+            libvirt_conn.populate_cache()
+        return libvirt_conn
+
+    def get_device_libvirt(self, device_id):
+        return self.get_libvirt(self._hypervisors[int(device_id)])
+
+    def get_external_bridge(self, hypervisor_name):
+        return self._external_bridges[hypervisor_name]
+
+    def get_device_hypervisor(self, device_id):
+        return self._hypervisors[device_id]
+
+
 class LibvirtConnection():
+    #pylint: disable=too-many-instance-attributes
     def __init__(self, hypervisor):
         self.conn = None
         self.bridges = defaultdict(lambda: defaultdict(dict, interfaces=[]))
         self.networks = {}
         self.domains = {}
         self.volumes = {} # by pool
+        self.name = hypervisor.name
 
         self._username = hypervisor.username
         username_str = f'{self._username}@' if self._username else ''

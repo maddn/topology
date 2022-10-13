@@ -40,6 +40,35 @@ submodule topology-libvirt {
       augment "topology/links/link/z-end-interface" {
         uses libvirt-interface-grouping;
       }
+      augment "topology/links/link" {
+        container external-connection {
+          when
+            "not(deref(../a-end-device)/../hypervisor = " +
+                "deref(../z-end-device)/../hypervisor or " +
+                "not(deref(../a-end-device)/../hypervisor) and " +
+                "not(deref(../z-end-device)/../hypervisor) or " +
+                "not(deref(../z-end-device)/../hypervisor) and " +
+                  "deref(../a-end-device)/../hypervisor = " +
+                  "../../../libvirt/hypervisor or " +
+                "not(deref(../a-end-device)/../hypervisor) and " +
+                  "deref(../z-end-device)/../hypervisor = " +
+                  "../../../libvirt/hypervisor)" {
+            tailf:dependency "/topologies/topology/libvirt/hypervisor";
+            tailf:dependency "/topologies/topology/devices/device/hypevisor";
+          }
+          tailf:info
+            "Link spans two hypervisors and connected using existing bridges.";
+          description
+            "The interfaces on this link will be connected to existing bridges
+             given here, or the default external-bridge for the hypervisor.";
+          leaf a-end-bridge {
+            type string;
+          }
+          leaf z-end-bridge {
+            type string;
+          }
+        }
+      }
 
       augment "topology/networks/network/devices/device" {
         container interface {
@@ -54,13 +83,23 @@ submodule topology-libvirt {
         }
       }
 
+      augment "topology/devices/device" {
+        leaf hypervisor {
+          type leafref {
+            path "/topologies/libvirt/hypervisor/name";
+          }
+          description
+            "Hypervisor the device will run on, if different to the default";
+        }
+      }
+
       augment "topology" {
         container libvirt {
           leaf hypervisor {
             type leafref {
               path "/topologies/libvirt/hypervisor/name";
             }
-            description "The hypervisor the topology will run on";
+            description "The default hypervisor the topology will run on";
           }
           action define {
             tailf:actionpoint libvirt-action;
@@ -211,6 +250,11 @@ submodule topology-libvirt {
       }
       augment "topology/networks/network" {
         uses libvirt-network-grouping;
+        leaf external-bridge {
+          type string;
+          tailf:info
+            "Use this pre-existing bridge instead of creating a new network.";
+        }
       }
       augment "topology/devices/device" {
         uses libvirt-device-grouping;

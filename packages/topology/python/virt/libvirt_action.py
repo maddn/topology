@@ -18,10 +18,10 @@ import pycdlib
 import ncs
 from ncs.dp import Action
 from ncs import maapi, maagic, OPERATIONAL
-from virt.libvirt_connection import LibvirtConnection
+from virt.libvirt_connection import HypervisorManager
 from virt.topology_status import \
         update_device_status_after_action, update_status_after_action, \
-        schedule_topology_ping
+        schedule_topology_ping, unschedule_topology_ping
 
 _ncs = __import__('_ncs')
 
@@ -83,42 +83,70 @@ def force_maagic_leaf_val2str(node, leaf_name):
     value = maagic.get_trans(node).get_elem(f'{node._path}/{leaf_name}')
     return value.val2str(_ncs.cs_node_cd(node._cs_node, leaf_name))
 
+def get_hypervisor_output_node(output, hypervisor_name):
+    if hypervisor_name in output.hypervisor:
+        return output.hypervisor[hypervisor_name]
+    return output.hypervisor.create(hypervisor_name)
+
 
 class NetworkManager():
-    def __init__(self, topology):
-        self._devices = {device.device_name:int(device.id)
-                         for device in topology.devices.device}
+    def __init__(self, topology, hypervisor_mgr):
+        self._device_ids = {device.device_name:int(device.id)
+                            for device in topology.devices.device}
         self._device_names = {int(device.id):device.device_name
                               for device in topology.devices.device}
-
-        self._network_ifaces = {
-                (self._devices[device.name], network.interface_id): (
-                        network.name, network._path)
-                for network in topology.networks.network
-                for device in network.devices.device}
         self._networks = {network.name:
                 f'{force_maagic_leaf_val2str(network, "ipv4-subnet-start")}.0'
                 for network in topology.networks.network}
 
+        self._network_ifaces = {}
+        self._bridge_ifaces = {}
         self._link_networks = {}
         for link in topology.links.link:
-            iface_ids = ((self._devices[link.z_end_device],  #a-end-interface-id
-                          self._devices[link.a_end_device])) #z-end-interface-id
+            a_end_device_id = self._device_ids[link.a_end_device]
+            z_end_device_id = self._device_ids[link.z_end_device]
+            a_end_hypervisor = \
+                    hypervisor_mgr.get_device_hypervisor(a_end_device_id)
+            z_end_hypervisor = \
+                    hypervisor_mgr.get_device_hypervisor(z_end_device_id)
+
+            iface_ids = (z_end_device_id, #a-end-interface-id
+                         a_end_device_id) #z-end-interface-id
             device_ids = sort_link_device_ids(iface_ids)
-            self._link_networks[device_ids] = (
-                generate_network_id(*device_ids), link._path, iface_ids)
+            if a_end_hypervisor == z_end_hypervisor:
+                self._link_networks[device_ids] = (
+                    generate_network_id(*device_ids), link._path, iface_ids)
+            else:
+                self._bridge_ifaces[(a_end_device_id, z_end_device_id)] = (
+                        link.external_connection.a_end_bridge or \
+                        hypervisor_mgr.get_external_bridge(a_end_hypervisor),
+                        f'{link._path}/a-end-interface')
+                self._bridge_ifaces[(z_end_device_id, a_end_device_id)] = (
+                        link.external_connection.z_end_bridge or \
+                        hypervisor_mgr.get_external_bridge(z_end_hypervisor),
+                        f'{link._path}/z-end-interface')
+
+        for network in topology.networks.network:
+            for device in network.devices.device:
+                key = (self._device_ids[device.name], network.interface_id)
+                path = f'{device._path}/interface'
+                if network.external_bridge:
+                    self._bridge_ifaces[key] = (network.external_bridge, path)
+                else:
+                    self._network_ifaces[key] = (network.name, path)
 
         self._max_iface_id = max((0, *(max(iface_ids)
                  for (_, _, iface_ids) in self._link_networks.values()),
-                 *(iface_id for (_, iface_id) in self._network_ifaces)))
+                 *(iface_id for (_, iface_id) in (
+                     *self._network_ifaces, *self._bridge_ifaces))))
 
     def _get_link_device_ids(self, link):
-        return sort_link_device_ids((self._devices[link.a_end_device],
-                                     self._devices[link.z_end_device]))
+        return sort_link_device_ids((self._device_ids[link.a_end_device],
+                                     self._device_ids[link.z_end_device]))
 
     def get_link_network(self, link):
         device_ids = self._get_link_device_ids(link)
-        return (self._link_networks[device_ids][0], device_ids)
+        return (self._link_networks.get(device_ids, [None])[0], device_ids)
 
     def get_network(self, network_id):
         return self._networks[network_id]
@@ -128,13 +156,14 @@ class NetworkManager():
                 self._link_networks.get(
                     sort_link_device_ids((device_id, iface_id)), [None]))[0]
 
+    def get_iface_bridge_id(self, device_id, iface_id):
+        return self._bridge_ifaces.get((device_id, iface_id), [None])[0]
+
     def write_iface_oper_data(self, device_id, iface_id, data):
         (_, path) = self._network_ifaces.get(
-                (device_id, iface_id), (None, None))
-        if path:
-            path = f'{path}/devices' \
-                   f'/device{{{self._device_names[device_id]}}}/interface'
-        else:
+                (device_id, iface_id),
+                    self._bridge_ifaces.get((device_id, iface_id), (None, None)))
+        if not path:
             (_, path, link_iface_ids) = self._link_networks.get(
                     sort_link_device_ids((device_id, iface_id)),
                     (None, None, None))
@@ -265,7 +294,7 @@ class DomainXmlBuilder():
             'interface-type': 'bridge' if bridge_name else 'network',
             'mac-address': mac_address,
             'network': generate_network_name(network_id) if network_id else '',
-            'bridge': bridge_name,
+            'bridge': bridge_name if bridge_name else '',
             'dev': dev_name,
             'model-type': model_type})
 
@@ -311,18 +340,21 @@ class DomainXmlBuilder():
 
     def add_data_ifaces(self, include_null_interfaces, model_type):
         for iface_id in range(self._network_mgr.get_num_device_ifaces()):
+            bridge_id = self._network_mgr.get_iface_bridge_id(
+                    self._device_id, iface_id)
             network_id = self._network_mgr.get_iface_network_id(
                     self._device_id, iface_id)
 
-            if network_id is not None or include_null_interfaces:
+            if (bridge_id or network_id or include_null_interfaces):
                 iface_dev_name = self._generate_iface_dev_name(iface_id)
                 mac_address = self._generate_mac_address(iface_id)
 
                 self._domain_xml_devices.append(self._get_iface_xml(
-                    network_id or generate_network_id(self._device_id, None),
-                    iface_dev_name, mac_address, model_type))
+                    network_id or not bridge_id and
+                            generate_network_id(self._device_id, None),
+                    iface_dev_name, mac_address, model_type, bridge_id))
 
-                if network_id:
+                if network_id or bridge_id:
                     self._network_mgr.write_iface_oper_data(
                         self._device_id, iface_id, [
                                 ('id', iface_id),
@@ -331,8 +363,9 @@ class DomainXmlBuilder():
 
 
 class LibvirtObject(): #pylint: disable=too-few-public-methods
-    def __init__(self, libvirt_conn, resource_mgr, network_mgr, dev_defs, log):
-        self._libvirt = libvirt_conn
+    def __init__(self,
+            hypervisor_mgr, resource_mgr, network_mgr, dev_defs, log):
+        self._hypervisor_mgr = hypervisor_mgr
         self._resource_mgr = resource_mgr
         self._network_mgr = network_mgr
         self._dev_defs = dev_defs
@@ -365,11 +398,12 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
     def _load_templates(self):
         self._templates.load_template('templates', 'network.xml')
 
-    def _define_network(self, network_id, mac_address, isolated=False,
-            path=None):
+    def _define_network(self, hypervisor_name, network_id, mac_address,
+            isolated=False, path=None):
         network_name = generate_network_name(network_id)
         bridge_name = generate_bridge_name(network_id)
-        if network_name not in self._libvirt.networks:
+        libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
+        if network_name not in libvirt.networks:
             variables = {
                 'network': network_name,
                 'bridge': bridge_name,
@@ -378,64 +412,88 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
 
             network_xml_str = self._templates.apply_template(
                     'network.xml', variables)
-            self._log.info(f'Defining network {network_name}')
+            self._log.info(f'[{hypervisor_name}] '
+                           f'Defining network {network_name}')
             self._log.info(network_xml_str)
-            self._libvirt.conn.networkDefineXML(network_xml_str)
-            self._output.networks.create(network_name)
+            libvirt.conn.networkDefineXML(network_xml_str)
+            get_hypervisor_output_node(self._output,
+                    hypervisor_name).networks.create(network_name)
             if path:
                 write_oper_data(path, [
                     ('host-bridge', bridge_name),
                     ('mac-address', mac_address)])
 
     def _action(self, action, *args): #network_id, path
-        network_id, *args = args
+        hypervisor_name, network_id,  *args = args
         path = args[0] if args else None
+
         if action in ['undefine', 'create', 'destroy']:
             network_name = generate_network_name(network_id)
-            if network_name in self._libvirt.networks:
-                network = self._libvirt.conn.networkLookupByName(network_name)
+            libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
+            if network_name in libvirt.networks:
+                network = libvirt.conn.networkLookupByName(network_name)
                 if self._action_allowed(network.isActive(), action):
-                    self._log.info(f'Running {action} on network {network_name}')
+                    self._log.info(
+                            f'[{hypervisor_name}] '
+                            f'Running {action} on network {network_name}')
                     network_action_method = getattr(network, action)
                     network_action_method()
+                    get_hypervisor_output_node(self._output,
+                            hypervisor_name).networks.create(network_name)
                     if action == 'undefine' and path:
                         write_oper_data(path, [
                             ('host-bridge', None),
                             ('mac-address', None)])
-                    self._output.networks.create(network_name)
-                    return True
-        return False
 
+    def _get_hypervisors(self, device_ids):
+        return set(self._hypervisor_mgr.get_device_hypervisor(device_id)
+                   for device_id in device_ids)
 
 class LinkNetwork(Network):
     def define(self, link):
         (network_id, device_ids) = self._network_mgr.get_link_network(link)
-        mac_address = self._resource_mgr.generate_mac_address(*device_ids)
-        self._define_network(network_id, mac_address, path=link._path)
+        if network_id:
+            self._define_network(
+                self._hypervisor_mgr.get_device_hypervisor(device_ids[0]),
+                network_id,
+                self._resource_mgr.generate_mac_address(*device_ids),
+                path=link._path)
 
     def _action(self, action, *args):
         link, = args
-        (network_id, _) = self._network_mgr.get_link_network(link)
-        return super()._action(action, network_id, link._path)
-
+        (network_id, device_ids) = self._network_mgr.get_link_network(link)
+        if network_id:
+            super()._action(action,
+                self._hypervisor_mgr.get_device_hypervisor(device_ids[0]),
+                network_id, link._path)
 
 class IsolatedNetwork(Network):
+    def _get_hypervisor_network(self, device_id):
+        return (self._hypervisor_mgr.get_device_hypervisor(device_id),
+                generate_network_id(device_id, None))
+
     def define(self, device_id):
-        network_id = generate_network_id(device_id, None)
-        mac_address = self._resource_mgr.generate_mac_address(device_id, 0x00)
-        self._define_network(network_id, mac_address, isolated=True)
+        self._define_network(*self._get_hypervisor_network(device_id),
+                self._resource_mgr.generate_mac_address(device_id, 0x00),
+                isolated=True)
 
     def _action(self, action, *args):
         device_id, = args
-        network_id = generate_network_id(device_id, None)
-        return super()._action(action, network_id)
-
+        super()._action(action, *self._get_hypervisor_network(device_id))
 
 class ExtraNetwork(Network):
-    def define(self, network_id, path, mac_octets):
-        mac_address = self._resource_mgr.generate_mac_address(*mac_octets)
-        self._define_network(network_id, mac_address, path=path)
+    def define(self, device_ids, network_id, path, mac_octets):
+        for (idx, hypervisor_name) in enumerate(
+                self._get_hypervisors(device_ids)):
+            mac_address = self._resource_mgr.generate_mac_address(
+                    mac_octets[0] - 0x10*idx, mac_octets[1])
+            self._define_network(
+                    hypervisor_name, network_id, mac_address, path=path)
 
+    def _action(self, action, *args):
+        device_ids, network_id, path, _ = args
+        for hypervisor_name in self._get_hypervisors(device_ids):
+            super()._action(action, hypervisor_name, network_id, path)
 
 class Volume(LibvirtObject):
     def _load_templates(self):
@@ -590,7 +648,7 @@ class Volume(LibvirtObject):
         iso.close()
         return iso_stream.getvalue()
 
-    def _create_day0_volume(self, device_id, device_name, dev_def):
+    def _create_day0_volume(self, libvirt, device_id, device_name, dev_def):
         volume_name = generate_day0_volume_name(device_name)
         mapping = self._resource_mgr.get_authgroup_mapping(dev_def.authgroup)
 
@@ -621,26 +679,29 @@ class Volume(LibvirtObject):
             image_byte_str = self._create_cloud_init_iso_image(
                     device_id, dev_def.day0_file, variables)
 
-        pool = self._libvirt.conn.storagePoolLookupByName(dev_def.storage_pool)
+        pool = libvirt.conn.storagePoolLookupByName(dev_def.storage_pool)
         volume_xml_str = self._templates.apply_template('volume.xml', {
             'name': volume_name,
             'capacity': len(image_byte_str),
             'format-type': 'raw'})
 
-        self._log.info(f'Creating day0 volume {volume_name}')
+        self._log.info(
+                f'[{libvirt.name}] Creating day0 volume {volume_name}')
         self._log.info(volume_xml_str)
         volume = pool.createXML(volume_xml_str)
 
-        self._log.info(f'Uploading day0 image to volume {volume_name}')
-        stream = self._libvirt.conn.newStream()
+        self._log.info(
+                f'[{libvirt.name}] Uploading day0 image to volume {volume_name}')
+        stream = libvirt.conn.newStream()
         volume.upload(stream, 0, len(image_byte_str))
         stream.send(image_byte_str)
         stream.finish()
-        self._output.volumes.create(volume_name)
+        get_hypervisor_output_node(
+                self._output, libvirt.name).volumes.create(volume_name)
 
-    def _create_volume(self, volume_name, pool_name,
+    def _create_volume(self, libvirt, volume_name, pool_name,
             base_image_name, clone, new_size):
-        pool = self._libvirt.conn.storagePoolLookupByName(pool_name)
+        pool = libvirt.conn.storagePoolLookupByName(pool_name)
         base_image = pool.storageVolLookupByName(base_image_name)
         volume_size = base_image.info()[1] if not clone else ''
         volume_xml_str = self._templates.apply_template('volume.xml', {
@@ -650,46 +711,54 @@ class Volume(LibvirtObject):
 
         if clone:
             self._log.info(
-                f'Creating volume {volume_name} from {base_image_name}')
+                    f'[{libvirt.name}] '
+                    f'Creating volume {volume_name} from {base_image_name}')
             self._log.info(volume_xml_str)
             vol = pool.createXMLFrom(volume_xml_str, base_image)
         else:
-            self._log.info(f'Creating volume {volume_name}')
+            self._log.info(f'[{libvirt.name}] Creating volume {volume_name}')
             self._log.info(volume_xml_str)
             vol = pool.createXML(volume_xml_str)
 
         if new_size is not None:
             vol.resize(new_size*1024*1024*1024)
-        self._output.volumes.create(volume_name)
+        get_hypervisor_output_node(
+                self._output, libvirt.name).volumes.create(volume_name)
 
-    def _delete_volume(self, pool, volume_name, volume_type='volume'):
-        if volume_name and volume_name in self._libvirt.volumes[pool.name()]:
+    def _delete_volume(self, libvirt, pool, volume_name, volume_type='volume'):
+        if volume_name and volume_name in libvirt.volumes[pool.name()]:
             volume = pool.storageVolLookupByName(volume_name)
-            self._log.info(f'Running delete on {volume_type} {volume_name}')
+            self._log.info(f'[{libvirt.name}] '
+                           f'Running delete on {volume_type} {volume_name}')
             volume.delete()
-            self._output.volumes.create(volume_name)
+            get_hypervisor_output_node(
+                    self._output, libvirt.name).volumes.create(volume_name)
 
     def define(self, device):
         dev_def = self._dev_defs[device.definition]
         device_name = device.device_name
-        self._create_volume(generate_volume_name(device_name),
+        libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
+        self._create_volume(libvirt, generate_volume_name(device_name),
                 dev_def.storage_pool, dev_def.base_image,
                 dev_def.base_image_type == 'clone', dev_def.disk_size)
 
         if dev_def.day0_file is not None:
-            self._create_day0_volume(int(device.id), device_name, dev_def)
+            self._create_day0_volume(
+                    libvirt, int(device.id), device_name, dev_def)
 
     def undefine(self, device):
         dev_def = self._dev_defs[device.definition]
         device_name = device.device_name
-        if dev_def.storage_pool in self._libvirt.volumes:
-            pool = self._libvirt.conn.storagePoolLookupByName(
-                    dev_def.storage_pool)
-            self._delete_volume(pool, generate_volume_name(device_name))
+        libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
+        if dev_def.storage_pool in libvirt.volumes:
+            pool = libvirt.conn.storagePoolLookupByName(dev_def.storage_pool)
+            self._delete_volume(
+                    libvirt, pool, generate_volume_name(device_name))
 
             if dev_def.day0_file is not None:
                 day0_volume_name = generate_day0_volume_name(device_name)
-                self._delete_volume(pool, day0_volume_name, 'day0 volume')
+                self._delete_volume(
+                        libvirt, pool, day0_volume_name, 'day0 volume')
 
 
 class Domain(LibvirtObject):
@@ -705,7 +774,8 @@ class Domain(LibvirtObject):
 
     def define(self, device):
         device_name = device.device_name
-        self._log.info(f'Defining domain {device_name}')
+        libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
+        self._log.info(f'[{libvirt.name}] Defining domain {device_name}')
 
         dev_def = self._dev_defs[device.definition]
         xml_builder = DomainXmlBuilder(int(device.id), device_name,
@@ -737,8 +807,9 @@ class Domain(LibvirtObject):
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
         self._log.info(domain_xml_str)
 
-        self._libvirt.conn.defineXML(domain_xml_str)
-        self._output.domains.create(device_name)
+        libvirt.conn.defineXML(domain_xml_str)
+        get_hypervisor_output_node(
+                self._output, libvirt.name).domains.create(device_name)
 
         self._log.info(f'Creating device {device_name} in NSO')
         if dev_def.ned_id is not None:
@@ -764,33 +835,47 @@ class Domain(LibvirtObject):
 
     def is_active(self, device):
         device_name = device.device_name
-        if device_name in self._libvirt.domains:
-            return self._libvirt.conn.lookupByName(device_name).isActive()
+        libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
+        if device_name in libvirt.domains:
+            return libvirt.conn.lookupByName(device_name).isActive()
         return False
 
     def _action(self, action, *args):
         device, = args
         device_name = device.device_name
-        if device_name in self._libvirt.domains:
-            domain = self._libvirt.conn.lookupByName(device_name)
+        libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
+        if device_name in libvirt.domains:
+            domain = libvirt.conn.lookupByName(device_name)
             if self._action_allowed(domain.isActive(), action):
-                self._log.info(f'Running {action} on domain {device_name}')
+                self._log.info(f'[{libvirt.name}] '
+                               f'Running {action} on domain {device_name} ')
                 domain_action_method = getattr(domain, action)
                 domain_action_method()
-                self._output.domains.create(device_name)
+                get_hypervisor_output_node(
+                        self._output, libvirt.name).domains.create(device_name)
                 return True
         return False
 
 
 class Topology():
-    def __init__(self, libvirt_conn, topology,
-            hypervisor, log, output, username):
+    def __init__(self, topology, log, output, username):
+        hypervisor_name = topology.libvirt.hypervisor
+
+        if hypervisor_name is None:
+            raise Exception('No hypervisor defined for this topology')
+
+        hypervisors = maagic.cd(topology, '../libvirt/hypervisor')
+        hypervisor = hypervisors[hypervisor_name]
+        hypervisor_mgr = HypervisorManager(hypervisors, topology)
+
         self._topology = topology
         self._dev_defs = maagic.cd(topology, '../libvirt/device-definition')
         self._output = output
 
-        args = (libvirt_conn, ResourceManager(hypervisor, username),
-                NetworkManager(topology), self._dev_defs, log)
+        args = (hypervisor_mgr,
+                ResourceManager(hypervisor, username),
+                NetworkManager(topology, hypervisor_mgr),
+                self._dev_defs, log)
 
         self._extra_network = ExtraNetwork(*args)
         self._link_network = LinkNetwork(*args)
@@ -806,15 +891,18 @@ class Topology():
         output.action = action
 
         if device_name is None:
-            if any(self._dev_defs[device.definition].device_type == 'XRv-9000'
-                    for device in self._topology.devices.device):
+            device_ids = [device.id for device in self._topology.devices.device
+                          if self._dev_defs[device.definition
+                                ].device_type == 'XRv-9000']
+            if len(device_ids) > 0:
                 for (idx, network_id) in enumerate(XRV9K_EXTRA_MGMT_NETWORKS):
-                    self._extra_network.action(
-                            action, output, network_id, None, (0xff, 0xff-idx))
+                    self._extra_network.action(action, output,
+                            device_ids, network_id, None, (0xff, 0xff-idx))
 
             for (idx, network) in enumerate(self._topology.networks.network):
-                self._extra_network.action(action, output, network.name,
-                        network._path, (0xfe, 0xff-idx))
+                if not network.external_bridge:
+                    self._extra_network.action(action, output, device_ids,
+                            network.name, network._path, (0xfe, 0xff-idx))
 
             for link in self._topology.links.link:
                 self._link_network.action(action, output, link)
@@ -855,30 +943,21 @@ class LibvirtAction(Action):
                     topology.provisioning_status != 'undefined'):
                 return
 
-        hypervisor_name = topology.libvirt.hypervisor
-
-        if hypervisor_name is None:
-            raise Exception('No hypervisor defined for this topology')
-
-        hypervisor = maagic.cd(topology,
-                '../libvirt/hypervisor')[hypervisor_name]
-
         trans.maapi.install_crypto_keys()
-        with LibvirtConnection(hypervisor) as libvirt_conn:
-            libvirt_conn.populate_cache()
+        libvirt_topology = Topology(topology, self.log, output, uinfo.username)
 
-            libvirt_topology = Topology(libvirt_conn, topology,
-                    hypervisor, self.log, output, uinfo.username)
+        if name == 'start':
+            action = 'create'
+        elif name == 'stop':
+            libvirt_topology.action('shutdown', input.device)
+            libvirt_topology.wait_for_shutdown()
+            action = 'destroy'
 
-            if name == 'start':
-                action = 'create'
-            elif name == 'stop':
-                libvirt_topology.action('shutdown', input.device)
-                libvirt_topology.wait_for_shutdown()
-                action = 'destroy'
+        libvirt_topology.action(action, input.device)
+        update_status_after_action(topology, action)
 
-            libvirt_topology.action(action, input.device)
-            update_status_after_action(topology, action)
+        if name == 'start':
+            schedule_topology_ping(kp[1:])
 
-            if name == 'start':
-                schedule_topology_ping(kp[1:])
+        if name == 'stop':
+            unschedule_topology_ping(kp[1][0])

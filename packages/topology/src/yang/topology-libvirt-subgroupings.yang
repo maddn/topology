@@ -44,14 +44,20 @@ submodule topology-libvirt-subgroupings {
       leaf action {
         type string;
       }
-      leaf-list networks {
-        type string;
-      }
-      leaf-list domains {
-        type string;
-      }
-      leaf-list volumes {
-        type string;
+      list hypervisor {
+        key name;
+        leaf name {
+          type string;
+        }
+        leaf-list networks {
+          type string;
+        }
+        leaf-list domains {
+          type string;
+        }
+        leaf-list volumes {
+          type string;
+        }
       }
     }
   }
