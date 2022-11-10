@@ -68,86 +68,88 @@
     </device>
   </devices>
 
-  <?foreach {../links/link}?>
-    <?expand GetSortedDeviceIds
-      device_id_1=deref(a-end-device)/../id
-      device_id_2=deref(z-end-device)/../id
-    ?>
-    <?expand GigabitEthernetAddresses
-      device_name=a-end-device
-      device_id=deref(a-end-device)/../id
-      interface_id=a-end-interface/id
-      connected_device_name=z-end-device
-      connected_interface_id=z-end-interface/id
-    ?>
-    <?set A_END_IPV4_ADDRESS={$IPV4_ADDRESS}?>
-    <?expand GigabitEthernetAddresses
-      device_name=z-end-device
-      device_id=deref(z-end-device)/../id
-      interface_id=z-end-interface/id
-      connected_device_name=a-end-device
-      connected_interface_id=a-end-interface/id
-    ?>
-    <topologies xmlns="http://example.com/topology">
-      <topology>
-        <name>{string(../../name)}</name>
-        <links>
-          <link>
-            <a-end-device>{a-end-device}</a-end-device>
-            <z-end-device>{z-end-device}</z-end-device>
-            <a-end-interface>
-              <ip-address>{$A_END_IPV4_ADDRESS}</ip-address>
-            </a-end-interface>
-            <z-end-interface>
-              <ip-address>{$IPV4_ADDRESS}</ip-address>
-            </z-end-interface>
-          </link>
-        </links>
-      </topology>
-    </topologies>
-  <?end?>
-
-  <?foreach {../networks/network}?>
-    <?foreach {devices/device}?>
-      <?set IPV4_ADDRESS={concat(../../ipv4-subnet-start, '.', deref(name)/../id)}?>
-      <devices xmlns="http://tail-f.com/ns/ncs">
-        <device tags="nocreate">
-          <name>{name}</name>
-          <config>
-            <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-              <GigabitEthernet tags="merge">
-                <id>0/0/0/{string(../../interface-id)}</id>
-                <description>Connection to {../../name} network</description>
-                <ipv4>
-                  <address>
-                    <ip>{$IPV4_ADDRESS}</ip>
-                    <mask>255.255.255.0</mask>
-                  </address>
-                </ipv4>
-                <shutdown tags="delete"/>
-              </GigabitEthernet>
-            </interface>
-          </config>
-        </device>
-      </devices>
+  <?if {physical-interfaces}?>
+    <?foreach {../links/link}?>
+      <?expand GetSortedDeviceIds
+        device_id_1=deref(a-end-device)/../id
+        device_id_2=deref(z-end-device)/../id
+      ?>
+      <?expand GigabitEthernetAddresses
+        device_name=a-end-device
+        device_id=deref(a-end-device)/../id
+        interface_id=a-end-interface/id
+        connected_device_name=z-end-device
+        connected_interface_id=z-end-interface/id
+      ?>
+      <?set A_END_IPV4_ADDRESS={$IPV4_ADDRESS}?>
+      <?expand GigabitEthernetAddresses
+        device_name=z-end-device
+        device_id=deref(z-end-device)/../id
+        interface_id=z-end-interface/id
+        connected_device_name=a-end-device
+        connected_interface_id=a-end-interface/id
+      ?>
       <topologies xmlns="http://example.com/topology">
         <topology>
-          <name>{string(../../../../name)}</name>
-          <networks>
-            <network>
-              <name>{string(../../name)}</name>
-              <devices>
-                <device>
-                  <name>{name}</name>
-                  <interface>
-                    <ip-address>{$IPV4_ADDRESS}</ip-address>
-                  </interface>
-                </device>
-              </devices>
-            </network>
-          </networks>
+          <name>{string(../../name)}</name>
+          <links>
+            <link>
+              <a-end-device>{a-end-device}</a-end-device>
+              <z-end-device>{z-end-device}</z-end-device>
+              <a-end-interface>
+                <ip-address>{$A_END_IPV4_ADDRESS}</ip-address>
+              </a-end-interface>
+              <z-end-interface>
+                <ip-address>{$IPV4_ADDRESS}</ip-address>
+              </z-end-interface>
+            </link>
+          </links>
         </topology>
       </topologies>
+    <?end?>
+
+    <?foreach {../networks/network}?>
+      <?foreach {devices/device}?>
+        <?set IPV4_ADDRESS={concat(../../ipv4-subnet-start, '.', deref(name)/../id)}?>
+        <devices xmlns="http://tail-f.com/ns/ncs">
+          <device tags="nocreate">
+            <name>{name}</name>
+            <config>
+              <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+                <GigabitEthernet tags="merge">
+                  <id>0/0/0/{string(../../interface-id)}</id>
+                  <description>Connection to {../../name} network</description>
+                  <ipv4>
+                    <address>
+                      <ip>{$IPV4_ADDRESS}</ip>
+                      <mask>255.255.255.0</mask>
+                    </address>
+                  </ipv4>
+                  <shutdown tags="delete"/>
+                </GigabitEthernet>
+              </interface>
+            </config>
+          </device>
+        </devices>
+        <topologies xmlns="http://example.com/topology">
+          <topology>
+            <name>{string(../../../../name)}</name>
+            <networks>
+              <network>
+                <name>{string(../../name)}</name>
+                <devices>
+                  <device>
+                    <name>{name}</name>
+                    <interface>
+                      <ip-address>{$IPV4_ADDRESS}</ip-address>
+                    </interface>
+                  </device>
+                </devices>
+              </network>
+            </networks>
+          </topology>
+        </topologies>
+      <?end?>
     <?end?>
   <?end?>
 </config-template>

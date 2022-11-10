@@ -72,6 +72,7 @@ submodule ip-connectivity {
     }
 
     container physical-interfaces {
+      presence true;
       description
         "IPv4 and IPv6 addresses are configured on each topology link interface
          in the /24 or /112 subnet, generated using the leaves in this

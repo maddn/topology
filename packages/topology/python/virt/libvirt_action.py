@@ -17,7 +17,7 @@ import pycdlib
 
 import ncs
 from ncs.dp import Action
-from ncs import maapi, maagic, OPERATIONAL
+from ncs import maapi, maagic
 from virt.libvirt_connection import HypervisorManager
 from virt.topology_status import \
         update_device_status_after_action, update_status_after_action, \
@@ -59,8 +59,8 @@ def xml_to_string(xml):
     return parseString(xml_stripped).toprettyxml('  ')
 
 
-def write_oper_data(path, leaf_value_pairs):
-    with maapi.single_write_trans('admin', 'python', db=OPERATIONAL) as trans:
+def write_node_data(path, leaf_value_pairs):
+    with maapi.single_write_trans('admin', 'python') as trans:
         for leaf, value in leaf_value_pairs:
             if value is None:
                 trans.safe_delete(f'{path}/{leaf}')
@@ -91,11 +91,24 @@ def get_hypervisor_output_node(output, hypervisor_name):
 
 class NetworkManager():
     def __init__(self, topology, hypervisor_mgr):
+        def _add_interface(key, path, network=None, bridge=None):
+            if (bridge and key in self._bridge_ifaces
+                    or key in self._network_ifaces):
+                raise Exception(
+                        'A device interface can only be used in 1 link or ' +
+                        f'network (device {key[0]} interface {key[1]})')
+
+            value = (bridge or network, path)
+            if bridge:
+                self._bridge_ifaces[key] = value
+            else:
+                self._network_ifaces[key] = value
+
         self._device_ids = {device.device_name:int(device.id)
                             for device in topology.devices.device}
         self._device_names = {int(device.id):device.device_name
                               for device in topology.devices.device}
-        self._networks = {network.name:
+        self._networks = {network.external_bridge or network.name:
                 f'{force_maagic_leaf_val2str(network, "ipv4-subnet-start")}.0'
                 for network in topology.networks.network}
 
@@ -103,42 +116,38 @@ class NetworkManager():
         self._bridge_ifaces = {}
         self._link_networks = {}
         for link in topology.links.link:
-            a_end_device_id = self._device_ids[link.a_end_device]
-            z_end_device_id = self._device_ids[link.z_end_device]
-            a_end_hypervisor = \
-                    hypervisor_mgr.get_device_hypervisor(a_end_device_id)
-            z_end_hypervisor = \
-                    hypervisor_mgr.get_device_hypervisor(z_end_device_id)
-
-            iface_ids = (z_end_device_id, #a-end-interface-id
-                         a_end_device_id) #z-end-interface-id
-            device_ids = sort_link_device_ids(iface_ids)
-            if a_end_hypervisor == z_end_hypervisor:
-                self._link_networks[device_ids] = (
-                    generate_network_id(*device_ids), link._path, iface_ids)
+            device_ids = (self._device_ids[link.a_end_device],
+                          self._device_ids[link.z_end_device])
+            hypervisors = (hypervisor_mgr.get_device_hypervisor(device_ids[0]),
+                           hypervisor_mgr.get_device_hypervisor(device_ids[1]))
+            iface_ids = (link.a_end_interface.id or device_ids[1],
+                         link.z_end_interface.id or device_ids[0])
+            sorted_device_ids = sort_link_device_ids(device_ids)
+            network_id = None
+            bridges = (None, None)
+            if hypervisors[0] == hypervisors[1]:
+                network_id = generate_network_id(*sorted_device_ids)
+                self._link_networks[sorted_device_ids] = network_id
             else:
-                self._bridge_ifaces[(a_end_device_id, z_end_device_id)] = (
-                        link.external_connection.a_end_bridge or \
-                        hypervisor_mgr.get_external_bridge(a_end_hypervisor),
-                        f'{link._path}/a-end-interface')
-                self._bridge_ifaces[(z_end_device_id, a_end_device_id)] = (
-                        link.external_connection.z_end_bridge or \
-                        hypervisor_mgr.get_external_bridge(z_end_hypervisor),
-                        f'{link._path}/z-end-interface')
+                bridges = (link.external_connection.a_end_bridge or
+                           hypervisor_mgr.get_external_bridge(hypervisors[0]),
+                           link.external_connection.z_end_bridge or
+                           hypervisor_mgr.get_external_bridge(hypervisors[1]))
+
+            _add_interface((device_ids[0], iface_ids[0]),
+                    f'{link._path}/a-end-interface', network_id, bridges[0])
+            _add_interface((device_ids[1], iface_ids[1]),
+                    f'{link._path}/z-end-interface', network_id, bridges[1])
 
         for network in topology.networks.network:
             for device in network.devices.device:
-                key = (self._device_ids[device.name], network.interface_id)
-                path = f'{device._path}/interface'
-                if network.external_bridge:
-                    self._bridge_ifaces[key] = (network.external_bridge, path)
-                else:
-                    self._network_ifaces[key] = (network.name, path)
+                key = (self._device_ids[device.name],
+                        device.interface.id or network.interface_id)
+                _add_interface(key, f'{device._path}/interface',
+                        network.name, network.external_bridge)
 
-        self._max_iface_id = max((0, *(max(iface_ids)
-                 for (_, _, iface_ids) in self._link_networks.values()),
-                 *(iface_id for (_, iface_id) in (
-                     *self._network_ifaces, *self._bridge_ifaces))))
+        self._max_iface_id = max(0, *(iface_id for (_, iface_id) in (
+            *self._network_ifaces, *self._bridge_ifaces)))
 
     def _get_link_device_ids(self, link):
         return sort_link_device_ids((self._device_ids[link.a_end_device],
@@ -146,34 +155,23 @@ class NetworkManager():
 
     def get_link_network(self, link):
         device_ids = self._get_link_device_ids(link)
-        return (self._link_networks.get(device_ids, [None])[0], device_ids)
+        return (self._link_networks.get(device_ids, None), device_ids)
 
     def get_network(self, network_id):
         return self._networks[network_id]
 
     def get_iface_network_id(self, device_id, iface_id):
-        return self._network_ifaces.get((device_id, iface_id),
-                self._link_networks.get(
-                    sort_link_device_ids((device_id, iface_id)), [None]))[0]
+        return self._network_ifaces.get((device_id, iface_id), [None])[0]
 
-    def get_iface_bridge_id(self, device_id, iface_id):
+    def get_iface_bridge_name(self, device_id, iface_id):
         return self._bridge_ifaces.get((device_id, iface_id), [None])[0]
 
-    def write_iface_oper_data(self, device_id, iface_id, data):
-        (_, path) = self._network_ifaces.get(
-                (device_id, iface_id),
-                    self._bridge_ifaces.get((device_id, iface_id), (None, None)))
+    def write_iface_data(self, device_id, iface_id, data):
+        (_, path) = self._network_ifaces.get((device_id, iface_id), [None, None])
         if not path:
-            (_, path, link_iface_ids) = self._link_networks.get(
-                    sort_link_device_ids((device_id, iface_id)),
-                    (None, None, None))
-            if path:
-                if iface_id == link_iface_ids[0]:
-                    path = f'{path}/a-end-interface'
-                else:
-                    path = f'{path}/z-end-interface'
+            (_, path) = self._bridge_ifaces.get((device_id, iface_id), [None, None])
         if path:
-            write_oper_data(path, data)
+            write_node_data(path, data)
 
     def get_num_device_ifaces(self):
         return self._max_iface_id + 1
@@ -340,22 +338,22 @@ class DomainXmlBuilder():
 
     def add_data_ifaces(self, include_null_interfaces, model_type):
         for iface_id in range(self._network_mgr.get_num_device_ifaces()):
-            bridge_id = self._network_mgr.get_iface_bridge_id(
+            bridge_name = self._network_mgr.get_iface_bridge_name(
                     self._device_id, iface_id)
             network_id = self._network_mgr.get_iface_network_id(
                     self._device_id, iface_id)
 
-            if (bridge_id or network_id or include_null_interfaces):
+            if (bridge_name or network_id or include_null_interfaces):
                 iface_dev_name = self._generate_iface_dev_name(iface_id)
                 mac_address = self._generate_mac_address(iface_id)
 
                 self._domain_xml_devices.append(self._get_iface_xml(
-                    network_id or not bridge_id and
+                    network_id or not bridge_name and
                             generate_network_id(self._device_id, None),
-                    iface_dev_name, mac_address, model_type, bridge_id))
+                    iface_dev_name, mac_address, model_type, bridge_name))
 
-                if network_id or bridge_id:
-                    self._network_mgr.write_iface_oper_data(
+                if network_id or bridge_name:
+                    self._network_mgr.write_iface_data(
                         self._device_id, iface_id, [
                                 ('id', iface_id),
                                 ('host-interface', iface_dev_name),
@@ -419,7 +417,7 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
             get_hypervisor_output_node(self._output,
                     hypervisor_name).networks.create(network_name)
             if path:
-                write_oper_data(path, [
+                write_node_data(path, [
                     ('host-bridge', bridge_name),
                     ('mac-address', mac_address)])
 
@@ -441,7 +439,7 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
                     get_hypervisor_output_node(self._output,
                             hypervisor_name).networks.create(network_name)
                     if action == 'undefine' and path:
-                        write_oper_data(path, [
+                        write_node_data(path, [
                             ('host-bridge', None),
                             ('mac-address', None)])
 
@@ -605,13 +603,14 @@ class Volume(LibvirtObject):
     def _get_cloud_init_ethernets(self, device_id):
         network_config = ''
         for iface_id in range(self._network_mgr.get_num_device_ifaces()):
-            network_id = self._network_mgr.get_iface_network_id(
+            network = self._network_mgr.get_iface_network_id(device_id,
+                    iface_id) or self._network_mgr.get_iface_bridge_name(
                     device_id, iface_id)
 
-            if network_id is None:
+            if network is None:
                 continue
 
-            ip_address_start = self._network_mgr.get_network(network_id)
+            ip_address_start = self._network_mgr.get_network(network)
             if ip_address_start is None:
                 continue
 
@@ -623,7 +622,7 @@ class Volume(LibvirtObject):
                     'mac-address': self._resource_mgr.\
                             generate_mac_address(device_id, iface_id, True)
                     })
-            self._network_mgr.write_iface_oper_data(device_id, iface_id, [
+            self._network_mgr.write_iface_data(device_id, iface_id, [
                 ('ip-address', ip_address)])
         return network_config
 
@@ -793,7 +792,7 @@ class Domain(LibvirtObject):
         (mgmt_ip_address, mac_address, iface_dev_name
                 ) = xml_builder.add_mgmt_iface('e1000' if dev_def.device_type
                         in ('XRv-9000', 'IOSv') else 'virtio')
-        write_oper_data(device.management_interface._path, [
+        write_node_data(device.management_interface._path, [
                 ('ip-address', mgmt_ip_address),
                 ('mac-address', mac_address),
                 ('host-interface', iface_dev_name)])
@@ -817,13 +816,13 @@ class Domain(LibvirtObject):
 
     def undefine(self, device):
         if self._action('undefine', device):
-            write_oper_data(device.management_interface._path, [
+            write_node_data(device.management_interface._path, [
                     ('ip-address', None),
                     ('mac-address', None),
                     ('host-interface', None)])
 
             for iface_id in range(self._network_mgr.get_num_device_ifaces()):
-                self._network_mgr.write_iface_oper_data(
+                self._network_mgr.write_iface_data(
                     device.id, iface_id, [
                             ('id', None),
                             ('ip-address', None),

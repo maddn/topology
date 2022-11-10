@@ -65,6 +65,16 @@ submodule topology-base {
           container a-end-interface {
             leaf id {
               type uint8;
+              must "count(../../../link[a-end-device=current()/../.." +
+                         "/a-end-device]/a-end-interface[id=current()]) + " +
+                   "count(../../../link[z-end-device=current()/../.." +
+                         "/a-end-device]/z-end-interface[id=current()]) + " +
+                   "count(../../../../networks/network[interface-id=current()]" +
+                         "/devices/device[name=current()/../../a-end-device])" +
+                   "<= 1" {
+                error-message
+                  "A device interface can only be used in 1 link or network";
+              }
             }
           }
           leaf z-end-device {
@@ -80,6 +90,16 @@ submodule topology-base {
           container z-end-interface {
             leaf id {
               type uint8;
+              must "count(../../../link[a-end-device=current()/../.." +
+                         "/z-end-device]/a-end-interface[id=current()]) + " +
+                   "count(../../../link[z-end-device=current()/../.." +
+                         "/z-end-device]/z-end-interface[id=current()]) + " +
+                   "count(../../../../networks/network[interface-id=current()]" +
+                         "/devices/device[name=current()/../../z-end-device])" +
+                   "<= 1" {
+                error-message
+                  "A device interface can only be used in 1 link or network";
+              }
             }
           }
           leaf igp-metric {
@@ -121,6 +141,11 @@ submodule topology-base {
                 type string;
                 tailf:non-strict-leafref {
                   path "../../../../../devices/device/device-name";
+                }
+              }
+              container interface {
+                leaf id {
+                  type uint8;
                 }
               }
             }

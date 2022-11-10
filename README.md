@@ -43,6 +43,7 @@ automatically when using Docker.
 - passlib
 - pycdlib
 - pyfatfs
+- setproctitle
 
 
 ### Docker
@@ -175,7 +176,7 @@ associated [hypervisor](#hypervisors).
 | List     | Description |
 | :------- | :---------- |
 | Devices  | A device is created with a numeric `id` and a `prefix`. The `id` is used extensively by the services and libvirt actions to generate resource names such as networks, MAC addresses and IP addresses. The `device‑name` is automatically populated by combining the `prefix` and `id`. Optionally the device can refer to a [device-definition](#device-definitions) if the device is to be created using libvirt. |
-| Links    | These are point-to-point links between two devices in the `device` list (`a‑end‑device` and `z‑end‑device`). When defining a topology to be created in libvirt, the interface ids are refined as operational data and will be automatically populated. |
+| Links    | These are point-to-point links between two devices in the `device` list (`a‑end‑device` and `z‑end‑device`).
 | Networks | A network connects multiple devices to a single network using the same `interface‑id` on each device. |
 
 
@@ -208,6 +209,13 @@ The `loopback‑interfaces` list allows one interface to be selected as the
 `primary` interface. This will be the default loopback interface used by the
 other services if one isn't explicitly given (for example for BGP and PCE
 peering).
+
+Link and network interface IP address are only configured when the
+`physical‑interfaces` container is present. If using the below services on an
+existing network where the IP addresses are already configured,
+`physical‑interfaces` can be ommitted, however the `ip‑connectivity` service
+must be still be created with the loopback addresses as it is a pre-requisite
+for the other services.
 
 
 ### Base Configuration
@@ -439,7 +447,7 @@ high level it will create a network for each link in the topology and a domain
 for each device in the topology, with the interfaces attached to the
 appropriate networks.
 
-Interfaces are assigned automatically, and cannot be manually chosen. The
+If the interface ID is not specified then one is assigned automatically. The
 interface is chosen based on the destination device id, for example interface 6
 will be connected to device 6.
 
@@ -625,61 +633,63 @@ Below is a snippet of the XML showing how the topology device and links are
 defined.
 
 ```xml
-<topology>
-  <name>simple-lab</name>
-  <devices>
-    <device>
-      <id>1</id>
-      <prefix>node</prefix>
-    </device>
-    <device>
-      <id>2</id>
-      <prefix>node</prefix>
-    </device>
-    <device>
-      <id>3</id>
-      <prefix>node</prefix>
-    </device>
-    <device>
-      <id>4</id>
-      <prefix>node</prefix>
-    </device>
-    <device>
-      <id>5</id>
-      <prefix>node</prefix>
-    </device>
-  </devices>
-  <links>
-  <link>
-    <a-end-device>node-1</a-end-device>
-    <z-end-device>node-2</z-end-device>
-  </link>
-  <link>
-    <a-end-device>node-3</a-end-device>
-    <z-end-device>node-1</z-end-device>
-    <affinity>top</affinity>
-  </link>
-  <link>
-    <a-end-device>node-1</a-end-device>
-    <z-end-device>node-4</z-end-device>
-    <affinity>top</affinity>
-  </link>
-  <link>
-    <a-end-device>node-4</a-end-device>
-    <z-end-device>node-2</z-end-device>
-    <affinity>bottom</affinity>
-  </link>
-  <link>
-    <a-end-device>node-2</a-end-device>
-    <z-end-device>node-3</z-end-device>
-    <affinity>bottom</affinity>
-  </link>
-  <link>
-    <a-end-device>node-1</a-end-device>
-    <z-end-device>node-5</z-end-device>
-  </link>
-  </links>
-</topology>
+<topologies xmlns="http://example.com/topology">
+  <topology>
+    <name>simple-lab</name>
+    <devices>
+      <device>
+        <id>1</id>
+        <prefix>node</prefix>
+      </device>
+      <device>
+        <id>2</id>
+        <prefix>node</prefix>
+      </device>
+      <device>
+        <id>3</id>
+        <prefix>node</prefix>
+      </device>
+      <device>
+        <id>4</id>
+        <prefix>node</prefix>
+      </device>
+      <device>
+        <id>5</id>
+        <prefix>node</prefix>
+      </device>
+    </devices>
+    <links>
+      <link>
+        <a-end-device>node-1</a-end-device>
+        <z-end-device>node-2</z-end-device>
+      </link>
+      <link>
+        <a-end-device>node-3</a-end-device>
+        <z-end-device>node-1</z-end-device>
+        <affinity>top</affinity>
+      </link>
+      <link>
+        <a-end-device>node-1</a-end-device>
+        <z-end-device>node-4</z-end-device>
+        <affinity>top</affinity>
+      </link>
+      <link>
+        <a-end-device>node-4</a-end-device>
+        <z-end-device>node-2</z-end-device>
+        <affinity>bottom</affinity>
+      </link>
+      <link>
+        <a-end-device>node-2</a-end-device>
+        <z-end-device>node-3</z-end-device>
+        <affinity>bottom</affinity>
+      </link>
+      <link>
+        <a-end-device>node-1</a-end-device>
+        <z-end-device>node-5</z-end-device>
+      </link>
+    </links>
+  </topology>
+</topologies>
 ```
 
 ### Managed Topology Service XML
@@ -715,50 +725,52 @@ available to load from the home directory.
 The content of the XML file is shown below.
 
 ```xml
-<managed-topology>
-  <topology>simple-lab</topology>
-  <loopback-interfaces>
-    <loopback>
-      <id>0</id>
-      <ipv4-subnet-start>198.10.1</ipv4-subnet-start>
-      <primary/>
-    </loopback>
-  </loopback-interfaces>
-  <login-banner>Hello World!</login-banner>
-  <logging/>
-  <ntp-server>198.18.128.1</ntp-server>
-  <interface-bandwidth>10000</interface-bandwidth>
-  <lldp/>
-  <static-routes>
-    <route>
-      <source-device>node-1</source-device>
-      <destination-device>node-5</destination-device>
-      <loopback-id>0</loopback-id>
-    </route>
-  </static-routes>
-  <igp>
-    <name>1</name>
-    <devices>node-1</devices>
-    <devices>node-2</devices>
-    <devices>node-3</devices>
-    <devices>node-4</devices>
-    <is-is/>
-  </igp>
-  <bgp>
-    <as-number>65000</as-number>
-    <route-reflector>
-      <routers>node-5</routers>
-    </route-reflector>
-    <provider-edge>
-      <routers>node-3</routers>
-      <routers>node-4</routers>
-    </provider-edge>
-  </bgp>
-  <mpls>
-    <ldp/>
-    <rsvp/>
-  </mpls>
-</managed-topology>
+<topologies xmlns="http://example.com/topology">
+  <managed-topology>
+    <topology>simple-lab</topology>
+    <loopback-interfaces>
+      <loopback>
+        <id>0</id>
+        <ipv4-subnet-start>198.10.1</ipv4-subnet-start>
+        <primary/>
+      </loopback>
+    </loopback-interfaces>
+    <login-banner>Hello World!</login-banner>
+    <logging/>
+    <ntp-server>198.18.128.1</ntp-server>
+    <interface-bandwidth>10000</interface-bandwidth>
+    <lldp/>
+    <static-routes>
+      <route>
+        <source-device>node-1</source-device>
+        <destination-device>node-5</destination-device>
+        <loopback-id>0</loopback-id>
+      </route>
+    </static-routes>
+    <igp>
+      <name>1</name>
+      <devices>node-1</devices>
+      <devices>node-2</devices>
+      <devices>node-3</devices>
+      <devices>node-4</devices>
+      <is-is/>
+    </igp>
+    <bgp>
+      <as-number>65000</as-number>
+      <route-reflector>
+        <routers>node-5</routers>
+      </route-reflector>
+      <provider-edge>
+        <routers>node-3</routers>
+        <routers>node-4</routers>
+      </provider-edge>
+    </bgp>
+    <mpls>
+      <ldp/>
+      <rsvp/>
+    </mpls>
+  </managed-topology>
+</topologies>
 ```
 
 ### Allocated Resources
@@ -995,4 +1007,162 @@ Wed Jul 27 12:59:46.655 UTC
 
 Neighbor        Spk    AS Description                          Up/Down  NBRState
 198.10.1.5        0 65000                                      00:06:04 Established
+```
+
+## Getting Started - Existing Network
+
+When configuring an existing network, the topology has to be populated with the
+existing devices and links. For each link, the interface IDs must be populated.
+Each device must be added to NSO manually.
+
+If the loopback interface IP addresses are already configured, they must
+follow the same convention as the `ip‑connectivity` service (using the prefix
+combined with the device ID).
+
+Given an existing network whose topology is the same as the [Example
+Topology](#topology-overview) above, it could be configured with the
+following topology data and services.
+
+
+### Topology
+
+The topology should be populated as shown in [Topology XML](#topology-xml)
+above, but the interface ID for each link endpoint must also be populated.
+
+```xml
+<topologies xmlns="http://example.com/topology">
+  <topology>
+    <name>simple-lab</name>
+    <links>
+      <link>
+        <a-end-device>node-1</a-end-device>
+        <z-end-device>node-2</z-end-device>
+        <a-end-interface><id>2</id></a-end-interface>
+        <z-end-interface><id>1</id></z-end-interface>
+      </link>
+      <link>
+        <a-end-device>node-3</a-end-device>
+        <z-end-device>node-1</z-end-device>
+        <a-end-interface><id>1</id></a-end-interface>
+        <z-end-interface><id>3</id></z-end-interface>
+      </link>
+      <link>
+        <a-end-device>node-1</a-end-device>
+        <z-end-device>node-4</z-end-device>
+        <a-end-interface><id>4</id></a-end-interface>
+        <z-end-interface><id>1</id></z-end-interface>
+      </link>
+      <link>
+        <a-end-device>node-4</a-end-device>
+        <z-end-device>node-2</z-end-device>
+        <a-end-interface><id>2</id></a-end-interface>
+        <z-end-interface><id>4</id></z-end-interface>
+      </link>
+      <link>
+        <a-end-device>node-2</a-end-device>
+        <z-end-device>node-3</z-end-device>
+        <a-end-interface><id>3</id></a-end-interface>
+        <z-end-interface><id>2</id></z-end-interface>
+      </link>
+      <link>
+        <a-end-device>node-1</a-end-device>
+        <z-end-device>node-5</z-end-device>
+        <a-end-interface><id>5</id></a-end-interface>
+        <z-end-interface><id>1</id></z-end-interface>
+      </link>
+    </links>
+  </topology>
+</topologies>
+```
+
+### IP Connectivity
+
+Assuming the topology devices already have the interface IP addresses
+configured, the `ip‑connectivity` service would only include the loopback
+interface. If the loopback interface IP address is already configured, this
+service wouldn't generate any device changes, but it's still needed as it's a
+pre-requisite for the other services.
+
+```xml
+<topologies xmlns="http://example.com/topology">
+  <topology>
+    <name>simple-lab</name>
+    <ip-connectivity>
+      <loopback-interfaces>
+        <loopback>
+          <id>0</id>
+          <ipv4-subnet-start>198.10.1</ipv4-subnet-start>
+          <primary/>
+        </loopback>
+      </loopback-interfaces>
+    </ip-connectivity>
+  </topology>
+</topologies>
+```
+
+### Base Config
+
+```xml
+<topologies xmlns="http://example.com/topology">
+  <base-config>
+    <topology>simple-lab</topology>
+    <login-banner>Hello World!</login-banner>
+    <logging/>
+    <ntp-server>198.18.128.1</ntp-server>
+    <interface-bandwidth>10000</interface-bandwidth>
+    <lldp/>
+    <static-routes>
+      <route>
+        <source-device>node-1</source-device>
+        <destination-device>node-5</destination-device>
+        <loopback-id>0</loopback-id>
+      </route>
+  </base-config>
+</topologies>
+```
+
+### IGP
+
+```xml
+<topologies xmlns="http://example.com/topology">
+  <igp>
+    <name>1</name>
+    <topology>simple-lab</topology>
+    <devices>node-1</devices>
+    <devices>node-2</devices>
+    <devices>node-3</devices>
+    <devices>node-4</devices>
+    <is-is/>
+  </igp>
+</topologies>
+```
+
+### MPLS
+
+```xml
+<topologies xmlns="http://example.com/topology">
+  <mpls>
+    <igp>1</igp>
+    <ldp/>
+    <rsvp/>
+  </mpls>
+</topologies>
+```
+
+### BGP
+
+```xml
+<topologies xmlns="http://example.com/topology">
+  <bgp>
+    <as-number>65000</as-number>
+    <topology>simple-lab</topology>
+    <route-reflector>
+      <routers>node-5</routers>
+    </route-reflector>
+    <provider-edge>
+      <routers>node-3</routers>
+      <routers>node-4</routers>
+    </provider-edge>
+  </bgp>
+</topologies>
 ```

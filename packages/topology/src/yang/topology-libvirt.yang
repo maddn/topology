@@ -19,21 +19,6 @@ submodule topology-libvirt {
       "This grouping refines and augments the topology-base-grouping so the
        topology model can be used with libvirt.";
     uses topology-base-grouping {
-      refine "topology/links/link/a-end-interface" {
-        config false;
-        tailf:cdb-oper {
-          tailf:persistent true;
-        }
-        description "The interface is automatically assigned.";
-      }
-      refine "topology/links/link/z-end-interface" {
-        config false;
-        tailf:cdb-oper {
-          tailf:persistent true;
-        }
-        description "The interface is automatically assigned.";
-      }
-
       augment "topology/links/link/a-end-interface" {
         uses libvirt-interface-grouping;
       }
@@ -42,7 +27,7 @@ submodule topology-libvirt {
       }
       augment "topology/links/link" {
         container external-connection {
-          when
+          /*when
             "not(deref(../a-end-device)/../hypervisor = " +
                 "deref(../z-end-device)/../hypervisor or " +
                 "not(deref(../a-end-device)/../hypervisor) and " +
@@ -55,7 +40,7 @@ submodule topology-libvirt {
                   "../../../libvirt/hypervisor)" {
             tailf:dependency "/topologies/topology/libvirt/hypervisor";
             tailf:dependency "/topologies/topology/devices/device/hypevisor";
-          }
+          }*/
           tailf:info
             "Link spans two hypervisors and connected using existing bridges.";
           description
@@ -70,27 +55,8 @@ submodule topology-libvirt {
         }
       }
 
-      augment "topology/networks/network/devices/device" {
-        container interface {
-          config false;
-          tailf:cdb-oper {
-            tailf:persistent true;
-          }
-          leaf id {
-            type uint8;
-          }
-          uses libvirt-interface-grouping;
-        }
-      }
-
-      augment "topology/devices/device" {
-        leaf hypervisor {
-          type leafref {
-            path "/topologies/libvirt/hypervisor/name";
-          }
-          description
-            "Hypervisor the device will run on, if different to the default";
-        }
+      augment "topology/networks/network/devices/device/interface" {
+        uses libvirt-interface-grouping;
       }
 
       augment "topology" {
