@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<config xmlns="http://tail-f.com/ns/config/1.0">
+  <webui xmlns="http://tail-f.com/ns/webui">
+    <applications xmlns="http://tail-f.com/ns/webui-one">
+      <application>
+        <id>topology</id>
+        <href>/custom/topology-ui</href>
+        <title>Topology viewer</title>
+        <description>
+          Graphical topology viewer for devices and links.
+          Sidebar with summary information and service shortcuts.
+        </description>
+        <promo-label>TME</promo-label>
+        <category>Configuration</category>
+        <abbreviation>T</abbreviation>
+        <shortcut>T</shortcut>
+      </application>
+    </applications>
+  </webui>
+</config>

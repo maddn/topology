@@ -1,0 +1,144 @@
+submodule topology-ui {
+  yang-version 1.1;
+  belongs-to topology { prefix topology; }
+
+  import tailf-ncs {
+    prefix ncs;
+  }
+  import tailf-common {
+    prefix tailf;
+  }
+
+  description
+    "This submodule contains the libvirt extensions to the topology model.";
+
+  typedef icon-type {
+    type enumeration {
+      enum "antenna";
+      enum "cpe";
+      enum "customer-router";
+      enum "firewall";
+      enum "generic";
+      enum "load-balancer";
+      enum "router";
+      enum "service-chain";
+      enum "switch";
+      enum "web-server";
+    }
+  }
+  typedef icon-coordinate {
+    type decimal64 {
+      fraction-digits 18;
+      range "0 .. 1";
+    }
+    description "Normalized relative coordinate";
+  }
+  typedef config-format {
+    type enumeration {
+      enum cli;
+      enum curly-braces;
+      enum json;
+      enum xml;
+      enum yaml;
+    }
+  }
+
+  grouping icon-coordinates {
+    container coord {
+      leaf x {
+        type icon-coordinate;
+      }
+
+      leaf y {
+        type icon-coordinate;
+      }
+    }
+  }
+
+  grouping topology-icon-grouping {
+    description
+      "This grouping refines and augments the topology-base-grouping so the
+       topology model can be used with libvirt.";
+
+    container icon {
+      uses icon-coordinates;
+
+
+      leaf type {
+        type icon-type;
+      }
+
+      container zoomed {
+        uses icon-coordinates;
+      }
+
+      leaf underlay {
+        type boolean;
+      }
+    }
+  }
+
+  grouping topology-layout-grouping {
+    container layout {
+      list container {
+        key hypervisor;
+        ordered-by user;
+        description
+          "A list of child containers that will be rendered in as the
+           background when the container is zoomed";
+
+        leaf hypervisor {
+          type leafref {
+            path "/topologies/libvirt/hypervisor/name";
+          }
+        }
+
+        leaf title {
+          type string;
+        }
+
+        leaf width {
+          type uint8 {
+            range "0..100";
+          }
+          must "sum(../../container/width) = 100" {
+            error-message "The container widths must add up to 100%";
+          }
+          description "The width of the container in percent";
+        }
+
+        leaf connection-colour {
+          type string;
+        }
+      }
+    }
+  }
+
+  augment "/ncs:devices/ncs:device" {
+    tailf:action get-configuration {
+      tailf:info "Get full device configuration";
+      tailf:actionpoint get-device-configuration;
+
+      input {
+        leaf format {
+          type config-format;
+        }
+
+        leaf service-meta-data {
+          type boolean;
+        }
+      }
+
+      output {
+        leaf format {
+          type config-format;
+        }
+
+        leaf config {
+          type string;
+        }
+      }
+    }
+  }
+
+}
