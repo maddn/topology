@@ -1,0 +1,42 @@
+.config-viewer__title-text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  line-height: 2rem;
+}
+
+.config-viewer__panel {
+  position: relative;
+}
+
+.config-viewer__btn-row {
+  background: var(--background-alt);
+  display: flex;
+  padding: 0.5rem 0.25rem;
+}
+
+.config-viewer__pre {
+  background-color: White;
+  margin: 0;
+  overflow-x: scroll;
+  user-select: text;
+}
+
+.config-viewer__code {
+  display: block;
+  padding: 0.5rem;
+  transition: background 500ms;
+  width: max-content;
+}
+
+.config-viewer__line {
+  transition: background 500ms;
+  width: 100%;
+}
+
+.config-viewer__line--highlight {
+  background: PaleTurquoise;
+}
+
+.accordion--closed > .accordion__header > .loading__dots > .loading__dot {
+  background-color: var(--sub-header);
+}
