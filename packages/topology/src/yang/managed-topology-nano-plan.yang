@@ -106,6 +106,18 @@ submodule managed-topology-nano-plan {
               ncs:trigger-expr "provisioning-status!='defined'";
             }
           }
+          ncs:post-action-node
+              "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]/console" {
+            ncs:action-name "start";
+            ncs:sync;
+          }
+        }
+        ncs:delete {
+          ncs:post-action-node
+              "/topologies/topology[name=$TOPOLOGY]/devices/device[id=$ID]/console" {
+            ncs:action-name "stop";
+            ncs:sync;
+          }
         }
       }
       ncs:state "reachable" {

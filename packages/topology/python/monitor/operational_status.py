@@ -105,7 +105,9 @@ class OperationalStateMonitor(Action):
         return ('not-running', None)
 
     def stop(self):
-        for pinger in self._pinger_mgmt_threads:
+        self.log.info('Stopping all pingers')
+        pingers = list(self._pinger_mgmt_threads)
+        for pinger in pingers:
             self.stop_pinger(pinger)
         super().stop()
 

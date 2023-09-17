@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 import time
+from datetime import datetime
+
 import ncs
 from ncs import maapi, maagic, OPERATIONAL
 from ncs.dp import Action
@@ -58,6 +60,24 @@ class TopologyStatus():
         self.device_states[topology_device.device_name] = status
         update_provisioning_status(topology_device, status)
 
+    def check_console_activity(self, topology_device, timeout):
+        last_activity = datetime.fromisoformat(topology_device.console.last_activity)
+        duration = (datetime.utcnow() - last_activity).total_seconds()
+        if duration > timeout:
+            topology_name = maagic.cd(topology_device, '../..').name
+            device_id = topology_device.id
+            with maapi.single_read_trans('admin', 'python') as trans:
+                root = maagic.get_root(trans)
+                topology = root.topologies.topology[topology_name]
+                device = topology.devices.device[device_id]
+                if device.console.status().status == 'running':
+                    self.log.info(f'Rebooting {device.device_name}. {duration} '
+                                   'seconds since last console activity.')
+                    reboot = topology.libvirt.reboot
+                    input = reboot.get_input()
+                    input.device = device.device_name
+                    reboot(input)
+
     def ping_device(self, topology_device, root):
         device_name = topology_device.device_name
         self.device_states[device_name] = topology_device.provisioning_status
@@ -67,6 +87,9 @@ class TopologyStatus():
         self.log.info(device_ping.result)
         if ' 0% packet loss' not in device_ping.result:
             update_operational_status(topology_device, 'not-reachable')
+            self.check_console_activity(topology_device,
+                root.topologies.libvirt.device_definition[
+                    topology_device.definition].console_timeout)
             return False
 
         if topology_device.operational_status == 'not-reachable':

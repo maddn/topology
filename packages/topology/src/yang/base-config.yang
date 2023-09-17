@@ -46,6 +46,16 @@ submodule base-config {
           type inet:port-number;
         }
       }
+      leaf console {
+        type enumeration {
+          enum disable;
+          enum debugging;
+          enum error;
+          enum notifications;
+          enum warning;
+        }
+        default notifications;
+      }
     }
 
     leaf ntp-server {

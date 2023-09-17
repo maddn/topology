@@ -148,6 +148,41 @@ submodule topology-libvirt-subgroupings {
       description
         "Hypervisor the device will run on, if different to the default";
     }
+    container console {
+      config false;
+      tailf:cdb-oper {
+        tailf:persistent true;
+      }
+      leaf last-activity {
+        type string;
+      }
+      leaf last-message {
+        type string;
+        tailf:cli-value-display-template "$(.|trunc:100)";
+      }
+
+      action start {
+        tailf:actionpoint console-activity-monitor;
+      }
+      action stop {
+        tailf:actionpoint console-activity-monitor;
+      }
+      action status {
+        tailf:actionpoint console-activity-monitor;
+        output {
+          leaf status {
+            type enumeration {
+              enum running;
+              enum not-running;
+            }
+          }
+          leaf process-pid {
+            type uint32;
+          }
+        }
+      }
+    }
+
   }
 
 }

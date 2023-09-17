@@ -259,8 +259,8 @@ submodule libvirt {
         }
         leaf day0-file {
           type string;
-           tailf:info
-             "Template in the images directory. If empty, no day 0 is used.";
+          tailf:info
+            "Template in the images directory. If empty, no day 0 is used.";
         }
         leaf day0-upload-file {
           type string;
@@ -283,6 +283,11 @@ submodule libvirt {
           //}
           tailf:info
             "Device will be created and synced in NSO using this ned-id.";
+        }
+        leaf console-timeout {
+          type uint32;
+          tailf:info "Maximum seconds with no console activity.";
+          default 300;
         }
       }
     }

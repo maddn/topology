@@ -36,15 +36,12 @@
   <devices>
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
 
-    <!-- virsh console instead of telnet for first serial port -->
-    <console type="pty">
-      <target type="serial" port="0"/>
-    </console>
     <!-- Access: XR Console -->
-    <serial type='pty'>
+    <serial type='tcp'>
+       <source mode="bind" host="0.0.0.0" service="160{id:02d}"/>
+       <protocol type="telnet"/>
        <target port="0"/>
-     </serial>
-
+    </serial>
     <!-- Access: XR Aux (telnet localhost 16101) -->
     <serial type='tcp'>
        <source mode="bind" host="0.0.0.0" service="161{id:02d}"/>
