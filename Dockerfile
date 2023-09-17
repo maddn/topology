@@ -1,5 +1,8 @@
 FROM debian:bullseye AS nso-build
 
+ARG USER_NAME=cisco
+ARG PASSWORD=cisco
+
 RUN apt-get update \
   && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
   && apt-get install -qy --no-install-recommends \
@@ -14,6 +17,7 @@ RUN apt-get update \
      libxml2-utils \
      libvirt-dev \
      openssh-client \
+     openssh-server \
      make \
      pkg-config \
      python3 \
@@ -21,13 +25,14 @@ RUN apt-get update \
      python3-pip \
      python3-setuptools \
      procps \
+     sudo \
      syslog-ng \
      tcpdump \
      telnet \
      vim-tiny \
      xsltproc \
      xmlstarlet \
-  && pip3 install libvirt-python passlib pycdlib pyfatfs setproctitle \
+  && pip3 install libvirt-python passlib pycdlib pyfatfs pyyaml setproctitle \
   && apt-get -qy purge pkg-config python3-pip python3-dev \
   && apt-get -qy autoremove \
   && apt-get clean \
@@ -100,7 +105,14 @@ RUN rm -rf \
   /opt/ncs/current/src/tools \
   /opt/ncs/current/src/yang
 
-EXPOSE 22 80 443 830
+RUN useradd --no-log-init \
+            --create-home \
+            --shell /bin/bash \
+            --groups sudo,adm \
+            ${USER_NAME} && \
+  echo "${USER_NAME}:${PASSWORD}" | chpasswd
+
+EXPOSE 22 80 443 830 2024
 
 HEALTHCHECK --start-period=60s --interval=5s --retries=3 --timeout=5s CMD /opt/ncs/current/bin/ncs_cmd -c get_phase
 
