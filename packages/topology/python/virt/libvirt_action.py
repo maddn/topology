@@ -945,18 +945,36 @@ class LibvirtAction(Action):
         trans.maapi.install_crypto_keys()
         libvirt_topology = Topology(topology, self.log, output, uinfo.username)
 
-        if name == 'start':
-            action = 'create'
-        elif name == 'stop':
-            libvirt_topology.action('shutdown', input.device)
-            libvirt_topology.wait_for_shutdown()
-            action = 'destroy'
+        def run_action(name):
+            action = name
+            if name == 'start':
+                action = 'create'
+            elif name == 'stop':
+                libvirt_topology.action('shutdown', input.device)
+                libvirt_topology.wait_for_shutdown()
+                action = 'destroy'
 
-        libvirt_topology.action(action, input.device)
-        update_status_after_action(topology, action)
+            libvirt_topology.action(action, input.device)
+            update_status_after_action(topology, action)
 
-        if name == 'start':
-            schedule_topology_ping(kp[1:])
+            if name == 'start':
+                schedule_topology_ping(kp[1:])
 
-        if name == 'stop':
-            unschedule_topology_ping(kp[1][0])
+            if name == 'stop':
+                unschedule_topology_ping(kp[1][0])
+
+        if name in ('reboot', 'hard-reset'):
+            run_action('stop')
+            action = 'start'
+
+        if name == 'hard-reset':
+            run_action('undefine')
+            libvirt_topology = None
+            sleep(5)
+            libvirt_topology = Topology(topology, self.log, output, uinfo.username)
+            run_action('define')
+            libvirt_topology = None
+            sleep(5)
+            libvirt_topology = Topology(topology, self.log, output, uinfo.username)
+
+        run_action(action)

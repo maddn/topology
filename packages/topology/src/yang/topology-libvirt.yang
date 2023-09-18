@@ -5,6 +5,7 @@ submodule topology-libvirt {
   import tailf-common { prefix tailf; }
 
   include topology-base;
+  include topology-ui;
 
   // Additional groupings are in a seperate submodule due to an NSO bug.
   // If the groupings are in the same submodule they are missing from the
@@ -116,6 +117,28 @@ submodule topology-libvirt {
               uses libvirt-action-output-grouping;
             }
           }
+          action reboot {
+            tailf:actionpoint libvirt-action;
+            description
+              "Stop and restart the chosen domain.";
+            input {
+              uses libvirt-action-input-grouping;
+            }
+            output {
+              uses libvirt-action-output-grouping;
+            }
+          }
+          action hard-reset {
+            tailf:actionpoint libvirt-action;
+            description
+              "Stop, undefine, redefine and restart the chosen domain.";
+            input {
+              uses libvirt-action-input-grouping;
+            }
+            output {
+              uses libvirt-action-output-grouping;
+            }
+          }
         }
 
         container state-events {
@@ -209,6 +232,8 @@ submodule topology-libvirt {
           }
           description "Updated by the check-topology-status action.";
         }
+
+        uses topology-layout-grouping;
       }
 
       augment "topology/links/link" {
@@ -224,6 +249,7 @@ submodule topology-libvirt {
       }
       augment "topology/devices/device" {
         uses libvirt-device-grouping;
+        uses topology-icon-grouping;
       }
     }
   }
