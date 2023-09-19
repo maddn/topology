@@ -29,7 +29,10 @@
     <device tags="nocreate">
       <name>{deref(topology)/../devices/device/device-name}</name>
       <config tags="merge">
+
         <hostname xmlns="http://tail-f.com/ned/cisco-ios-xr">{device-name}</hostname>
+        <hostname xmlns="urn:ios">{device-name}</hostname>
+
         <banner xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <login>
             <start-marker>$</start-marker>
@@ -37,6 +40,12 @@
             <end-marker>$</end-marker>
           </login>
         </banner>
+
+<!--
+        <banner xmlns="urn:ios">
+          <login>{/login-banner}</login>
+        </banner>
+-->
 
         <logging when="{/logging}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <trap>informational</trap>
@@ -52,7 +61,7 @@
             <vrf>default</vrf>
             <port>{/logging/syslog-server/port}</port>
           </host>
-          <console>disable</console>
+          <console>{/logging/console}</console>
           <hostnameprefix>{device-name}</hostnameprefix>
         </logging>
         <service when="{/logging}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
@@ -68,6 +77,28 @@
                 <msec/>
                 <show-timezone/>
                 <year/>
+              </datetime>
+            </log>
+          </timestamps>
+        </service>
+        <logging when="{/logging}" xmlns="urn:ios">
+          <buffered>
+            <severity-level>debugging</severity-level>
+          </buffered>
+          <monitor>
+            <severity-level>debugging</severity-level>
+          </monitor>
+        </logging>
+        <service when="{/logging}" xmlns="urn:ios">
+          <timestamps>
+            <debug>
+              <datetime>
+                <msec/>
+              </datetime>
+            </debug>
+            <log>
+              <datetime>
+                <msec/>
               </datetime>
             </log>
           </timestamps>
@@ -102,6 +133,29 @@
             <last-vty>50</last-vty>
           </default>
         </vty-pool>
+        <line xmlns="urn:ios">
+          <console>
+            <first>0</first>
+            <exec-timeout>
+              <minutes>0</minutes>
+              <seconds>0</seconds>
+            </exec-timeout>
+            <width>0</width>
+          </console>
+          <vty>
+            <first>0</first>
+            <last>4</last>
+            <exec-timeout>
+              <minutes>0</minutes>
+              <seconds>0</seconds>
+            </exec-timeout>
+            <transport>
+              <input>ssh</input>
+              <input>telnet</input>
+            </transport>
+            <width>0</width>
+          </vty>
+        </line>
 
         <telnet xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <vrf>
@@ -140,6 +194,25 @@
           <address-family>ipv4</address-family>
         </grpc>
 
+        <ip xmlns="urn:ios">
+          <domain>
+            <lookup-conf>
+              <lookup>false</lookup>
+            </lookup-conf>
+            <name>nso-topology</name>
+          </domain>
+          <ssh>
+            <version>2</version>
+          </ssh>
+          <forward-protocol>
+            <nd/>
+          </forward-protocol>
+          <http>
+            <server>false</server>
+            <secure-server>false</secure-server>
+          </http>
+        </ip>
+
         <ntp xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <server>
             <server-list>
@@ -174,41 +247,59 @@
           </traps>
         </snmp-server>
 
+        <snmp-server when="{/snmp-server}" xmlns="urn:ios">
+          <host foreach="{/snmp-server/host}">
+            <ip-address>{ip-address}</ip-address>
+            <message-type>traps</message-type>
+            <version>
+              <version>2c</version>
+            </version>
+            <community-string>{community-string}</community-string>
+            <udp-port>{port}</udp-port>
+          </host>
+          <community>
+            <name>cisco</name>
+            <RO/>
+          </community>
+          <enable>
+            <traps>
+              <name>isis</name>
+            </traps>
+            <traps>
+              <name>snmp authentication linkdown linkup coldstart warmstart</name>
+            </traps>
+          </enable>
+          <trap-source>
+            <Loopback>0</Loopback>
+          </trap-source>
+        </snmp-server>
+
+        <!-- Disable CDP on IOS GigabitEthernet interfaces by default -->
+        <interface xmlns="urn:ios">
+          <?set-root-node {/devices/device[name=current()/device-name]}?>
+          <GigabitEthernet tags="merge" foreach="{/config/interface/GigabitEthernet}">
+            <name>{name}</name>
+            <cdp>
+              <enable>false</enable>
+            </cdp>
+          </GigabitEthernet>
+        </interface>
+
         <!-- IOS Devices -->
-        <hostname xmlns="urn:ios">{device-name}</hostname>
-        <ip xmlns="urn:ios">
-          <domain>
-            <name>nso-topology</name>
-          </domain>
-          <ssh>
-            <version>2</version>
-          </ssh>
-        </ip>
-        <line xmlns="urn:ios">
-          <console>
-            <first>0</first>
-            <exec-timeout>
-              <minutes>0</minutes>
-              <seconds>0</seconds>
-            </exec-timeout>
-            <width>0</width>
-          </console>
-          <vty>
-            <first>0</first>
-            <last>4</last>
-            <exec-timeout>
-              <minutes>720</minutes>
-              <seconds>0</seconds>
-            </exec-timeout>
-            <login>
-              <local/>
-            </login>
-            <transport>
-              <input>ssh</input>
-            </transport>
-            <width>0</width>
-          </vty>
-        </line>
+        <ipv6 xmlns="urn:ios">
+          <unicast-routing/>
+          <cef/>
+        </ipv6>
+        <multilink xmlns="urn:ios">
+          <bundle-name>authenticated</bundle-name>
+        </multilink>
+        <redundancy xmlns="urn:ios"/>
+        <ethernet xmlns="urn:ios">
+          <lmi>
+            <ce/>
+          </lmi>
+        </ethernet>
+        <control-plane xmlns="urn:ios"/>
 
       </config>
     </device>
@@ -239,9 +330,12 @@
         device_id_1=$SOURCE_DEVICE_ID
         device_id_2=$DESTINATION_DEVICE_ID
       ?>
-      <?set LINK_SUBNET={concat(
+      <?set LINK_IPV4_SUBNET={concat(
         deref(../../topology)/../ip-connectivity/physical-interfaces/ipv4-subnet-start,
-        '.', $LOWER_DEVICE_ID, '.', $HIGHER_DEVICE_ID)}?>
+      '.', $LOWER_DEVICE_ID, '.', $HIGHER_DEVICE_ID)}?>
+      <?set LINK_IPV6_SUBNET={concat(
+        deref(../../topology)/../ip-connectivity/physical-interfaces/ipv6-subnet-start,
+        '::', $LOWER_DEVICE_ID, ':', $HIGHER_DEVICE_ID)}?>
 
       <device>
         <name>{source-device}</name>
@@ -253,10 +347,18 @@
                   <unicast>
                     <routes-ip>
                       <net>{deref(loopback-id)/../ipv4-subnet-start}.{$DESTINATION_DEVICE_ID}/32</net>
-                      <address>{$LINK_SUBNET}.{$DESTINATION_DEVICE_ID}</address>
+                      <address>{$LINK_IPV4_SUBNET}.{$DESTINATION_DEVICE_ID}</address>
                     </routes-ip>
                   </unicast>
                 </ipv4>
+                <ipv6 when="{deref(../../topology)/../ip-connectivity/ipv6}">
+                  <unicast>
+                    <routes-ip>
+                      <net>{deref(loopback-id)/../ipv6-subnet-start}::{$DESTINATION_DEVICE_ID}/128</net>
+                      <address>{$LINK_IPV6_SUBNET}:{$DESTINATION_DEVICE_ID}</address>
+                    </routes-ip>
+                  </unicast>
+                </ipv6>
               </address-family>
             </static>
           </router>
@@ -272,7 +374,7 @@
                   <unicast>
                     <routes-ip when="{return-route='source-device'}">
                       <net>{deref(loopback-id)/../ipv4-subnet-start}.{$SOURCE_DEVICE_ID}/32</net>
-                      <address>{$LINK_SUBNET}.{$SOURCE_DEVICE_ID}</address>
+                      <address>{$LINK_IPV4_SUBNET}.{$SOURCE_DEVICE_ID}</address>
                     </routes-ip>
                     <routes-ip when="{return-route='source-subnet'}">
                       <net>{deref(loopback-id)/../ipv4-subnet-start}.0/24</net>
@@ -280,6 +382,22 @@
                     </routes-ip>
                   </unicast>
                 </ipv4>
+                <ipv6 when="{deref(../../topology)/../ip-connectivity/ipv6}">
+                  <unicast>
+                    <routes-ip when="{return-route='source-device'}">
+                      <net>{deref(loopback-id)/../ipv6-subnet-start}::{$SOURCE_DEVICE_ID}/128</net>
+                      <address>{$LINK_IPV6_SUBNET}:{$SOURCE_DEVICE_ID}</address>
+                    </routes-ip>
+                    <routes-ip when="{return-route='source-subnet'}">
+                      <net>{deref(loopback-id)/../ipv6-subnet-start}::0/112</net>
+                      <address>{$LINK_IPV6_SUBNET}:{$SOURCE_DEVICE_ID}</address>
+                    </routes-ip>
+                    <routes-ip when="{add-links-subnet}">
+                      <net>{deref(../../topology)/../ip-connectivity/physical-interfaces/ipv6-subnet-start}::0/16</net>
+                      <address>{$LINK_IPV6_SUBNET}:{$SOURCE_DEVICE_ID}</address>
+                    </routes-ip>
+                  </unicast>
+                </ipv6>
               </address-family>
             </static>
           </router>
@@ -332,6 +450,30 @@
             </ip-route-forwarding-list>
           </route>
         </ip>
+      </config>
+    </device>
+
+    <device>
+      <name>{customer-networks/interface/device}</name>
+      <config>
+        <interface xmlns="urn:ios">
+          <GigabitEthernet tags="merge">
+            <name>0/{interface}</name>
+            <description>Customer network</description>
+            <ip>
+              <no-address>
+                <address tags="delete"/>
+              </no-address>
+              <address>
+                <primary>
+                  <address>{ipv4-subnet-start}.1</address>
+                  <mask>255.255.255.0</mask>
+                </primary>
+              </address>
+            </ip>
+            <shutdown tags="delete"/>
+          </GigabitEthernet>
+        </interface>
       </config>
     </device>
   </devices>

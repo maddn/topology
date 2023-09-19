@@ -5,7 +5,7 @@
 
     <topologies xmlns="http://example.com/topology">
     <bgp>
-      <as-number>{bgp/as-number}</as-number>
+      <as-number>{bgp[as-number=$AS_NUMBER]/as-number}</as-number>
       <topology>{/topology}</topology>
       <route-reflector>
         <loopback-id>{route-reflector/loopback-id}</loopback-id>

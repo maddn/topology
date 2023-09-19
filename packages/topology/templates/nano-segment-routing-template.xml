@@ -5,7 +5,7 @@
 
   <topologies xmlns="http://example.com/topology">
     <segment-routing>
-      <igp>{string(igp/name)}</igp>
+      <igp>{string(igp[1]/name)}</igp>
       <srgb>
         <lower-bound>{segment-routing/srgb/lower-bound}</lower-bound>
         <upper-bound>{segment-routing/srgb/upper-bound}</upper-bound>

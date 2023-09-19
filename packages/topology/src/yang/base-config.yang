@@ -185,5 +185,25 @@ submodule base-config {
         type string;
       }
     }
+
+    container customer-networks {
+      list interface {
+        key "device interface ipv4-subnet-start";
+        leaf device {
+          type string;
+          tailf:non-strict-leafref {
+            path "deref(../../../topology)/../devices/device/device-name";
+          }
+        }
+        leaf interface {
+          type uint8;
+        }
+        leaf ipv4-subnet-start {
+          type tailf:octet-list {
+            tailf:value-length 3;
+          }
+        }
+      }
+    }
   }
 }

@@ -9,6 +9,7 @@ module topology {
   include topology-base;
   include topology-libvirt;
   include topology-libvirt-subgroupings;
+  include topology-ui;
   include libvirt;
   include ip-connectivity;
   include base-config;
@@ -64,21 +65,23 @@ module topology {
       uses ip-connectivity-grouping;
       uses base-config-grouping;
 
-      container igp {
+      list igp {
+        key name;
         uses hidden-topology-link;
         uses igp-grouping;
       }
-      container bgp {
+      list bgp {
+        key as-number;
         uses hidden-topology-link;
         uses bgp-grouping;
       }
       container mpls {
-        must "../igp/name";
+        must "count(../igp) > 0";
         presence true;
         uses mpls-grouping;
       }
       container segment-routing {
-        must "../igp/name";
+        must "count(../igp) > 0";
         presence true;
         uses segment-routing-grouping;
         container srv6 {

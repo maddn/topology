@@ -16,6 +16,7 @@
       <device tags="nocreate">
         <name>{$device_name}</name>
         <config>
+
           <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
             <GigabitEthernet tags="merge">
               <id>0/0/0/{string($interface_id)}</id>
@@ -36,6 +37,33 @@
               <shutdown tags="delete"/>
             </GigabitEthernet>
           </interface>
+
+          <interface xmlns="urn:ios">
+            <GigabitEthernet tags="merge">
+              <name>0/{string($interface_id)}</name>
+              <description>Connection to device {$connected_device_name} destination interface 0/0/0/{$connected_interface_id}</description>
+              <ip>
+                <no-address>
+                  <address tags="delete"/>
+                </no-address>
+                <address>
+                  <primary>
+                    <address>{$IPV4_ADDRESS}</address>
+                    <mask>255.255.255.0</mask>
+                  </primary>
+                </address>
+              </ip>
+              <ipv6 when="{/physical-interfaces/ipv6-subnet-start}">
+                <address>
+                  <prefix-list>
+                    <prefix>{/physical-interfaces/ipv6-subnet-start}::{$LOWER_DEVICE_ID}:{$HIGHER_DEVICE_ID}:{$device_id}/112</prefix>
+                  </prefix-list>
+                </address>
+              </ipv6>
+              <shutdown tags="delete"/>
+            </GigabitEthernet>
+          </interface>
+
         </config>
       </device>
     </devices>
@@ -46,6 +74,7 @@
       <name>{../devices/device/device-name}</name>
       <?set DEVICE_ID={id}?>
       <config>
+
         <interface xmlns="http://tail-f.com/ned/cisco-ios-xr" foreach="{/loopback-interfaces/loopback}">
           <Loopback tags="merge">
             <id>{id}</id>
@@ -64,6 +93,28 @@
             </ipv6>
           </Loopback>
         </interface>
+
+        <interface xmlns="urn:ios" foreach="{/loopback-interfaces/loopback}">
+          <Loopback tags="merge">
+            <name>{id}</name>
+            <ip>
+              <address>
+                <primary>
+                  <address>{ipv4-subnet-start}.{$DEVICE_ID}</address>
+                  <mask>255.255.255.255</mask>
+                </primary>
+              </address>
+            </ip>
+            <ipv6 when="{ipv6-subnet-start}">
+              <address>
+                <prefix-list>
+                  <prefix>{ipv6-subnet-start}::{$DEVICE_ID}/128</prefix>
+                </prefix-list>
+              </address>
+            </ipv6>
+          </Loopback>
+        </interface>
+
       </config>
     </device>
   </devices>

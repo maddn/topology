@@ -336,14 +336,17 @@ class DomainXmlBuilder():
         self._domain_xml_devices.append(self._get_raw_disk_xml(
             generate_day0_volume_name(self._device_name), storage_pool))
 
-    def add_data_ifaces(self, include_null_interfaces, model_type):
-        for iface_id in range(self._network_mgr.get_num_device_ifaces()):
+    def add_data_ifaces(self, include_null_interfaces, model_type,
+            min_ifaces = 0, first_iface = 0):
+        for iface_id in range(first_iface,
+                self._network_mgr.get_num_device_ifaces()):
             bridge_name = self._network_mgr.get_iface_bridge_name(
                     self._device_id, iface_id)
             network_id = self._network_mgr.get_iface_network_id(
                     self._device_id, iface_id)
 
-            if (bridge_name or network_id or include_null_interfaces):
+            if (bridge_name or network_id or include_null_interfaces
+                    or iface_id < (min_ifaces - 1)):
                 iface_dev_name = self._generate_iface_dev_name(iface_id)
                 mac_address = self._generate_mac_address(iface_id)
 
@@ -801,7 +804,9 @@ class Domain(LibvirtObject):
             xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS)
 
         xml_builder.add_data_ifaces(dev_def.device_type == 'XRv-9000',
-                'e1000' if dev_def.device_type == 'XRv-9000' else 'virtio')
+                'e1000' if dev_def.device_type in ('XRv-9000', 'IOSv') else 'virtio',
+                4 if dev_def.device_type == 'IOSv' else 0,
+                1 if dev_def.device_type == 'IOSv' else 0)
 
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
         self._log.info(domain_xml_str)
@@ -910,18 +915,19 @@ class Topology():
             if device_name is not None and device.device_name != device_name:
                 continue
             dev_def = self._dev_defs[device.definition]
-            if dev_def.device_type == 'XRv-9000':
+            if dev_def.device_type in ('XRv-9000', 'IOSv'):
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)
             update_device_status_after_action(device,
                     action, dev_def.ned_id is None)
 
-    def wait_for_shutdown(self):
+    def wait_for_shutdown(self, device_name=None):
         timer = 0
         while any(self._domain.is_active(device)
                   for device in self._topology.devices.device
-                  if self._dev_defs[device.definition].device_type != 'IOSv'
+                  if (device_name is None or device.device_name == device_name)
+                  and self._dev_defs[device.definition].device_type != 'IOSv'
                   ) and timer < 60:
             sleep(10)
             timer += 10

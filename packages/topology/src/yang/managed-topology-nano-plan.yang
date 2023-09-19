@@ -211,7 +211,7 @@ submodule managed-topology-nano-plan {
       ncs:state "ncs:init" {
         ncs:create {
           ncs:pre-condition {
-            ncs:monitor "$PLAN/component[name='igp']/state[name='ncs:ready']" {
+            ncs:monitor "$PLAN/component[type='topology:igp']/state[name='ncs:ready']" {
               ncs:trigger-expr "status='reached'";
             }
           }
@@ -229,7 +229,7 @@ submodule managed-topology-nano-plan {
       ncs:state "ncs:init" {
         ncs:create {
           ncs:pre-condition {
-            ncs:monitor "$PLAN/component[name='igp']/state[name='ncs:ready']" {
+            ncs:monitor "$PLAN/component[type='topology:igp']/state[name='ncs:ready']" {
               ncs:trigger-expr "status='reached'";
             }
           }
@@ -300,40 +300,44 @@ submodule managed-topology-nano-plan {
         ncs:component-type-ref "initial-config";
       }
 
-      ncs:selector {
-        ncs:pre-condition {
-          ncs:monitor "$SERVICE/igp" {
-            ncs:trigger-expr "name";
+      ncs:multiplier {
+        ncs:foreach "$SERVICE/igp" {
+          ncs:variable "IGP_NAME" {
+            ncs:value-expr "name";
           }
-        }
-        ncs:create-component "'igp'" {
-          ncs:component-type-ref "igp";
-        }
-        ncs:create-component "'mpls'" {
-          ncs:pre-condition {
-            ncs:monitor "$SERVICE/mpls" {
-              ncs:trigger-expr ".";
-            }
+          ncs:create-component "concat('igp-', $IGP_NAME)" {
+            ncs:component-type-ref "igp";
           }
-          ncs:component-type-ref "mpls";
-        }
-        ncs:create-component "'segment-routing'" {
-          ncs:pre-condition {
-            ncs:monitor "$SERVICE/segment-routing" {
-              ncs:trigger-expr ".";
-            }
-          }
-          ncs:component-type-ref "segment-routing";
         }
       }
 
-      ncs:create-component "'bgp'" {
+      ncs:create-component "'mpls'" {
         ncs:pre-condition {
-          ncs:monitor "$SERVICE/bgp" {
-            ncs:trigger-expr "as-number";
+          ncs:monitor "$SERVICE/mpls" {
+            ncs:trigger-expr ".";
           }
         }
-        ncs:component-type-ref "bgp";
+        ncs:component-type-ref "mpls";
+      }
+
+      ncs:create-component "'segment-routing'" {
+        ncs:pre-condition {
+          ncs:monitor "$SERVICE/segment-routing" {
+            ncs:trigger-expr ".";
+          }
+        }
+        ncs:component-type-ref "segment-routing";
+      }
+
+      ncs:multiplier {
+        ncs:foreach "$SERVICE/bgp" {
+          ncs:variable "AS_NUMBER" {
+            ncs:value-expr "as-number";
+          }
+          ncs:create-component "concat('bgp-', $AS_NUMBER)" {
+            ncs:component-type-ref "bgp";
+          }
+        }
       }
       ncs:create-component "'traffic-generator'" {
         ncs:pre-condition {

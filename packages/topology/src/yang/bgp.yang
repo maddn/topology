@@ -69,5 +69,25 @@ submodule bgp {
         "On each device in the routers list, a link-state neighbour will be
          configured to each router in the route‑reflector/routers list.";
     }
+    container networks {
+      list network {
+        key "device interface-type interface-id";
+        leaf device {
+          type string;
+          tailf:non-strict-leafref {
+            path "deref(../../../topology)/../devices/device/device-name";
+          }
+        }
+        leaf interface-type {
+          type enumeration {
+            enum GigabitEthernet;
+            enum Loopback;
+          }
+        }
+        leaf interface-id {
+          type uint8;
+        }
+      }
+    }
   }
 }

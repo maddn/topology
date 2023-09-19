@@ -5,7 +5,7 @@
 
   <topologies xmlns="http://example.com/topology">
     <mpls>
-      <igp>{string(igp/name)}</igp>
+      <igp>{string(igp[1]/name)}</igp>
       <ldp when="{mpls/ldp}"/>
       <rsvp when="{mpls/rsvp}"/>
       <traffic-engineering when="{mpls/traffic-engineering}">

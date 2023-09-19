@@ -5,7 +5,7 @@
 
   <topologies xmlns="http://example.com/topology">
     <igp>
-      <name>{igp/name}</name>
+      <name>{igp[name=$IGP_NAME]/name}</name>
       <topology>{/topology}</topology>
       <devices>{devices}</devices>
       <is-is when="{is-is}"/>
