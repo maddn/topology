@@ -109,6 +109,12 @@ submodule topology-base {
           leaf affinity {
             type string;
           }
+          leaf cdp {
+            type empty;
+          }
+          leaf lldp {
+            type empty;
+          }
         }
       }
 

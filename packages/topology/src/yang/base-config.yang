@@ -89,10 +89,6 @@ submodule base-config {
       type uint32;
       tailf:info "Bandwidth for every topology link and network interface.";
     }
-    leaf lldp {
-      type empty;
-      tailf:info "Enable LLDP on every topology link and network interface.";
-    }
 
     container static-routes {
       list route {

@@ -9,7 +9,7 @@
     <?end?>
   <?endmacro?>
 
-  <?macro InterfaceBaseConfig device_name interface_id?>
+  <?macro InterfaceBaseConfig device_name interface_id lldp=false()?>
     <device tags="nocreate">
       <name>{$device_name}</name>
       <config>
@@ -17,8 +17,21 @@
           <GigabitEthernet tags="merge">
             <id>0/0/0/{string($interface_id)}</id>
             <bandwidth>{/interface-bandwidth}</bandwidth>
-            <lldp when="{/lldp}"/>
+            <lldp when="{lldp}"/>
+            <cdp when="{cdp}"/>
             <load-interval>30</load-interval>
+          </GigabitEthernet>
+        </interface>
+        <interface xmlns="urn:ios">
+          <GigabitEthernet tags="merge">
+            <name>0/{string($interface_id)}</name>
+            <lldp when="{lldp}">
+              <transmit>true</transmit>
+              <receive>true</receive>
+            </lldp>
+            <cdp>
+              <enable>{string(boolean(cdp))}</enable>
+            </cdp>
           </GigabitEthernet>
         </interface>
       </config>
@@ -274,6 +287,21 @@
           </trap-source>
         </snmp-server>
 
+        <?if {count(deref(/topology)/../links/link[a-end-device=$DEVICE]/lldp) +
+              count(deref(/topology)/../links/link[z-end-device=$DEVICE]/lldp) > 0}?>
+          <lldp xmlns="urn:ios">
+            <run/>
+          </lldp>
+          <lldp xmlns="http://tail-f.com/ned/cisco-ios-xr"/>
+        <?end?>
+
+        <?set CDP={boolean(count(deref(/topology)/../links/link[a-end-device=$DEVICE]/cdp) +
+                           count(deref(/topology)/../links/link[z-end-device=$DEVICE]/cdp))}?>
+        <cdp xmlns="urn:ios">
+          <run>{$CDP}</run>
+        </cdp>
+        <cdp xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{$CDP='true'}"/>
+
         <!-- Disable CDP on IOS GigabitEthernet interfaces by default -->
         <interface xmlns="urn:ios">
           <?set-root-node {/devices/device[name=current()/device-name]}?>
@@ -308,10 +336,12 @@
       <?expand InterfaceBaseConfig
         device_name=a-end-device
         interface_id=a-end-interface/id
+        lldp=boolean(lldp)
       ?>
       <?expand InterfaceBaseConfig
         device_name=z-end-device
         interface_id=z-end-interface/id
+        lldp=boolean(lldp)
       ?>
     <?end?>
     <?foreach {deref(topology)/../networks/network}?>

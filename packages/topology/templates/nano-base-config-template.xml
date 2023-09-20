@@ -24,7 +24,6 @@
       <grpc when="{grpc}">
         <port>57400</port>
       </grpc>
-      <lldp when="{lldp}"/>
       <interface-bandwidth>{interface-bandwidth}</interface-bandwidth>
       <static-routes>
         <route foreach="{static-routes/route}">
