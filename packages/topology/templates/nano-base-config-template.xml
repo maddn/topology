@@ -31,6 +31,8 @@
           <destination-device>{destination-device}</destination-device>
           <loopback-id>{loopback-id}</loopback-id>
           <return-route>{return-route}</return-route>
+          <redistribute-link when="{redistribute-link}"/>
+          <add-links-subnet when="{add-links-subnet}"/>
         </route>
         <loopback-to-management>
           <device>{static-routes/loopback-to-management/device}</device>

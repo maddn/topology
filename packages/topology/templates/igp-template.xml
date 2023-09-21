@@ -59,6 +59,7 @@
               <address-family>
                 <ipv4>
                   <unicast>
+                    <metric-style>wide</metric-style>
                     <router-id-address>
                       <router-id>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.{deref(current())/../id}</router-id>
                     </router-id-address>
@@ -68,6 +69,11 @@
                     <redistribute when="{count(../../traffic-generator[topology=/../name]/devices[.=current()]) = 1}">
                       <static/>
                     </redistribute>
+                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]/redistribute-link) > 0}">
+                      <connected>
+                        <route-policy>redistribute-uplinks</route-policy>
+                      </connected>
+                    </redistribute>
                   </unicast>
                 </ipv4>
                 <ipv6 when="{/ipv6}">
@@ -75,6 +81,14 @@
                     <router-id>
                       <Loopback>{/loopback-interfaces/loopback[primary]/id}</Loopback>
                     </router-id>
+                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) > 0}">
+                      <static/>
+                    </redistribute>
+                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]/redistribute-link) > 0}">
+                      <connected>
+                        <route-policy>redistribute-uplinks</route-policy>
+                      </connected>
+                    </redistribute>
                   </unicast>
                 </ipv6>
               </address-family>

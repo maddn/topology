@@ -145,6 +145,12 @@ submodule base-config {
           }
           default source-subnet;
         }
+        leaf redistribute-link {
+          type empty;
+        }
+        leaf add-links-subnet {
+          type empty;
+        }
       }
 
       container loopback-to-management {

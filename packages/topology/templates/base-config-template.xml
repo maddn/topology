@@ -392,6 +392,16 @@
               </address-family>
             </static>
           </router>
+          <prefix-set xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{redistribute-link}">
+            <name>{source-device}-uplinks</name>
+            <set>
+              <value>{$LINK_IPV4_SUBNET}.0/24</value>
+            </set>
+          </prefix-set>
+          <route-policy xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{redistribute-link}">
+            <name>redistribute-uplinks</name>
+            <value>  if destination in {source-device}-uplinks then&#13;&#10;    pass&#13;&#10;  endif&#13;&#10;</value>
+          </route-policy>
         </config>
       </device>
       <device when="return-route">
@@ -408,7 +418,11 @@
                     </routes-ip>
                     <routes-ip when="{return-route='source-subnet'}">
                       <net>{deref(loopback-id)/../ipv4-subnet-start}.0/24</net>
-                      <address>{$LINK_SUBNET}.{$SOURCE_DEVICE_ID}</address>
+                      <address>{$LINK_IPV4_SUBNET}.{$SOURCE_DEVICE_ID}</address>
+                    </routes-ip>
+                    <routes-ip when="{add-links-subnet}">
+                      <net>{deref(../../topology)/../ip-connectivity/physical-interfaces/ipv4-subnet-start}.0.0.0/8</net>
+                      <address>{$LINK_IPV4_SUBNET}.{$SOURCE_DEVICE_ID}</address>
                     </routes-ip>
                   </unicast>
                 </ipv4>
