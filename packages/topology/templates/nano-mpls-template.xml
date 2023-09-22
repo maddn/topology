@@ -9,7 +9,9 @@
       <ldp when="{mpls/ldp}"/>
       <rsvp when="{mpls/rsvp}"/>
       <traffic-engineering when="{mpls/traffic-engineering}">
-        <pce when="{mpls/traffic-engineering/pce}"/>
+        <pce when="{mpls/traffic-engineering/pce}">
+          <loopback-id>{mpls/traffic-engineering/pce/loopback-id}</loopback-id>
+        </pce>
       </traffic-engineering>
     </mpls>
   </topologies>

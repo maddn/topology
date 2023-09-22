@@ -100,17 +100,21 @@
             </auto-tunnel>
 
             <pce when="{/traffic-engineering/pce}">
+              <?set LOOPBACK_ID={/traffic-engineering/pce/loopback-id}?>
+              <?if {$LOOPBACK_ID=""}?>
+                <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
+              <?end?>
               <?set-root-node {/}?>
               <peer>
                 <source>
-                  <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+                  <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
                 </source>
                 <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
-                <ipv4>
-                  <address>{string(/devices/device[name=current()/router]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
-                  <password when="{password}">
+                <ipv4 foreach="{routers}">
+                  <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
+                  <password when="{../password}">
                     <type>clear</type>
-                    <secret>{password}</secret>
+                    <secret>{../password}</secret>
                   </password>
                 </ipv4>
               </peer>

@@ -40,9 +40,13 @@ submodule mpls {
       presence true;
       tailf:info
         "Enable TE on each interface connected to another device in the IGP.";
-      leaf pce {
-        type empty;
+      container pce {
+        presence true;
         tailf:info "Configure the PCE peer from the base-config service.";
+
+        leaf loopback-id {
+          type uint8;
+        }
       }
     }
   }

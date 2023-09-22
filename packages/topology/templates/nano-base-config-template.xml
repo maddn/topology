@@ -40,7 +40,7 @@
         </loopback-to-management>
       </static-routes>
       <pce when="{pce}">
-        <router>{pce/router}</router>
+        <routers>{pce/routers}</routers>
         <loopback-id>{pce/loopback-id}</loopback-id>
         <password>{pce/password}</password>
       </pce>

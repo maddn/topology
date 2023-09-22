@@ -136,13 +136,13 @@
               </source-address>
 
               <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
-              <pce>
+              <pce foreach="{routers}">
                 <address>
                   <ipv4>
-                    <address>{string(/devices/device[name=current()/router]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
-                    <password when="{password}">
+                    <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
+                    <password when="{../password}">
                       <type>clear</type>
-                      <secret>{password}</secret>
+                      <secret>{../password}</secret>
                     </password>
                   </ipv4>
                 </address>

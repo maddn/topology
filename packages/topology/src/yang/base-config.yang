@@ -174,7 +174,7 @@ submodule base-config {
     }
 
     container pce {
-      leaf router {
+      leaf-list routers {
         type string;
         tailf:non-strict-leafref {
           path "/topologies/topology/devices/device/device-name";
