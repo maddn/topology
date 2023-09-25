@@ -12,6 +12,7 @@
       </srgb>
       <prefix-sid-start>{segment-routing/prefix-sid-start}</prefix-sid-start>
       <pce when="{segment-routing/pce}"/>
+      <autoroute-profile-id>{segment-routing/autoroute-profile-id}</autoroute-profile-id>
       <srv6 when="{segment-routing/srv6}">
         <locator-prefix-start>{segment-routing/srv6/locator-prefix-start}</locator-prefix-start>
       </srv6>

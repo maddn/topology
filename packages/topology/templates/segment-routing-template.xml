@@ -73,6 +73,9 @@
                   </unicast>
                 </ipv6>
               </address-family>
+              <distribute>
+                <link-state/>
+              </distribute>
               <interface>
                 <name>Loopback{$PRIMARY_LOOPBACK_ID}</name>
                 <address-family tags="merge">
@@ -117,6 +120,7 @@
                 <affinity>
                   <exclude-any>{affinity-exclude}</exclude-any>
                 </affinity>
+                <advertise-definition/>
               </flex-algo>
             </tag>
           </isis>
@@ -130,6 +134,16 @@
 
           <traffic-eng when="{/pce}">
             <pcc>
+              <report-all/>
+              <profile>
+                <id>{/autoroute-profile-id}</id>
+                <autoroute>
+                  <include>
+                    <all/>
+                  </include>
+                </autoroute>
+              </profile>
+
               <?set-root-node {/}?>
               <source-address>
                 <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
@@ -161,7 +175,7 @@
                   </behavior>
                 </micro-segment>
                 <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
-                <algorithm>{algorithm}</algorithm>
+                <algorithm>{id}</algorithm>
               </locator>
               <locator foreach="{/flex-algo}">
                 <name>{srv6-locator}</name>
@@ -172,7 +186,7 @@
                   </behavior>
                 </micro-segment>
                 <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
-                <algorithm>{algorithm}</algorithm>
+                <algorithm>{id}</algorithm>
               </locator>
             </locators>
           </srv6>

@@ -75,6 +75,9 @@ submodule segment-routing {
       type empty;
       tailf:info "Configure the PCE peer from the base-config service.";
     }
+    leaf autoroute-profile-id {
+      type uint32;
+    }
 
     list flex-algo {
       key id;
