@@ -106,6 +106,10 @@ submodule topology-base {
             type uint32;
             default 10;
           }
+          leaf te-metric {
+            type uint32;
+            default 10;
+          }
           leaf affinity {
             type string;
           }

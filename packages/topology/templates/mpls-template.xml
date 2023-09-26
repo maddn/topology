@@ -16,6 +16,7 @@
           <traffic-eng when="{/traffic-engineering}">
             <interface>
               <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
+              <admin-weight>{te-metric}</admin-weight>
               <attribute-names>
                 <name>{affinity}</name>
               </attribute-names>
@@ -64,6 +65,7 @@
                         <router-id>
                           <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
                         </router-id>
+                        <level>level-2-only</level>
                       </traffic-eng>
                     </mpls>
                   </unicast>
