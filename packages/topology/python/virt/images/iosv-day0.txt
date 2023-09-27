@@ -13,6 +13,7 @@ line aux 0
 line vty 0 4
  login local
  transport input ssh
+ width 0
 !
 ip ssh version 2
 end
