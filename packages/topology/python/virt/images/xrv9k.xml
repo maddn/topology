@@ -1,8 +1,8 @@
 <domain type='kvm'>
-  <name>{device-name}</name>
-  <memory unit='MiB'>{memory}</memory>
-  <currentMemory unit='MiB'>{memory}</currentMemory>
-  <vcpu placement='static'>{vcpus}</vcpu>
+  <name>${device-name}</name>
+  <memory unit='MiB'>${memory}</memory>
+  <currentMemory unit='MiB'>${memory}</currentMemory>
+  <vcpu placement='static'>${vcpus}</vcpu>
   <cpu mode='custom' match='exact' check='full'>
     <model fallback='forbid'>Westmere</model>
     <feature policy='require' name='vmx'/>
@@ -38,25 +38,25 @@
 
     <!-- Access: XR Console -->
     <serial type='tcp'>
-       <source mode="bind" host="0.0.0.0" service="160{id:02d}"/>
+       <source mode="bind" host="0.0.0.0" service="160${id}"/>
        <protocol type="telnet"/>
        <target port="0"/>
     </serial>
     <!-- Access: XR Aux (telnet localhost 16101) -->
     <serial type='tcp'>
-       <source mode="bind" host="0.0.0.0" service="161{id:02d}"/>
+       <source mode="bind" host="0.0.0.0" service="161${id}"/>
        <protocol type="telnet"/>
        <target port="1"/>
     </serial>
     <!-- Access: Admin / Calvados (telnet localhost 16201) -->
     <serial type='tcp'>
-       <source mode="bind" host="0.0.0.0" service="162{id:02d}"/>
+       <source mode="bind" host="0.0.0.0" service="162${id}"/>
        <protocol type="telnet"/>
        <target port="2"/>
     </serial>
     <!-- Access: HOST VM (telnet localhost 16301) -->
     <serial type='tcp'>
-       <source mode="bind" host="0.0.0.0" service="163{id:02}"/>
+       <source mode="bind" host="0.0.0.0" service="163${id}"/>
        <protocol type="telnet"/>
        <target port="3"/>
     </serial>

@@ -9,6 +9,7 @@ import base64
 import crypt
 import os
 import re
+import string
 import subprocess
 
 from passlib.hash import md5_crypt
@@ -205,6 +206,10 @@ class ResourceManager():
                 self._username in authgroup.umap) else authgroup.default_map
 
 
+class Template(string.Template):
+    braceidpattern = '(?a:[_a-z\-][_a-z0-9\-]*)'
+
+
 class Templates():
     def __init__(self):
         self.templates = {}
@@ -222,8 +227,8 @@ class Templates():
         return xml_to_string(xml)
 
     def _apply_template(self, template_name, variables):
-        return self.templates[template_name].format_map(
-                defaultdict(str, variables))
+        return Template(self.templates[template_name]
+                ).substitute(defaultdict(str, variables))
 
     def apply_template(self, template_name, variables):
         is_xml = os.path.splitext(template_name)[1] == '.xml'
@@ -299,7 +304,7 @@ class DomainXmlBuilder():
     def create_base(self, vcpus, memory, template):
         self.domain_xml = self._templates.apply_xml_template(
                 f'{template}.xml', {
-                    'id': self._device_id,
+                    'id': f'{self._device_id:02d}',
                     'device-name': self._device_name,
                     'vcpus': vcpus,
                     'memory': memory})

@@ -1,13 +1,13 @@
-hostname {device-name}
-username {username} privilege 15 secret 5 {password-md5}
+hostname ${device-name}
+username ${username} privilege 15 secret 5 ${password-md5}
 ip domain-name nso-topology
 crypto key generate rsa modulus 2048
 interface GigabitEthernet0/0
- ip address {ip-address} 255.255.255.0
+ ip address ${ip-address} 255.255.255.0
  no shutdown
 !
-ip route 10.16.0.0 255.255.0.0 {gateway-address}
-ip route 198.18.128.0 255.255.128.0 {gateway-address}
+ip route 10.16.0.0 255.255.0.0 ${gateway-address}
+ip route 198.18.128.0 255.255.128.0 ${gateway-address}
 line aux 0
  privilege level 15
 line vty 0 4

@@ -1,8 +1,8 @@
 <domain type='kvm'>
-  <name>{device-name}</name>
-  <memory unit='MiB'>{memory}</memory>
-  <currentMemory unit='MiB'>{memory}</currentMemory>
-  <vcpu placement='static'>{vcpus}</vcpu>
+  <name>${device-name}</name>
+  <memory unit='MiB'>${memory}</memory>
+  <currentMemory unit='MiB'>${memory}</currentMemory>
+  <vcpu placement='static'>${vcpus}</vcpu>
   <os>
     <type arch='x86_64'>hvm</type>
     <boot dev='hd'/>

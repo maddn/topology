@@ -1,16 +1,16 @@
-username {username}
+username ${username}
  group root-lr
  group cisco-support
- secret 10 {password}
+ secret 10 ${password}
 !
 interface MgmtEth0/RP0/CPU0/0
- ipv4 address {ip-address} 255.255.255.0
+ ipv4 address ${ip-address} 255.255.255.0
  no shutdown
 !
 router static
  address-family ipv4 unicast
-  10.16.0.0/16 {gateway-address}
-  198.18.128.0/18 {gateway-address}
+  10.16.0.0/16 ${gateway-address}
+  198.18.128.0/18 ${gateway-address}
  !
 !
 ssh server v2

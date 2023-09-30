@@ -1,6 +1,6 @@
 <network>
-  <name>{network}</name>
-  <bridge name="{bridge}" stp="off"/>
-  <mac address='{mac-address}'/>
-  <port isolated='{isolated}'/>
+  <name>${network}</name>
+  <bridge name="${bridge}" stp="off"/>
+  <mac address="${mac-address}"/>
+  <port isolated="${isolated}"/>
 </network>
