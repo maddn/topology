@@ -202,6 +202,9 @@ submodule libvirt {
             enum XRv-9000 {
               tailf:info "ISO image for day 0. Two extra management interfaces.";
             }
+            enum vJunos-Evolved {
+              tailf:info "USB image for day 0. Four extra management interfaces.";
+            }
             enum IOSv {
               tailf:info "FAT disk image for day 0.";
             }
@@ -275,12 +278,14 @@ submodule libvirt {
           mandatory true;
         }
         leaf ned-id {
-          //type union {
-          //  type string;
+          type union {
             type identityref {
               base ned:cli-ned-id;
             }
-          //}
+            type identityref {
+              base ned:netconf-ned-id;
+            }
+          }
           tailf:info
             "Device will be created and synced in NSO using this ned-id.";
         }

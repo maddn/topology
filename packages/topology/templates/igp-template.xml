@@ -29,6 +29,37 @@
             </tag>
           </isis>
         </router>
+
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <interfaces>
+            <interface>
+              <name>et-0/0/{string($interface_id)}</name>
+              <unit>
+                <name>0</name>
+                <family>
+                  <iso/>
+                </family>
+              </unit>
+            </interface>
+          </interfaces>
+          <protocols>
+            <isis>
+              <interface>
+                <name>et-0/0/{string($interface_id)}.0</name>
+                <level>
+                  <name>2</name>
+                  <metric>{igp-metric}</metric>
+                </level>
+                <level>
+                  <name>1</name>
+                  <disable/>
+                </level>
+                <point-to-point/>
+              </interface>
+            </isis>
+          </protocols>
+        </configuration>
+
       </config>
     </device>
   <?endmacro?>
@@ -45,13 +76,14 @@
     <?set-root-node {deref(topology)/../ip-connectivity}?>
     <device>
       <name>{devices}</name>
+      <?set NET_ADDRESS=49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00?>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis when="{../is-is}">
             <tag>
               <name>{string(../name)}</name>
               <net>
-                <id>49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00</id>
+                <id>{$NET_ADDRESS}</id>
               </net>
               <distribute when="{count(../../bgp[topology=/../name]/link-state/routers[.=current()]) > 0}">
                 <link-state/>
@@ -109,6 +141,61 @@
           </isis>
         </router>
 
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <interfaces>
+            <interface>
+              <name>lo0</name>
+              <unit>
+                <name>0</name>
+                <family>
+                  <iso>
+                    <address>
+                      <name>{$NET_ADDRESS}</name>
+                    </address>
+                  </iso>
+                </family>
+              </unit>
+            </interface>
+          </interfaces>
+          <protocols>
+            <isis>
+              <interface>
+                <name>lo0.0</name>
+                <level>
+                  <name>1</name>
+                  <disable/>
+                </level>
+                <passive/>
+              </interface>
+              <level>
+                <name>2</name>
+                <wide-metrics-only/>
+              </level>
+            </isis>
+          </protocols>
+          <?if {count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) + count(../../traffic-generator[topology=/../name]/devices[.=current()]) > 0}?>
+            <policy-options>
+              <policy-statement>
+                <name>export-statics</name>
+                <term>
+                  <name>1</name>
+                  <from>
+                    <protocol>static</protocol>
+                  </from>
+                  <then>
+                    <accept/>
+                  </then>
+                </term>
+              </policy-statement>
+            </policy-options>
+            <protocols>
+              <isis>
+                <export>export-statics</export>
+              </isis>
+            </protocols>
+          <?end?>
+        </configuration>
+
         <!-- IOS Devices -->
         <router xmlns="urn:ios">
           <ospf when="{../ospf}">
@@ -121,7 +208,7 @@
             </redistribute>
             <network>
               <ip>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.0</ip>
-              <mask>255.255.255.0</mask>
+              <mask>0.0.0.255</mask>
               <area>0</area>
             </network>
             <?if {../ospf/include-management-network='true'}?>
@@ -129,7 +216,7 @@
               <?set LAST_OCTET={substring-after(substring-after(substring-after(management-interface/ip-address, '.'), '.'), '.')}?>
               <network>
                 <ip>{substring(management-interface/ip-address, 1, string-length(management-interface/ip-address)-string-length($LAST_OCTET)-1)}.0</ip>
-                <mask>255.255.255.0</mask>
+                <mask>0.0.0.255</mask>
                 <area>0</area>
               </network>
             <?end?>

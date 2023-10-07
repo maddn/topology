@@ -32,6 +32,25 @@
             </tag>
           </isis>
         </router>
+
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <protocols>
+            <isis>
+              <interface>
+                <name>et-0/0/{string($interface_id)}.0</name>
+                <level>
+                  <name>2</name>
+                  <ipv4-adjacency-segment>
+                    <unprotected>
+                      <dynamic/>
+                    </unprotected>
+                  </ipv4-adjacency-segment>
+                  <post-convergence-lfa/>
+                </level>
+              </interface>
+            </isis>
+          </protocols>
+        </configuration>
       </config>
     </device>
   <?endmacro?>
@@ -191,6 +210,54 @@
             </locators>
           </srv6>
         </segment-routing>
+
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <protocols>
+            <isis>
+              <source-packet-routing>
+                <srgb>
+                  <start-label>{/srgb/lower-bound}</start-label>
+                  <index-range>{/srgb/upper-bound}</index-range>
+                </srgb>
+                <node-segment>
+                  <ipv4-index>{number(/prefix-sid-start) + number($DEVICE_ID)}</ipv4-index>
+                  <ipv6-index>{number(/prefix-sid-start) + 1000 + number($DEVICE_ID)}</ipv6-index>
+                </node-segment>
+              </source-packet-routing>
+              <backup-spf-options>
+                <use-post-convergence-lfa>
+                  <maximum-labels>5</maximum-labels>
+                </use-post-convergence-lfa>
+                <use-source-packet-routing/>
+              </backup-spf-options>
+              <traffic-engineering when="{/pce}">
+                <l3-unicast-topology/>
+              </traffic-engineering>
+            </isis>
+            <source-packet-routing when="{/pce}">
+              <lsp-external-controller>
+                <name>pccd</name>
+              </lsp-external-controller>
+            </source-packet-routing>
+            <pcep when="{/pce}">
+              <?set-root-node {/}?>
+              <?set SOURCE_ADDRESS={substring-before(/devices/device[name=current()]/config/configuration/interfaces/interface[name='lo0']/unit[name='0']/family/inet/address[1]/name, '/')}?>
+              <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
+              <pce foreach="{routers}">
+                <name>{.}</name>
+                <local-address>{$SOURCE_ADDRESS}</local-address>
+                <destination-ipv4-address>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</destination-ipv4-address>
+                <authentication-key>{../password}</authentication-key>
+                <pce-type>
+                  <active/>
+                  <stateful/>
+                </pce-type>
+                <lsp-provisioning/>
+                <spring-capability/>
+              </pce>
+            </pcep>
+          </protocols>
+        </configuration>
       </config>
     </device>
 

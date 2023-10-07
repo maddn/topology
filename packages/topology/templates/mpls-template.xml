@@ -31,6 +31,51 @@
           </interface>
         </rsvp>
 
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <protocols>
+            <ldp when="{/ldp}">
+              <interface>
+                <name>et-0/0/{string($interface_id)}.0</name>
+              </interface>
+            </ldp>
+
+            <mpls>
+              <interface>
+                <name>et-0/0/{string($interface_id)}.0</name>
+                <admin-group>{affinity}</admin-group>
+              </interface>
+            </mpls>
+
+            <isis>
+              <interface>
+                <name>et-0/0/{string($interface_id)}.0</name>
+                <level>
+                  <name>2</name>
+                  <te-metric>{te-metric}</te-metric>
+                </level>
+              </interface>
+            </isis>
+
+            <rsvp when="{/rsvp}">
+              <interface>
+                <name>et-0/0/{string($interface_id)}.0</name>
+                <bandwidth>{bandwidth}</bandwidth>
+              </interface>
+            </rsvp>
+          </protocols>
+
+          <interfaces>
+            <interface>
+              <name>et-0/0/{string($interface_id)}</name>
+              <unit>
+                <name>0</name>
+                <family>
+                  <mpls/>
+                </family>
+              </unit>
+            </interface>
+          </interfaces>
+        </configuration>
       </config>
     </device>
   <?endmacro?>
@@ -128,6 +173,41 @@
 
           </traffic-eng>
         </mpls>
+
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <interfaces>
+            <interface>
+              <name>lo0</name>
+              <unit>
+                <name>0</name>
+                <family>
+                  <mpls/>
+                </family>
+              </unit>
+            </interface>
+          </interfaces>
+          <protocols>
+            <mpls>
+              <lsp-external-controller when="{/traffic-engineering/pce}">
+                <name>pccd</name>
+              </lsp-external-controller>
+
+              <?set DEVICE_NAME={.}?>
+              <?set BIT_POSITION={23}?>
+              <?set-root-node {/}?>
+              <?foreach {deref(../topology)/../links/link}?>
+                <?if {count(/devices/device[name=$DEVICE_NAME]/config/configuration/protocols/mpls/admin-groups[name=current()/affinity]) = 0}?>
+                  <admin-groups>
+                    <name>{affinity}</name>
+                    <group-value>{$BIT_POSITION}</group-value>
+                  </admin-groups>
+                  <?set BIT_POSITION={$BIT_POSITION+1}?>
+                <?end?>
+              <?end?>
+            </mpls>
+          </protocols>
+        </configuration>
+
       </config>
     </device>
 

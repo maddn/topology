@@ -6,9 +6,12 @@
       <address>{management-interface/ip-address}</address>
       <authgroup>{/authgroup}</authgroup>
       <device-type>
-        <cli>
+        <cli when="{derived-from(/ned-id, 'ned:cli-ned-id')}">
           <ned-id>{/ned-id}</ned-id>
         </cli>
+        <netconf when="{derived-from(/ned-id, 'ned:netconf-ned-id')}">
+          <ned-id>{/ned-id}</ned-id>
+        </netconf>
       </device-type>
       <ssh-algorithms>
         <public-key when="{/device-type='XRv-9000'}">rsa-sha2-256</public-key>

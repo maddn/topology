@@ -13,6 +13,7 @@ import string
 import subprocess
 
 from passlib.hash import md5_crypt
+from fs.tarfs import TarFS
 import fs
 import pycdlib
 
@@ -28,6 +29,7 @@ _ncs = __import__('_ncs')
 
 PYTHON_DIR = os.path.dirname(__file__)
 XRV9K_EXTRA_MGMT_NETWORKS = ['ctrl', 'host']
+VJUNOS_EXTRA_MGMT_NETWORKS = ['pfe', 'rpio', 'rpio', 'pfe']
 
 
 def generate_network_id(device_id, other_id):
@@ -273,23 +275,14 @@ class DomainXmlBuilder():
             'base-image-name': base_image_name,
             'bus': 'virtio'})
 
-    def _get_raw_disk_xml(self, volume_name, pool_name):
+    def _get_raw_disk_xml(self, volume_name, pool_name, device_type, target, bus):
         return self._templates.apply_xml_template('disk.xml', {
-            'disk-device-type': 'disk',
+            'disk-device-type': device_type,
             'file-format': 'raw',
             'storage-pool': pool_name,
             'volume-name': volume_name,
-            'target-dev': 'vdb',
-            'bus': 'virtio'})
-
-    def _get_cdrom_xml(self, volume_name, pool_name):
-        return self._templates.apply_xml_template('disk.xml', {
-            'disk-device-type': 'cdrom',
-            'file-format': 'raw',
-            'storage-pool': pool_name,
-            'volume-name': volume_name,
-            'target-dev': 'hdc',
-            'bus': 'ide'})
+            'target-dev': target,
+            'bus': bus})
 
     def _get_iface_xml(self, network_id, dev_name, mac_address, model_type,
             bridge_name=''):
@@ -322,24 +315,32 @@ class DomainXmlBuilder():
 
         return (mgmt_ip_address, mac_address, iface_dev_name)
 
-    def add_extra_mgmt_ifaces(self, ifaces):
-        for (idx, network_id) in enumerate(ifaces):
+    def add_extra_mgmt_ifaces(self, ifaces, device_id=None):
+        for (idx, network_name) in enumerate(ifaces):
+            network_id = f'{network_name}-{device_id}' if device_id else network_name
             self._domain_xml_devices.append(self._get_iface_xml(network_id,
-                self._generate_iface_dev_name(network_id),
+                self._generate_iface_dev_name(f'{network_id}-{idx}'),
                 self._generate_mac_address(0xfe-idx),
-                'e1000'))
+                'virtio'))
 
     def add_disk(self, storage_pool, base_image):
         self._domain_xml_devices.append(self._get_disk_xml(
             generate_volume_name(self._device_name), storage_pool, base_image))
 
     def add_day0_cdrom(self, storage_pool):
-        self._domain_xml_devices.append(self._get_cdrom_xml(
-            generate_day0_volume_name(self._device_name), storage_pool))
+        self._domain_xml_devices.append(self._get_raw_disk_xml(
+            generate_day0_volume_name(self._device_name), storage_pool,
+            'cdrom', 'hdc', 'ide'))
 
     def add_day0_disk(self, storage_pool):
         self._domain_xml_devices.append(self._get_raw_disk_xml(
-            generate_day0_volume_name(self._device_name), storage_pool))
+            generate_day0_volume_name(self._device_name), storage_pool,
+            'disk', 'vdb', 'virtio'))
+
+    def add_day0_usb(self, storage_pool):
+        self._domain_xml_devices.append(self._get_raw_disk_xml(
+            generate_day0_volume_name(self._device_name), storage_pool,
+            'disk', 'sdb', 'usb'))
 
     def add_data_ifaces(self, include_null_interfaces, model_type,
             min_ifaces = 0, first_iface = 0):
@@ -589,6 +590,30 @@ class Volume(LibvirtObject):
 
         return disk_byte_str
 
+    def _create_junos_day0_disk_image(self, file_name, variables):
+        day0_str = self._templates.apply_template(file_name, variables)
+        tmp_disk_file = \
+                f'tmp-{generate_day0_volume_name(variables["device-name"])}'
+
+        offset = self._create_raw_disk_image(tmp_disk_file)
+
+        self._log.info('Writing day0 file to partition')
+        self._log.info(f'/config/juniper.conf:\n{day0_str}')
+        with fs.open_fs(f'fat://{tmp_disk_file}?'
+                        f'offset={offset}') as flash_drive:
+            with TarFS(flash_drive.openbin('/vmm-config.tgz', 'wb'),
+                                write=True, compression='gz') as tarfile:
+                tarfile.makedir('/config')
+                tarfile.writetext('/config/juniper.conf', day0_str)
+
+        with open(tmp_disk_file, 'rb') as binary_file:
+            disk_byte_str = binary_file.read()
+
+        self._log.info(f'Deleting temporary disk file {tmp_disk_file}')
+        os.remove(tmp_disk_file)
+
+        return disk_byte_str
+
     def _add_iso_file(self, iso, file_string, file_name):
         self._log.info(f'{file_name}:\n{file_string}')
         byte_str = file_string.encode()
@@ -678,6 +703,9 @@ class Volume(LibvirtObject):
 
         if dev_def.device_type == 'XRv-9000':
             image_byte_str = self._create_iosxr_day0_iso_image(
+                    dev_def.day0_file, variables)
+        if dev_def.device_type == 'vJunos-Evolved':
+            image_byte_str = self._create_junos_day0_disk_image(
                     dev_def.day0_file, variables)
         elif dev_def.device_type == 'IOSv':
             image_byte_str = self._create_ios_day0_disk_image(
@@ -792,10 +820,12 @@ class Domain(LibvirtObject):
         xml_builder.add_disk(dev_def.storage_pool, dev_def.base_image
                 if dev_def.base_image_type == 'backing-store' else None)
         if dev_def.day0_file is not None:
-            if dev_def.device_type == 'IOSv':
-                xml_builder.add_day0_disk(dev_def.storage_pool)
-            else:
+            if dev_def.device_type == 'XRv-9000':
                 xml_builder.add_day0_cdrom(dev_def.storage_pool)
+            elif dev_def.device_type == 'vJunos-Evolved':
+                xml_builder.add_day0_usb(dev_def.storage_pool)
+            else:
+                xml_builder.add_day0_disk(dev_def.storage_pool)
 
         (mgmt_ip_address, mac_address, iface_dev_name
                 ) = xml_builder.add_mgmt_iface('e1000' if dev_def.device_type
@@ -807,8 +837,10 @@ class Domain(LibvirtObject):
 
         if dev_def.device_type == 'XRv-9000':
             xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS)
+        if dev_def.device_type == 'vJunos-Evolved':
+            xml_builder.add_extra_mgmt_ifaces(VJUNOS_EXTRA_MGMT_NETWORKS, device.id)
 
-        xml_builder.add_data_ifaces(dev_def.device_type == 'XRv-9000',
+        xml_builder.add_data_ifaces(dev_def.device_type in ('XRv-9000', 'vJunos-Evolved'),
                 'e1000' if dev_def.device_type in ('XRv-9000', 'IOSv') else 'virtio',
                 4 if dev_def.device_type == 'IOSv' else 0,
                 1 if dev_def.device_type == 'IOSv' else 0)
@@ -834,7 +866,7 @@ class Domain(LibvirtObject):
             for iface_id in range(self._network_mgr.get_num_device_ifaces()):
                 self._network_mgr.write_iface_data(
                     device.id, iface_id, [
-                            ('id', None),
+#                           ('id', None),
                             ('ip-address', None),
                             ('host-interface', None),
                             ('mac-address', None)])
@@ -920,7 +952,13 @@ class Topology():
             if device_name is not None and device.device_name != device_name:
                 continue
             dev_def = self._dev_defs[device.definition]
-            if dev_def.device_type in ('XRv-9000', 'IOSv'):
+            if dev_def.device_type == 'vJunos-Evolved':
+                for (idx, network_name) in enumerate(
+                        set(VJUNOS_EXTRA_MGMT_NETWORKS)):
+                    self._extra_network.action(action, output,
+                            [ device.id ], f'{network_name}-{device.id}',
+                            None, (0xfd, 0xff-idx))
+            if dev_def.device_type in ('XRv-9000', 'IOSv', 'vJunos-Evolved'):
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)

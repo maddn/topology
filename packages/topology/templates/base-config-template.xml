@@ -30,7 +30,7 @@
               <receive>true</receive>
             </lldp>
             <cdp>
-              <enable>{string(boolean(cdp))}</enable>
+              <enable when="{cdp}">true</enable>
             </cdp>
           </GigabitEthernet>
         </interface>
@@ -45,6 +45,12 @@
 
         <hostname xmlns="http://tail-f.com/ned/cisco-ios-xr">{device-name}</hostname>
         <hostname xmlns="urn:ios">{device-name}</hostname>
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <system>
+            <host-name>{device-name}</host-name>
+          </system>
+        </configuration>
+
 
         <banner xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <login>
@@ -77,6 +83,36 @@
           <console>{/logging/console}</console>
           <hostnameprefix>{device-name}</hostnameprefix>
         </logging>
+
+        <configuration when="{/logging}" xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <system>
+            <syslog>
+              <host>
+                <name>{/logging/syslog-server/ip-address</name>
+                <port>{/logging/syslog-server/port</port>
+              </host>
+              <file>
+                <name>interactive-commands</name>
+                <contents>
+                  <name>interactive-commands</name>
+                  <any/>
+                </contents>
+              </file>
+              <file>
+                <name>messages</name>
+                <contents>
+                  <name>any</name>
+                  <notice/>
+                </contents>
+                <contents>
+                  <name>authorization</name>
+                  <info/>
+                </contents>
+              </file>
+            </syslog>
+          </system>
+        </configuration>
+
         <service when="{/logging}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <timestamps>
             <debug>
@@ -181,6 +217,7 @@
             </telnet-server-list>
           </vrf>
         </telnet>
+
         <ssh xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <server>
             <netconf>
@@ -206,6 +243,41 @@
           <no-tls/>
           <address-family>ipv4</address-family>
         </grpc>
+
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <system>
+            <services>
+              <ssh/>
+              <netconf>
+                <ssh/>
+              </netconf>
+              <telnet>
+                <connection-limit>16</connection-limit>
+                <rate-limit>32</rate-limit>
+              </telnet>
+            </services>
+          </system>
+        </configuration>
+
+        <configuration when="{/grpc}" xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <system>
+            <services>
+              <extension-service>
+                <request-response>
+                  <grpc>
+                    <max-connections>30</max-connections>
+                    <undocumented>
+                      <clear-text>
+                        <port>{/grpc/port}</port>
+                      </clear-text>
+                      <skip-authentication/>
+                    </undocumented>
+                  </grpc>
+                </request-response>
+              </extension-service>
+            </services>
+          </system>
+        </configuration>
 
         <ip xmlns="urn:ios">
           <domain>
@@ -234,6 +306,16 @@
           </server>
         </ntp>
 
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <system>
+            <ntp>
+              <server>
+                <name>{/ntp-server}</name>
+              </server>
+            </ntp>
+          </system>
+        </configuration>
+
         <snmp-server when="{/snmp-server}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <ifindex>persist</ifindex>
           <host foreach="{/snmp-server/host}">
@@ -259,6 +341,33 @@
             </traps-list>
           </traps>
         </snmp-server>
+
+
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <snmp>
+            <community>
+              <name>cisco</name>
+              <authorization>read-only</authorization>
+              <clients>
+                <name>0.0.0.0/0</name>
+              </clients>
+            </community>
+            <trap-options>
+              <source-address>
+                <lo0/>
+              </source-address>
+              <agent-address>outgoing-interface</agent-address>
+            </trap-options>
+            <trap-group foreach="{/snmp-server/host}">
+              <name>{community-string}</name>
+              <version>v2</version>
+              <destination-port>{port}</destination-port>
+              <targets>
+                <name>{ip-address}</name>
+              </targets>
+            </trap-group>
+          </snmp>
+        </configuration>
 
         <snmp-server when="{/snmp-server}" xmlns="urn:ios">
           <host foreach="{/snmp-server/host}">
