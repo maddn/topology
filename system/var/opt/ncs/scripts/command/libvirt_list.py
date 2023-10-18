@@ -65,7 +65,7 @@ def print_usage_and_exit():
   --help                Display this help and exit
   --command             Display command configuration and exit
 
-  --hypervisor name     The hypervisor to connect to. If omitted the first hypervisor in the list is used
+  --hypervisor name     The hypervisor to connect to. If omitted all hypervisors will be displayed
   --domains             List domains
   --networks            List all networks
   --links               List link network only
@@ -81,7 +81,8 @@ def run_action(action, hypervisor):
 def print_domains(hypervisor):
     domains = hypervisor.get.domains()
     print('\nDevices:')
-    name_length = max(len(domain.name) for domain in domains.domain)
+    name_length = max(len(domain.name) for domain in domains.domain
+            ) if domains.domain else 0
 
     for domain in domains.domain:
         print('    {:{}}  vCPUs {:3}  Memory {:10}  {}'.format(
@@ -144,7 +145,8 @@ def print_volumes(hypervisor):
     print('\nStorage Pools:')
     for storage_pool in volumes.storage_pool:
         print(f'    {storage_pool.name}:')
-        name_length = max(len(volume.name) for volume in storage_pool.volume)
+        name_length = max(len(volume.name) for volume in storage_pool.volume
+                ) if storage_pool.volume else 0
         for volume in storage_pool.volume:
             print ('        {:{}}  Capacity {:10}  Allocation {}'.format(
                     volume.name, name_length + 1,
@@ -168,24 +170,23 @@ def print_libvirt(hypervisor_name, domains, networks, links, volumes):
             print("No hypervisors configured")
             sys.exit(1)
 
-        if not hypervisor_name:
-            hypervisor_name = next(iter(libvirt.hypervisor)).name
-
-        if hypervisor_name not in libvirt.hypervisor:
+        if hypervisor_name and hypervisor_name not in libvirt.hypervisor:
             print(f"Hypervisor {hypervisor_name} does not exist")
             sys.exit(1)
 
-        hypervisor = libvirt.hypervisor[hypervisor_name]
+        for hypervisor in libvirt.hypervisor:
+            if not hypervisor_name or hypervisor_name == hypervisor.name:
 
-        print_all = not(domains or networks or links or volumes)
-        if domains or print_all:
-            print_domains(hypervisor)
-        if networks or print_all:
-            print_networks(hypervisor)
-        if links and not networks:
-            print_links(hypervisor)
-        if volumes or print_all:
-            print_volumes(hypervisor)
+                print(f'\n\n*** Hypervisor: {hypervisor.name} ***')
+                print_all = not(domains or networks or links or volumes)
+                if domains or print_all:
+                    print_domains(hypervisor)
+                if networks or print_all:
+                    print_networks(hypervisor)
+                if links and not networks:
+                    print_links(hypervisor)
+                if volumes or print_all:
+                    print_volumes(hypervisor)
 
     print()
 

@@ -61,22 +61,25 @@ class TopologyStatus():
         update_provisioning_status(topology_device, status)
 
     def check_console_activity(self, topology_device, timeout):
-        last_activity = datetime.fromisoformat(topology_device.console.last_activity)
-        duration = (datetime.utcnow() - last_activity).total_seconds()
-        if duration > timeout:
-            topology_name = maagic.cd(topology_device, '../..').name
-            device_id = topology_device.id
-            with maapi.single_read_trans('admin', 'python') as trans:
-                root = maagic.get_root(trans)
-                topology = root.topologies.topology[topology_name]
-                device = topology.devices.device[device_id]
-                if device.console.status().status == 'running':
-                    self.log.info(f'Rebooting {device.device_name}. {duration} '
-                                   'seconds since last console activity.')
-                    reboot = topology.libvirt.reboot
-                    input = reboot.get_input()
-                    input.device = device.device_name
-                    reboot(input)
+        if topology_device.console.last_activity:
+            last_activity = datetime.fromisoformat(
+                    topology_device.console.last_activity)
+            duration = (datetime.utcnow() - last_activity).total_seconds()
+            if duration > timeout:
+                topology_name = maagic.cd(topology_device, '../..').name
+                device_id = topology_device.id
+                with maapi.single_read_trans('admin', 'python') as trans:
+                    root = maagic.get_root(trans)
+                    topology = root.topologies.topology[topology_name]
+                    device = topology.devices.device[device_id]
+                    if device.console.status().status == 'running':
+                        self.log.info(
+                                f'Rebooting {device.device_name}. {duration} '
+                                 'seconds since last console activity.')
+                        reboot = topology.libvirt.reboot
+                        input = reboot.get_input()
+                        input.device = device.device_name
+                        reboot(input)
 
     def ping_device(self, topology_device, root):
         device_name = topology_device.device_name
