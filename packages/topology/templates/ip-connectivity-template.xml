@@ -1,6 +1,24 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
   servicepoint="ip-connectivity">
 
+  <?macro GetManagedDeviceFromContext?>
+    <?set MANAGED_DEVICE={device-name}?>
+    <?if {control-plane-id}?>
+      <?set MANAGED_DEVICE={deref(control-plane-id)/../device-name}?>
+    <?else?>
+      <?if {deref(definition)/../device-type='vMX'}?>
+        <?set MANAGED_DEVICE=''?>
+      <?end?>
+    <?end?>
+  <?endmacro?>
+
+  <?macro GetManagedDevice topology_device=.?>
+    <?save-context CURRENT_CONTEXT?>
+    <?set-context-node {deref($topology_device)/..}?>
+    <?expand GetManagedDeviceFromContext?>
+    <?switch-context CURRENT_CONTEXT?>
+  <?endmacro?>
+
   <?macro GetSortedDeviceIds device_id_1 device_id_2?>
     <?set LOWER_DEVICE_ID='{$device_id_1}'?>
     <?set HIGHER_DEVICE_ID='{$device_id_2}'?>
@@ -98,82 +116,85 @@
   <?endmacro?>
 
   <devices xmlns="http://tail-f.com/ns/ncs">
-    <device tags="nocreate">
-      <name>{../devices/device/device-name}</name>
-      <?set DEVICE_ID={id}?>
-      <config>
+    <?foreach {../devices/device}?>
+      <?expand GetManagedDeviceFromContext?>
+      <device tags="nocreate">
+        <name>{$MANAGED_DEVICE}</name>
+        <?set DEVICE_ID={id}?>
+        <config>
 
-        <?foreach {/loopback-interfaces/loopback}?>
-          <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-            <Loopback tags="merge">
-              <id>{id}</id>
-              <ipv4>
-                <address>
-                  <ip>{ipv4-subnet-start}.{$DEVICE_ID}</ip>
-                  <mask>255.255.255.255</mask>
-                </address>
-              </ipv4>
-              <ipv6 when="{ipv6-subnet-start}">
-                <address>
-                  <prefix-list>
-                    <prefix>{ipv6-subnet-start}::{$DEVICE_ID}/128</prefix>
-                  </prefix-list>
-                </address>
-              </ipv6>
-            </Loopback>
-          </interface>
-
-          <interface xmlns="urn:ios">
-            <Loopback tags="merge">
-              <name>{id}</name>
-              <ip>
-                <address>
-                  <primary>
-                    <address>{ipv4-subnet-start}.{$DEVICE_ID}</address>
+          <?foreach {/loopback-interfaces/loopback}?>
+            <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+              <Loopback tags="merge">
+                <id>{id}</id>
+                <ipv4>
+                  <address>
+                    <ip>{ipv4-subnet-start}.{$DEVICE_ID}</ip>
                     <mask>255.255.255.255</mask>
-                  </primary>
-                </address>
-              </ip>
-              <ipv6 when="{ipv6-subnet-start}">
-                <address>
-                  <prefix-list>
-                    <prefix>{ipv6-subnet-start}::{$DEVICE_ID}/128</prefix>
-                  </prefix-list>
-                </address>
-              </ipv6>
-            </Loopback>
-          </interface>
+                  </address>
+                </ipv4>
+                <ipv6 when="{ipv6-subnet-start}">
+                  <address>
+                    <prefix-list>
+                      <prefix>{ipv6-subnet-start}::{$DEVICE_ID}/128</prefix>
+                    </prefix-list>
+                  </address>
+                </ipv6>
+              </Loopback>
+            </interface>
 
-          <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
-            <interfaces>
-              <interface tags="merge">
-                <name>lo0</name>
-                <unit>
-                  <name>0</name>
-                  <family>
-                    <inet>
-                      <address>
-                        <name>{ipv4-subnet-start}.{$DEVICE_ID}/32</name>
-                        <primary when="{boolean(primary)}"/>
-                        <preferred when="{boolean(primary)}"/>
-                      </address>
-                    </inet>
-                    <inet6 when="{ipv6-subnet-start}">
-                      <address>
-                        <name>{ipv6-subnet-start}::{$DEVICE_ID}/128</name>
-                        <primary when="{boolean(primary)}"/>
-                        <preferred when="{boolean(primary)}"/>
-                      </address>
-                    </inet6>
-                  </family>
-                </unit>
-              </interface>
-            </interfaces>
-          </configuration>
-        <?end?>
+            <interface xmlns="urn:ios">
+              <Loopback tags="merge">
+                <name>{id}</name>
+                <ip>
+                  <address>
+                    <primary>
+                      <address>{ipv4-subnet-start}.{$DEVICE_ID}</address>
+                      <mask>255.255.255.255</mask>
+                    </primary>
+                  </address>
+                </ip>
+                <ipv6 when="{ipv6-subnet-start}">
+                  <address>
+                    <prefix-list>
+                      <prefix>{ipv6-subnet-start}::{$DEVICE_ID}/128</prefix>
+                    </prefix-list>
+                  </address>
+                </ipv6>
+              </Loopback>
+            </interface>
 
-      </config>
-    </device>
+            <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+              <interfaces>
+                <interface tags="merge">
+                  <name>lo0</name>
+                  <unit>
+                    <name>0</name>
+                    <family>
+                      <inet>
+                        <address>
+                          <name>{ipv4-subnet-start}.{$DEVICE_ID}/32</name>
+                          <primary when="{boolean(primary)}"/>
+                          <preferred when="{boolean(primary)}"/>
+                        </address>
+                      </inet>
+                      <inet6 when="{ipv6-subnet-start}">
+                        <address>
+                          <name>{ipv6-subnet-start}::{$DEVICE_ID}/128</name>
+                          <primary when="{boolean(primary)}"/>
+                          <preferred when="{boolean(primary)}"/>
+                        </address>
+                      </inet6>
+                    </family>
+                  </unit>
+                </interface>
+              </interfaces>
+            </configuration>
+          <?end?>
+
+        </config>
+      </device>
+    <?end?>
   </devices>
 
   <?if {physical-interfaces}?>
@@ -181,17 +202,19 @@
       <?expand GetSortedDeviceIds
         device_id_1=deref(a-end-device)/../id
         device_id_2=deref(z-end-device)/../id
-      ?>
+    ?>
+      <?expand GetManagedDevice topology_device=a-end-device?>
       <?expand GigabitEthernetAddresses
-        device_name=a-end-device
+        device_name=$MANAGED_DEVICE
         device_id=deref(a-end-device)/../id
         interface_id=a-end-interface/id
         connected_device_name=z-end-device
         connected_interface_id=z-end-interface/id
       ?>
       <?set A_END_IPV4_ADDRESS={$IPV4_ADDRESS}?>
+      <?expand GetManagedDevice topology_device=z-end-device?>
       <?expand GigabitEthernetAddresses
-        device_name=z-end-device
+        device_name=$MANAGED_DEVICE
         device_id=deref(z-end-device)/../id
         interface_id=z-end-interface/id
         connected_device_name=a-end-device
@@ -218,10 +241,11 @@
 
     <?foreach {../networks/network}?>
       <?foreach {devices/device}?>
+        <?expand GetManagedDevice topology_device=name?>
         <?set IPV4_ADDRESS={concat(../../ipv4-subnet-start, '.', deref(name)/../id)}?>
         <devices xmlns="http://tail-f.com/ns/ncs">
           <device tags="nocreate">
-            <name>{name}</name>
+            <name>{$MANAGED_DEVICE}</name>
             <config>
               <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
                 <GigabitEthernet tags="merge">

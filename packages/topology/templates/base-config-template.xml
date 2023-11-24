@@ -602,11 +602,14 @@
       <config>
         <ip xmlns="urn:ios">
           <route>
-            <ip-route-forwarding-list foreach="{deref(/topology)/../devices/device[device-name!=current()/device]}">
-              <prefix>{$LOOPBACK_SUBNET_START}.{current()/id}</prefix>
-              <mask>255.255.255.255</mask>
-              <forwarding-address>{management-interface/ip-address}</forwarding-address>
-            </ip-route-forwarding-list>
+            <?foreach {deref(/topology)/../devices/device[device-name!=current()/device]}?>
+              <?expand GetManagedDeviceFromContext?>
+              <ip-route-forwarding-list>
+                <prefix>{$LOOPBACK_SUBNET_START}.{current()/id}</prefix>
+                <mask>255.255.255.255</mask>
+                <forwarding-address>{deref(/topology)/../devices/device[device-name=$MANAGED_DEVICE]/management-interface/ip-address}</forwarding-address>
+              </ip-route-forwarding-list>
+            <?end?>
           </route>
         </ip>
       </config>

@@ -1,9 +1,10 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
   servicepoint="segment-routing">
 
-  <?macro LinkEndpointSR device_name interface_id?>
+  <?macro LinkEndpointSR device interface_id?>
+    <?expand GetManagedDevice topology_device=$device?>
     <device>
-      <name>{$device_name}</name>
+      <name>{$MANAGED_DEVICE}</name>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
@@ -60,213 +61,215 @@
   <?expand GetPCEVariables?>
 
   <devices xmlns="http://tail-f.com/ns/ncs">
-    <device>
-      <name>{devices}</name>
-      <?set DEVICE_NAME={.}?>
+    <?foreach {devices}?>
+      <?expand GetManagedDevice?>
       <?set DEVICE_ID={deref(.)/../id}?>
-      <config>
-        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <isis>
-            <tag tags="merge">
-              <name>{$IGP_NAME}</name>
-              <address-family tags="merge">
-                <ipv4>
-                  <unicast>
-                    <segment-routing>
-                      <mpls/>
-                    </segment-routing>
-                  </unicast>
-                </ipv4>
-                <ipv6 when="{deref(../topology)/../ip-connectivity/ipv6}">
-                  <unicast>
-                    <segment-routing>
-                      <srv6 when="{/srv6}">
-                        <locator>
-                          <name>MAIN</name>
-                        </locator>
-                        <locator foreach="{/flex-algo}">
-                          <name>{srv6-locator}</name>
-                        </locator>
-                      </srv6>
-                    </segment-routing>
-                  </unicast>
-                </ipv6>
-              </address-family>
-              <distribute>
-                <link-state/>
-              </distribute>
-              <interface>
-                <name>Loopback{$PRIMARY_LOOPBACK_ID}</name>
+      <device>
+        <name>{$MANAGED_DEVICE}</name>
+        <config>
+          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <isis>
+              <tag tags="merge">
+                <name>{$IGP_NAME}</name>
                 <address-family tags="merge">
                   <ipv4>
                     <unicast>
-                      <prefix-sid>
-                        <absolute>{number(/prefix-sid-start) + number($DEVICE_ID)}</absolute>
-                      </prefix-sid>
-                      <prefix-sid-algorithm>
-                        <prefix-sid>
-                          <?set FLEX_ALGO_INDEX=1?>
-                          <algorithm foreach="{/flex-algo}">
-                            <id>{id}</id>
-                            <absolute>{number(/prefix-sid-start) + 1000 + number($FLEX_ALGO_INDEX) * 100 + number($DEVICE_ID)}</absolute>
-                            <?set FLEX_ALGO_INDEX={$FLEX_ALGO_INDEX+1}?>
-                          </algorithm>
-                        </prefix-sid>
-                      </prefix-sid-algorithm>
+                      <segment-routing>
+                        <mpls/>
+                      </segment-routing>
                     </unicast>
                   </ipv4>
+                  <ipv6 when="{deref(../topology)/../ip-connectivity/ipv6}">
+                    <unicast>
+                      <segment-routing>
+                        <srv6 when="{/srv6}">
+                          <locator>
+                            <name>MAIN</name>
+                          </locator>
+                          <locator foreach="{/flex-algo}">
+                            <name>{srv6-locator}</name>
+                          </locator>
+                        </srv6>
+                      </segment-routing>
+                    </unicast>
+                  </ipv6>
                 </address-family>
-              </interface>
+                <distribute>
+                  <link-state/>
+                </distribute>
+                <interface>
+                  <name>Loopback{$PRIMARY_LOOPBACK_ID}</name>
+                  <address-family tags="merge">
+                    <ipv4>
+                      <unicast>
+                        <prefix-sid>
+                          <absolute>{number(/prefix-sid-start) + number($DEVICE_ID)}</absolute>
+                        </prefix-sid>
+                        <prefix-sid-algorithm>
+                          <prefix-sid>
+                            <?set FLEX_ALGO_INDEX=1?>
+                            <algorithm foreach="{/flex-algo}">
+                              <id>{id}</id>
+                              <absolute>{number(/prefix-sid-start) + 1000 + number($FLEX_ALGO_INDEX) * 100 + number($DEVICE_ID)}</absolute>
+                              <?set FLEX_ALGO_INDEX={$FLEX_ALGO_INDEX+1}?>
+                            </algorithm>
+                          </prefix-sid>
+                        </prefix-sid-algorithm>
+                      </unicast>
+                    </ipv4>
+                  </address-family>
+                </interface>
 
-              <?set BIT_POSITION={101}?>
-              <?set-root-node {/}?>
-              <?foreach {deref(../topology)/../links/link}?>
-                <?if {count(/devices/device[name=$DEVICE_NAME]/config/router/isis/tag[name=$IGP_NAME]/affinity-map[name=current()/affinity]) = 0}?>
-                  <affinity-map tags="merge">
-                    <name>{affinity}</name>
-                    <bit-position>{$BIT_POSITION}</bit-position>
-                  </affinity-map>
-                  <?set BIT_POSITION={$BIT_POSITION+1}?>
+                <?set BIT_POSITION={101}?>
+                <?set-root-node {/}?>
+                <?foreach {deref(../topology)/../links/link}?>
+                  <?if {count(/devices/device[name=$DEVICE]/config/router/isis/tag[name=$IGP_NAME]/affinity-map[name=current()/affinity]) = 0}?>
+                    <affinity-map tags="merge">
+                      <name>{affinity}</name>
+                      <bit-position>{$BIT_POSITION}</bit-position>
+                    </affinity-map>
+                    <?set BIT_POSITION={$BIT_POSITION+1}?>
+                  <?end?>
                 <?end?>
-              <?end?>
 
-              <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
-              <flex-algo tags="merge" foreach="{/flex-algo}">
-                <id>{id}</id>
-                <metric-type>
-                  <delay when="{metric-type-delay}"/>
-                </metric-type>
-                <affinity>
-                  <exclude-any>{affinity-exclude}</exclude-any>
-                </affinity>
-                <advertise-definition/>
-              </flex-algo>
-            </tag>
-          </isis>
-        </router>
-
-        <segment-routing xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <global-block>
-            <lower-bound>{/srgb/lower-bound}</lower-bound>
-            <upper-bound>{/srgb/upper-bound}</upper-bound>
-          </global-block>
-
-          <traffic-eng when="{/pce}">
-            <pcc>
-              <report-all/>
-              <profile>
-                <id>{/autoroute-profile-id}</id>
-                <autoroute>
-                  <include>
-                    <all/>
-                  </include>
-                </autoroute>
-              </profile>
-
-              <?set-root-node {/}?>
-              <source-address>
-                <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
-              </source-address>
-
-              <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
-              <pce foreach="{routers}">
-                <address>
-                  <ipv4>
-                    <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
-                    <password when="{../password}">
-                      <type>clear</type>
-                      <secret>{../password}</secret>
-                    </password>
-                  </ipv4>
-                </address>
-              </pce>
-            </pcc>
-          </traffic-eng>
-
-          <srv6 when="{/srv6}">
-            <locators>
-              <?set LOCATOR_INDEX={0}?>
-              <locator>
-                <name>MAIN</name>
-                <micro-segment>
-                  <behavior>
-                    <unode>psp-usd</unode>
-                  </behavior>
-                </micro-segment>
-                <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
-                <algorithm>{id}</algorithm>
-              </locator>
-              <locator foreach="{/flex-algo}">
-                <name>{srv6-locator}</name>
-                <?set LOCATOR_INDEX={$LOCATOR_INDEX+1}?>
-                <micro-segment>
-                  <behavior>
-                    <unode>psp-usd</unode>
-                  </behavior>
-                </micro-segment>
-                <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
-                <algorithm>{id}</algorithm>
-              </locator>
-            </locators>
-          </srv6>
-        </segment-routing>
-
-        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
-          <protocols>
-            <isis>
-              <source-packet-routing>
-                <srgb>
-                  <start-label>{/srgb/lower-bound}</start-label>
-                  <index-range>{/srgb/upper-bound}</index-range>
-                </srgb>
-                <node-segment>
-                  <ipv4-index>{number(/prefix-sid-start) + number($DEVICE_ID)}</ipv4-index>
-                  <ipv6-index>{number(/prefix-sid-start) + 1000 + number($DEVICE_ID)}</ipv6-index>
-                </node-segment>
-              </source-packet-routing>
-              <backup-spf-options>
-                <use-post-convergence-lfa>
-                  <maximum-labels>5</maximum-labels>
-                </use-post-convergence-lfa>
-                <use-source-packet-routing/>
-              </backup-spf-options>
-              <traffic-engineering when="{/pce}">
-                <l3-unicast-topology/>
-              </traffic-engineering>
+                <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
+                <flex-algo tags="merge" foreach="{/flex-algo}">
+                  <id>{id}</id>
+                  <metric-type>
+                    <delay when="{metric-type-delay}"/>
+                  </metric-type>
+                  <affinity>
+                    <exclude-any>{affinity-exclude}</exclude-any>
+                  </affinity>
+                  <advertise-definition/>
+                </flex-algo>
+              </tag>
             </isis>
-            <source-packet-routing when="{/pce}">
-              <lsp-external-controller>
-                <name>pccd</name>
-              </lsp-external-controller>
-            </source-packet-routing>
-            <pcep when="{/pce}">
-              <?set-root-node {/}?>
-              <?set SOURCE_ADDRESS={substring-before(/devices/device[name=current()]/config/configuration/interfaces/interface[name='lo0']/unit[name='0']/family/inet/address[1]/name, '/')}?>
-              <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
-              <pce foreach="{routers}">
-                <name>{.}</name>
-                <local-address>{$SOURCE_ADDRESS}</local-address>
-                <destination-ipv4-address>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</destination-ipv4-address>
-                <authentication-key>{../password}</authentication-key>
-                <pce-type>
-                  <active/>
-                  <stateful/>
-                </pce-type>
-                <lsp-provisioning/>
-                <spring-capability/>
-              </pce>
-            </pcep>
-          </protocols>
-        </configuration>
-      </config>
-    </device>
+          </router>
+
+          <segment-routing xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <global-block>
+              <lower-bound>{/srgb/lower-bound}</lower-bound>
+              <upper-bound>{/srgb/upper-bound}</upper-bound>
+            </global-block>
+
+            <traffic-eng when="{/pce}">
+              <pcc>
+                <report-all/>
+                <profile>
+                  <id>{/autoroute-profile-id}</id>
+                  <autoroute>
+                    <include>
+                      <all/>
+                    </include>
+                  </autoroute>
+                </profile>
+
+                <?set-root-node {/}?>
+                <source-address>
+                  <ipv4>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+                </source-address>
+
+                <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
+                <pce foreach="{routers}">
+                  <address>
+                    <ipv4>
+                      <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
+                      <password when="{../password}">
+                        <type>clear</type>
+                        <secret>{../password}</secret>
+                      </password>
+                    </ipv4>
+                  </address>
+                </pce>
+              </pcc>
+            </traffic-eng>
+
+            <srv6 when="{/srv6}">
+              <locators>
+                <?set LOCATOR_INDEX={0}?>
+                <locator>
+                  <name>MAIN</name>
+                  <micro-segment>
+                    <behavior>
+                      <unode>psp-usd</unode>
+                    </behavior>
+                  </micro-segment>
+                  <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
+                  <algorithm>{id}</algorithm>
+                </locator>
+                <locator foreach="{/flex-algo}">
+                  <name>{srv6-locator}</name>
+                  <?set LOCATOR_INDEX={$LOCATOR_INDEX+1}?>
+                  <micro-segment>
+                    <behavior>
+                      <unode>psp-usd</unode>
+                    </behavior>
+                  </micro-segment>
+                  <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
+                  <algorithm>{id}</algorithm>
+                </locator>
+              </locators>
+            </srv6>
+          </segment-routing>
+
+          <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+            <protocols>
+              <isis>
+                <source-packet-routing>
+                  <srgb>
+                    <start-label>{/srgb/lower-bound}</start-label>
+                    <index-range>{/srgb/upper-bound}</index-range>
+                  </srgb>
+                  <node-segment>
+                    <ipv4-index>{number(/prefix-sid-start) + number($DEVICE_ID)}</ipv4-index>
+                    <ipv6-index>{number(/prefix-sid-start) + 1000 + number($DEVICE_ID)}</ipv6-index>
+                  </node-segment>
+                </source-packet-routing>
+                <backup-spf-options>
+                  <use-post-convergence-lfa>
+                    <maximum-labels>5</maximum-labels>
+                  </use-post-convergence-lfa>
+                  <use-source-packet-routing/>
+                </backup-spf-options>
+                <traffic-engineering when="{/pce}">
+                  <l3-unicast-topology/>
+                </traffic-engineering>
+              </isis>
+              <source-packet-routing when="{/pce}">
+                <lsp-external-controller>
+                  <name>pccd</name>
+                </lsp-external-controller>
+              </source-packet-routing>
+              <pcep when="{/pce}">
+                <?set-root-node {/}?>
+                <?set SOURCE_ADDRESS={substring-before(/devices/device[name=$DEVICE]/config/configuration/interfaces/interface[name='lo0']/unit[name='0']/family/inet/address[1]/name, '/')}?>
+                <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
+                <pce foreach="{routers}">
+                  <name>{.}</name>
+                  <local-address>{$SOURCE_ADDRESS}</local-address>
+                  <destination-ipv4-address>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</destination-ipv4-address>
+                  <authentication-key>{../password}</authentication-key>
+                  <pce-type>
+                    <active/>
+                    <stateful/>
+                  </pce-type>
+                  <lsp-provisioning/>
+                  <spring-capability/>
+                </pce>
+              </pcep>
+            </protocols>
+          </configuration>
+        </config>
+      </device>
+    <?end?>
 
     <?set-root-node {.}?>
     <?foreach {deref(/topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
         <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
-        <?expand LinkEndpointSR device_name=a-end-device interface_id=a-end-interface/id?>
-        <?expand LinkEndpointSR device_name=z-end-device interface_id=z-end-interface/id?>
+        <?expand LinkEndpointSR device=a-end-device interface_id=a-end-interface/id?>
+        <?expand LinkEndpointSR device=z-end-device interface_id=z-end-interface/id?>
       <?end?>
     <?end?>
   </devices>

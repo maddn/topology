@@ -30,6 +30,7 @@ _ncs = __import__('_ncs')
 PYTHON_DIR = os.path.dirname(__file__)
 XRV9K_EXTRA_MGMT_NETWORKS = ['ctrl', 'host']
 VJUNOS_EXTRA_MGMT_NETWORKS = ['pfe', 'rpio', 'rpio', 'pfe']
+VMX_EXTRA_MGMT_NETWORKS = ['int']
 
 
 def generate_network_id(device_id, other_id):
@@ -317,9 +318,10 @@ class DomainXmlBuilder():
 
     def add_extra_mgmt_ifaces(self, ifaces, device_id=None):
         for (idx, network_name) in enumerate(ifaces):
-            network_id = f'{network_name}-{device_id}' if device_id else network_name
+            network_id = f'{network_name}-{device_id}' if (
+                    device_id) else network_name
             self._domain_xml_devices.append(self._get_iface_xml(network_id,
-                self._generate_iface_dev_name(f'{network_id}-{idx}'),
+                self._generate_iface_dev_name(f'{network_name}'),
                 self._generate_mac_address(0xfe-idx),
                 'virtio'))
 
@@ -508,6 +510,7 @@ class Volume(LibvirtObject):
         self._templates.load_template('cloud-init', 'meta-data.yaml')
         self._templates.load_template('cloud-init', 'network-config.yaml')
         self._templates.load_template('cloud-init', 'ethernet.yaml')
+        self._templates.load_template('images', 'junos-vmx-loader.conf')
 
     def load_day0_templates(self, devices):
         day0_templates = filter(None, set(self._dev_defs[
@@ -515,7 +518,7 @@ class Volume(LibvirtObject):
         for template in day0_templates:
             self._templates.load_template('images', template)
 
-    def _create_raw_disk_image(self, file_name):
+    def _create_raw_disk_image(self, file_name, create_partition_table=True):
         size = 1024 * 1024 #1048576
         bytes_per_sector = 512
         sectors_per_track = 63
@@ -525,7 +528,7 @@ class Volume(LibvirtObject):
         actual_sectors = int(sectors // sectors_per_track * sectors_per_track) #32*63 = 2016
         actual_size = actual_sectors * bytes_per_sector #1032192
         cylinders = int(actual_sectors / sectors_per_track / heads) #16
-        first_sector = sectors_per_track * 1 #63
+        first_sector = sectors_per_track * int(create_partition_table) #63
 
         #dd if=/dev/zero of=test.img count=2016
         self._log.info(f'Creating empty disk image using temporary disk file '
@@ -533,27 +536,28 @@ class Volume(LibvirtObject):
         with open(file_name, 'wb') as binary_file:
             binary_file.write(b'\x00' * actual_size)
 
-        #fdisk --cylinders 16 --heads 2 --sectors 63 test.img
-        self._log.info('Creating partition table using fdisk')
-        with subprocess.Popen(['fdisk',
-                    '--cylinders', str(cylinders),
-                    '--heads', str(heads),
-                    '--sectors', str(sectors_per_track),
-                    file_name],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                text=True) as fdisk:
-            fdisk.communicate(
-                    f'n\n' #Add partition
-                    f'p\n' #Partition type (primary)
-                    f'1\n' #Partition number
-                    f'{first_sector}\n' #First sector
-                    f'{actual_sectors-1}\n' #Last sector
-                    f't\n' #Change partition type
-                    f'01\n' #01 FAT12
-                    f'a\n' #Toggle boot flag
-                    f'w\n' #Write table and exit
-                )
+        if first_sector > 0:
+            #fdisk --cylinders 16 --heads 2 --sectors 63 test.img
+            self._log.info('Creating partition table using fdisk')
+            with subprocess.Popen(['fdisk',
+                        '--cylinders', str(cylinders),
+                        '--heads', str(heads),
+                        '--sectors', str(sectors_per_track),
+                        file_name],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,
+                    text=True) as fdisk:
+                fdisk.communicate(
+                        f'n\n' #Add partition
+                        f'p\n' #Partition type (primary)
+                        f'1\n' #Partition number
+                        f'{first_sector}\n' #First sector
+                        f'{actual_sectors-1}\n' #Last sector
+                        f't\n' #Change partition type
+                        f'01\n' #01 FAT12
+                        f'a\n' #Toggle boot flag
+                        f'w\n' #Write table and exit
+                    )
 
         #mkfs.fat -F 12 -g 16/63 -h 1 -R 8 -s 8 -v --offset 63 ./test.img
         self._log.info('Formatting partition using mkfs.fat')
@@ -590,12 +594,12 @@ class Volume(LibvirtObject):
 
         return disk_byte_str
 
-    def _create_junos_day0_disk_image(self, file_name, variables):
+    def _create_junos_day0_disk_image(self, file_name, variables, vmx=True):
         day0_str = self._templates.apply_template(file_name, variables)
         tmp_disk_file = \
                 f'tmp-{generate_day0_volume_name(variables["device-name"])}'
 
-        offset = self._create_raw_disk_image(tmp_disk_file)
+        offset = self._create_raw_disk_image(tmp_disk_file, not vmx)
 
         self._log.info('Writing day0 file to partition')
         self._log.info(f'/config/juniper.conf:\n{day0_str}')
@@ -605,6 +609,11 @@ class Volume(LibvirtObject):
                                 write=True, compression='gz') as tarfile:
                 tarfile.makedir('/config')
                 tarfile.writetext('/config/juniper.conf', day0_str)
+                if vmx:
+                    tarfile.makedir('/boot')
+                    tarfile.writetext('/boot/loader.conf',
+                            self._templates.apply_template(
+                                'junos-vmx-loader.conf', {}))
 
         with open(tmp_disk_file, 'rb') as binary_file:
             disk_byte_str = binary_file.read()
@@ -704,9 +713,9 @@ class Volume(LibvirtObject):
         if dev_def.device_type == 'XRv-9000':
             image_byte_str = self._create_iosxr_day0_iso_image(
                     dev_def.day0_file, variables)
-        if dev_def.device_type == 'vJunos-Evolved':
+        if dev_def.device_type in ('vJunos-Evolved', 'vMX'):
             image_byte_str = self._create_junos_day0_disk_image(
-                    dev_def.day0_file, variables)
+                    dev_def.day0_file, variables, dev_def.device_type == 'vMX')
         elif dev_def.device_type == 'IOSv':
             image_byte_str = self._create_ios_day0_disk_image(
                     dev_def.day0_file, variables)
@@ -839,8 +848,12 @@ class Domain(LibvirtObject):
             xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS)
         if dev_def.device_type == 'vJunos-Evolved':
             xml_builder.add_extra_mgmt_ifaces(VJUNOS_EXTRA_MGMT_NETWORKS, device.id)
+        if dev_def.device_type == 'vMX':
+            xml_builder.add_extra_mgmt_ifaces(VMX_EXTRA_MGMT_NETWORKS,
+                    device.control_plane_id or device.id)
 
-        xml_builder.add_data_ifaces(dev_def.device_type in ('XRv-9000', 'vJunos-Evolved'),
+        xml_builder.add_data_ifaces(
+                dev_def.device_type in ('XRv-9000', 'vJunos-Evolved', 'vMX'),
                 'e1000' if dev_def.device_type in ('XRv-9000', 'IOSv') else 'virtio',
                 4 if dev_def.device_type == 'IOSv' else 0,
                 1 if dev_def.device_type == 'IOSv' else 0)
@@ -958,7 +971,13 @@ class Topology():
                     self._extra_network.action(action, output,
                             [ device.id ], f'{network_name}-{device.id}',
                             None, (0xfd, 0xff-idx))
-            if dev_def.device_type in ('XRv-9000', 'IOSv', 'vJunos-Evolved'):
+            if dev_def.device_type== 'vMX' and device.control_plane_id:
+                for (idx, network_name) in enumerate(
+                        set(VMX_EXTRA_MGMT_NETWORKS)):
+                    self._extra_network.action(action, output, [ device.id ],
+                            f'{network_name}-{device.control_plane_id}',
+                            None, (0xfc, device.control_plane_id))
+            if dev_def.device_type != 'Linux':
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)
             self._volume.action(action, output, device)
@@ -970,7 +989,8 @@ class Topology():
         while any(self._domain.is_active(device)
                   for device in self._topology.devices.device
                   if (device_name is None or device.device_name == device_name)
-                  and self._dev_defs[device.definition].device_type != 'IOSv'
+                  and self._dev_defs[device.definition].device_type not in (
+                        'IOSv', 'vMX')
                   ) and timer < 60:
             sleep(10)
             timer += 10
@@ -1000,7 +1020,7 @@ class LibvirtAction(Action):
                 action = 'create'
             elif name == 'stop':
                 libvirt_topology.action('shutdown', input.device)
-                libvirt_topology.wait_for_shutdown()
+                libvirt_topology.wait_for_shutdown(input.device)
                 action = 'destroy'
 
             libvirt_topology.action(action, input.device)

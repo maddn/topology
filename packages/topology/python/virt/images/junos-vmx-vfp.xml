@@ -1,0 +1,87 @@
+<domain type='kvm'>
+  <name>${device-name}</name>
+  <memory unit='MiB'>${memory}</memory>
+  <currentMemory unit='MiB'>${memory}</currentMemory>
+  <memoryBacking>
+    <nosharepages/>
+  </memoryBacking>
+  <vcpu placement='static'>${vcpus}</vcpu>
+  <resource>
+    <partition>/machine</partition>
+  </resource>
+  <os>
+    <type arch='x86_64' machine='pc-i440fx-trusty'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+  </features>
+  <cpu mode='custom' match='exact' check='full'>
+    <model fallback='forbid'>Westmere</model>
+    <vendor>Intel</vendor>
+    <topology sockets='1' dies='1' cores='4' threads='1'/>
+    <feature policy='require' name='vme'/>
+    <feature policy='require' name='ss'/>
+    <feature policy='require' name='pclmuldq'/>
+    <feature policy='require' name='vmx'/>
+    <feature policy='require' name='x2apic'/>
+    <feature policy='require' name='tsc-deadline'/>
+    <feature policy='require' name='hypervisor'/>
+    <feature policy='require' name='arat'/>
+    <feature policy='require' name='tsc_adjust'/>
+    <feature policy='require' name='umip'/>
+    <feature policy='require' name='spec-ctrl'/>
+    <feature policy='require' name='stibp'/>
+    <feature policy='require' name='arch-capabilities'/>
+    <feature policy='require' name='ssbd'/>
+    <feature policy='require' name='rdtscp'/>
+    <feature policy='require' name='ibpb'/>
+    <feature policy='require' name='ibrs'/>
+    <feature policy='require' name='amd-stibp'/>
+    <feature policy='require' name='amd-ssbd'/>
+    <feature policy='require' name='rsba'/>
+    <feature policy='require' name='skip-l1dfl-vmentry'/>
+    <feature policy='require' name='pschange-mc-no'/>
+    <feature policy='disable' name='avx2'/>
+  </cpu>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>restart</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <controller type='pci' index='0' model='pci-root'>
+      <alias name='pci.0'/>
+    </controller>
+    <controller type='usb' index='0' model='piix3-uhci'>
+      <alias name='usb'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x2'/>
+    </controller>
+    <controller type='ide' index='0'>
+      <alias name='ide'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
+    </controller>
+    <serial type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='160${id}' tls='no'/>
+      <protocol type='telnet'/>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial'/>
+      </target>
+      <alias name='serial0'/>
+    </serial>
+    <console type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='160${id}' tls='no'/>
+      <protocol type='telnet'/>
+      <target type='serial' port='0'/>
+      <alias name='serial0'/>
+    </console>
+    <memballoon model='virtio'>
+      <alias name='balloon0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0a' function='0x0'/>
+    </memballoon>
+  </devices>
+  <seclabel type='dynamic' model='dac' relabel='yes'>
+    <label>+0:+0</label>
+    <imagelabel>+0:+0</imagelabel>
+  </seclabel>
+</domain>

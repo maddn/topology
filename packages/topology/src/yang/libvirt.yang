@@ -208,6 +208,9 @@ submodule libvirt {
             enum IOSv {
               tailf:info "FAT disk image for day 0.";
             }
+            enum vMX {
+              tailf:info "FAT disk image for day 0. Extra int network CP to FP.";
+            }
             enum Linux {
               tailf:info "ISO image using cloud-init for day 0.";
             }

@@ -45,6 +45,13 @@ submodule topology-base {
               tailf:transform true;
             }
           }
+          leaf control-plane-id {
+            type leafref {
+              path "../../device/id";
+            }
+            tailf:info
+              "ID of device to actually configure when the CP is seperate.";
+          }
         }
       }
 

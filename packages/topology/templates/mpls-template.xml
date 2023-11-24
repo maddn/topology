@@ -1,9 +1,10 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
   servicepoint="mpls">
 
-  <?macro LinkEndpointMPLS device_name interface_id?>
+  <?macro LinkEndpointMPLS device interface_id?>
+    <?expand GetManagedDevice topology_device=$device?>
     <device>
-      <name>{$device_name}</name>
+      <name>{$MANAGED_DEVICE}</name>
       <config>
 
         <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr">
@@ -85,138 +86,139 @@
   <?expand GetPCEVariables?>
 
   <devices xmlns="http://tail-f.com/ns/ncs">
-    <device>
-      <name>{devices}</name>
-      <config>
-        <ipv4 when="{/traffic-engineering}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <unnumbered>
-            <mpls>
-              <traffic-eng>
-                <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
-              </traffic-eng>
-            </mpls>
-          </unnumbered>
-        </ipv4>
+    <?foreach {devices}?>
+      <?expand GetManagedDevice?>
+      <device>
+        <name>{$MANAGED_DEVICE}</name>
+        <config>
+          <ipv4 when="{/traffic-engineering}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <unnumbered>
+              <mpls>
+                <traffic-eng>
+                  <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
+                </traffic-eng>
+              </mpls>
+            </unnumbered>
+          </ipv4>
 
-        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <isis>
-            <tag tags="merge">
-              <name>{$IGP_NAME}</name>
-              <address-family tags="merge">
-                <ipv4>
-                  <unicast>
-                    <mpls when="{/traffic-engineering}">
-                      <traffic-eng>
-                        <router-id>
-                          <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
-                        </router-id>
-                        <level>level-2-only</level>
-                      </traffic-eng>
-                    </mpls>
-                  </unicast>
-                </ipv4>
-              </address-family>
-            </tag>
-          </isis>
-        </router>
+          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <isis>
+              <tag tags="merge">
+                <name>{$IGP_NAME}</name>
+                <address-family tags="merge">
+                  <ipv4>
+                    <unicast>
+                      <mpls when="{/traffic-engineering}">
+                        <traffic-eng>
+                          <router-id>
+                            <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
+                          </router-id>
+                          <level>level-2-only</level>
+                        </traffic-eng>
+                      </mpls>
+                    </unicast>
+                  </ipv4>
+                </address-family>
+              </tag>
+            </isis>
+          </router>
 
-        <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <traffic-eng when="{/traffic-engineering}">
+          <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <traffic-eng when="{/traffic-engineering}">
 
-            <?set DEVICE_NAME={.}?>
-            <?set BIT_POSITION={23}?>
-            <?set-root-node {/}?>
-            <?foreach {deref(../topology)/../links/link}?>
-              <?if {count(/devices/device[name=$DEVICE_NAME]/config/mpls/traffic-eng/affinity-map[name=current()/affinity]) = 0}?>
-                <affinity-map>
-                  <name>{affinity}</name>
-                  <bit-position>{$BIT_POSITION}</bit-position>
-                </affinity-map>
-                <?set BIT_POSITION={$BIT_POSITION+1}?>
-              <?end?>
-            <?end?>
-
-            <?set-root-node {/topologies/mpls[igp=$IGP_NAME]}?>
-            <auto-tunnel when="{/traffic-engineering/pce}">
-              <pcc>
-                <tunnel-id>
-                  <min>1000</min>
-                  <max>1999</max>
-                </tunnel-id>
-              </pcc>
-            </auto-tunnel>
-
-            <pce when="{/traffic-engineering/pce}">
-              <?set LOOPBACK_ID={/traffic-engineering/pce/loopback-id}?>
-              <?if {$LOOPBACK_ID=""}?>
-                <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
-              <?end?>
-              <?set-root-node {/}?>
-              <peer>
-                <source>
-                  <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
-                </source>
-                <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
-                <ipv4 foreach="{routers}">
-                  <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
-                  <password when="{../password}">
-                    <type>clear</type>
-                    <secret>{../password}</secret>
-                  </password>
-                </ipv4>
-              </peer>
-              <stateful-client>
-                <instantiation/>
-                <report/>
-              </stateful-client>
-            </pce>
-
-          </traffic-eng>
-        </mpls>
-
-        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
-          <interfaces>
-            <interface>
-              <name>lo0</name>
-              <unit>
-                <name>0</name>
-                <family>
-                  <mpls/>
-                </family>
-              </unit>
-            </interface>
-          </interfaces>
-          <protocols>
-            <mpls>
-              <lsp-external-controller when="{/traffic-engineering/pce}">
-                <name>pccd</name>
-              </lsp-external-controller>
-
-              <?set DEVICE_NAME={.}?>
               <?set BIT_POSITION={23}?>
               <?set-root-node {/}?>
-              <?foreach {deref(../topology)/../links/link}?>
-                <?if {count(/devices/device[name=$DEVICE_NAME]/config/configuration/protocols/mpls/admin-groups[name=current()/affinity]) = 0}?>
-                  <admin-groups>
+              <?foreach {deref(../topology)/../links/link[affinity]}?>
+                <?if {count(/devices/device[name=$DEVICE]/config/mpls/traffic-eng/affinity-map[name=current()/affinity]) = 0}?>
+                  <affinity-map>
                     <name>{affinity}</name>
-                    <group-value>{$BIT_POSITION}</group-value>
-                  </admin-groups>
+                    <bit-position>{$BIT_POSITION}</bit-position>
+                  </affinity-map>
                   <?set BIT_POSITION={$BIT_POSITION+1}?>
                 <?end?>
               <?end?>
-            </mpls>
-          </protocols>
-        </configuration>
 
-      </config>
-    </device>
+              <?set-root-node {/topologies/mpls[igp=$IGP_NAME]}?>
+              <auto-tunnel when="{/traffic-engineering/pce}">
+                <pcc>
+                  <tunnel-id>
+                    <min>1000</min>
+                    <max>1999</max>
+                  </tunnel-id>
+                </pcc>
+              </auto-tunnel>
+
+              <pce when="{/traffic-engineering/pce}">
+                <?set LOOPBACK_ID={/traffic-engineering/pce/loopback-id}?>
+                <?if {$LOOPBACK_ID=""}?>
+                  <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
+                <?end?>
+                <?set-root-node {/}?>
+                <peer>
+                  <source>
+                    <ipv4>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+                  </source>
+                  <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
+                  <ipv4 foreach="{routers}">
+                    <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
+                    <password when="{../password}">
+                      <type>clear</type>
+                      <secret>{../password}</secret>
+                    </password>
+                  </ipv4>
+                </peer>
+                <stateful-client>
+                  <instantiation/>
+                  <report/>
+                </stateful-client>
+              </pce>
+
+            </traffic-eng>
+          </mpls>
+
+          <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+            <interfaces>
+              <interface>
+                <name>lo0</name>
+                <unit>
+                  <name>0</name>
+                  <family>
+                    <mpls/>
+                  </family>
+                </unit>
+              </interface>
+            </interfaces>
+            <protocols>
+              <mpls>
+                <lsp-external-controller when="{/traffic-engineering/pce}">
+                  <name>pccd</name>
+                </lsp-external-controller>
+
+                <?set BIT_POSITION={23}?>
+                <?set-root-node {/}?>
+                <?foreach {deref(../topology)/../links/link[affinity]}?>
+                  <?if {count(/devices/device[name=$DEVICE]/config/configuration/protocols/mpls/admin-groups[name=current()/affinity]) = 0}?>
+                    <admin-groups>
+                      <name>{affinity}</name>
+                      <group-value>{$BIT_POSITION}</group-value>
+                    </admin-groups>
+                    <?set BIT_POSITION={$BIT_POSITION+1}?>
+                  <?end?>
+                <?end?>
+              </mpls>
+            </protocols>
+          </configuration>
+
+        </config>
+      </device>
+    <?end?>
 
     <?set-root-node {.}?>
     <?foreach {deref(topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
         <?set-root-node {/topologies/mpls[igp=$IGP_NAME]}?>
-        <?expand LinkEndpointMPLS device_name=a-end-device interface_id=a-end-interface/id?>
-        <?expand LinkEndpointMPLS device_name=z-end-device interface_id=z-end-interface/id?>
+        <?expand LinkEndpointMPLS device=a-end-device interface_id=a-end-interface/id?>
+        <?expand LinkEndpointMPLS device=z-end-device interface_id=z-end-interface/id?>
       <?end?>
     <?end?>
   </devices>

@@ -1,9 +1,10 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
   servicepoint="igp">
 
-  <?macro LinkEndpointIGP device_name interface_id?>
+  <?macro LinkEndpointIGP device interface_id?>
+    <?expand GetManagedDevice topology_device=$device?>
     <device>
-      <name>{$device_name}</name>
+      <name>{$MANAGED_DEVICE}</name>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
@@ -68,162 +69,165 @@
 
     <?foreach {deref(topology)/../links/link}?>
       <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
-        <?expand LinkEndpointIGP device_name=a-end-device interface_id=a-end-interface/id?>
-        <?expand LinkEndpointIGP device_name=z-end-device interface_id=z-end-interface/id?>
+        <?expand LinkEndpointIGP device=a-end-device interface_id=a-end-interface/id?>
+        <?expand LinkEndpointIGP device=z-end-device interface_id=z-end-interface/id?>
       <?end?>
     <?end?>
 
     <?set-root-node {deref(topology)/../ip-connectivity}?>
-    <device>
-      <name>{devices}</name>
-      <?set NET_ADDRESS=49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00?>
-      <config>
-        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <isis when="{../is-is}">
-            <tag>
-              <name>{string(../name)}</name>
-              <net>
-                <id>{$NET_ADDRESS}</id>
-              </net>
-              <distribute when="{count(../../bgp[topology=/../name]/link-state/routers[.=current()]) > 0}">
-                <link-state/>
-              </distribute>
-              <address-family>
-                <ipv4>
-                  <unicast>
-                    <metric-style>wide</metric-style>
-                    <router-id-address>
-                      <router-id>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.{deref(current())/../id}</router-id>
-                    </router-id-address>
-                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) > 0}">
-                      <static/>
-                    </redistribute>
-                    <redistribute when="{count(../../traffic-generator[topology=/../name]/devices[.=current()]) = 1}">
-                      <static/>
-                    </redistribute>
-                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]/redistribute-link) > 0}">
-                      <connected>
-                        <route-policy>redistribute-uplinks</route-policy>
-                      </connected>
-                    </redistribute>
-                  </unicast>
-                </ipv4>
-                <ipv6 when="{/ipv6}">
-                  <unicast>
-                    <router-id>
-                      <Loopback>{/loopback-interfaces/loopback[primary]/id}</Loopback>
-                    </router-id>
-                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) > 0}">
-                      <static/>
-                    </redistribute>
-                    <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]/redistribute-link) > 0}">
-                      <connected>
-                        <route-policy>redistribute-uplinks</route-policy>
-                      </connected>
-                    </redistribute>
-                  </unicast>
-                </ipv6>
-              </address-family>
-              <interface foreach="{/loopback-interfaces/loopback}">
-                <name>Loopback{id}</name>
-                <interface-type>passive</interface-type>
-                <circuit-type>level-2-only</circuit-type>
+    <?foreach {devices}?>
+      <?expand GetManagedDevice?>
+      <device>
+        <name>{$MANAGED_DEVICE}</name>
+        <?set NET_ADDRESS=49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00?>
+        <config>
+          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <isis when="{../is-is}">
+              <tag>
+                <name>{string(../name)}</name>
+                <net>
+                  <id>{$NET_ADDRESS}</id>
+                </net>
+                <distribute when="{count(../../bgp[topology=/../name]/link-state/routers[.=current()]) > 0}">
+                  <link-state/>
+                </distribute>
                 <address-family>
                   <ipv4>
-                    <unicast/>
+                    <unicast>
+                      <metric-style>wide</metric-style>
+                      <router-id-address>
+                        <router-id>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.{deref(current())/../id}</router-id>
+                      </router-id-address>
+                      <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) > 0}">
+                        <static/>
+                      </redistribute>
+                      <redistribute when="{count(../../traffic-generator[topology=/../name]/devices[.=current()]) = 1}">
+                        <static/>
+                      </redistribute>
+                      <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]/redistribute-link) > 0}">
+                        <connected>
+                          <route-policy>redistribute-uplinks</route-policy>
+                        </connected>
+                      </redistribute>
+                    </unicast>
                   </ipv4>
                   <ipv6 when="{/ipv6}">
-                    <unicast/>
+                    <unicast>
+                      <router-id>
+                        <Loopback>{/loopback-interfaces/loopback[primary]/id}</Loopback>
+                      </router-id>
+                      <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) > 0}">
+                        <static/>
+                      </redistribute>
+                      <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]/redistribute-link) > 0}">
+                        <connected>
+                          <route-policy>redistribute-uplinks</route-policy>
+                        </connected>
+                      </redistribute>
+                    </unicast>
                   </ipv6>
                 </address-family>
-              </interface>
-            </tag>
-          </isis>
-        </router>
-
-        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
-          <interfaces>
-            <interface>
-              <name>lo0</name>
-              <unit>
-                <name>0</name>
-                <family>
-                  <iso>
-                    <address>
-                      <name>{$NET_ADDRESS}</name>
-                    </address>
-                  </iso>
-                </family>
-              </unit>
-            </interface>
-          </interfaces>
-          <protocols>
-            <isis>
-              <interface>
-                <name>lo0.0</name>
-                <level>
-                  <name>1</name>
-                  <disable/>
-                </level>
-                <passive/>
-              </interface>
-              <level>
-                <name>2</name>
-                <wide-metrics-only/>
-              </level>
+                <interface foreach="{/loopback-interfaces/loopback}">
+                  <name>Loopback{id}</name>
+                  <interface-type>passive</interface-type>
+                  <circuit-type>level-2-only</circuit-type>
+                  <address-family>
+                    <ipv4>
+                      <unicast/>
+                    </ipv4>
+                    <ipv6 when="{/ipv6}">
+                      <unicast/>
+                    </ipv6>
+                  </address-family>
+                </interface>
+              </tag>
             </isis>
-          </protocols>
-          <?if {count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) + count(../../traffic-generator[topology=/../name]/devices[.=current()]) > 0}?>
-            <policy-options>
-              <policy-statement>
-                <name>export-statics</name>
-                <term>
-                  <name>1</name>
-                  <from>
-                    <protocol>static</protocol>
-                  </from>
-                  <then>
-                    <accept/>
-                  </then>
-                </term>
-              </policy-statement>
-            </policy-options>
+          </router>
+
+          <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+            <interfaces>
+              <interface>
+                <name>lo0</name>
+                <unit>
+                  <name>0</name>
+                  <family>
+                    <iso>
+                      <address>
+                        <name>{$NET_ADDRESS}</name>
+                      </address>
+                    </iso>
+                  </family>
+                </unit>
+              </interface>
+            </interfaces>
             <protocols>
               <isis>
-                <export>export-statics</export>
+                <interface>
+                  <name>lo0.0</name>
+                  <level>
+                    <name>1</name>
+                    <disable/>
+                  </level>
+                  <passive/>
+                </interface>
+                <level>
+                  <name>2</name>
+                  <wide-metrics-only/>
+                </level>
               </isis>
             </protocols>
-          <?end?>
-        </configuration>
+            <?if {count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) + count(../../traffic-generator[topology=/../name]/devices[.=current()]) > 0}?>
+              <policy-options>
+                <policy-statement>
+                  <name>export-statics</name>
+                  <term>
+                    <name>1</name>
+                    <from>
+                      <protocol>static</protocol>
+                    </from>
+                    <then>
+                      <accept/>
+                    </then>
+                  </term>
+                </policy-statement>
+              </policy-options>
+              <protocols>
+                <isis>
+                  <export>export-statics</export>
+                </isis>
+              </protocols>
+            <?end?>
+          </configuration>
 
-        <!-- IOS Devices -->
-        <router xmlns="urn:ios">
-          <ospf when="{../ospf}">
-            <id>{string(../name)}</id>
-            <redistribute when="{../../base-config[topology=/../name]/static-routes/loopback-to-management/device=current()}">
-              <static>
-                <metric-type>1</metric-type>
-                <subnets/>
-              </static>
-            </redistribute>
-            <network>
-              <ip>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.0</ip>
-              <mask>0.0.0.255</mask>
-              <area>0</area>
-            </network>
-            <?if {../ospf/include-management-network='true'}?>
-              <?set-context-node {deref(current())/..}?>
-              <?set LAST_OCTET={substring-after(substring-after(substring-after(management-interface/ip-address, '.'), '.'), '.')}?>
+          <!-- IOS Devices -->
+          <router xmlns="urn:ios">
+            <ospf when="{../ospf}">
+              <id>{string(../name)}</id>
+              <redistribute when="{../../base-config[topology=/../name]/static-routes/loopback-to-management/device=current()}">
+                <static>
+                  <metric-type>1</metric-type>
+                  <subnets/>
+                </static>
+              </redistribute>
               <network>
-                <ip>{substring(management-interface/ip-address, 1, string-length(management-interface/ip-address)-string-length($LAST_OCTET)-1)}.0</ip>
+                <ip>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.0</ip>
                 <mask>0.0.0.255</mask>
                 <area>0</area>
               </network>
-            <?end?>
-          </ospf>
-        </router>
-      </config>
-    </device>
+              <?if {../ospf/include-management-network='true'}?>
+                <?set-context-node {deref(current())/..}?>
+                <?set LAST_OCTET={substring-after(substring-after(substring-after(management-interface/ip-address, '.'), '.'), '.')}?>
+                <network>
+                  <ip>{substring(management-interface/ip-address, 1, string-length(management-interface/ip-address)-string-length($LAST_OCTET)-1)}.0</ip>
+                  <mask>0.0.0.255</mask>
+                  <area>0</area>
+                </network>
+              <?end?>
+            </ospf>
+          </router>
+        </config>
+      </device>
+    <?end?>
 
   </devices>
 </config-template>
