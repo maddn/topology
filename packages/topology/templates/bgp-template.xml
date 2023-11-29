@@ -107,13 +107,14 @@
 
   <?macro SetIfaceContext external?>
     <?set IFACE_ID={../loopback-id}?>
+    <?expand GetManagedDevice?>
     <?set TYPE=''?>
     <?if $external?>
       <?set IFACE_ID={deref(../../topology)/../links/link[a-end-device=current()][z-end-device=$DEVICE_NAME]/a-end-interface/id}?>
       <?if {$IFACE_ID=''}?>
         <?set IFACE_ID={deref(../../topology)/../links/link[a-end-device=$DEVICE_NAME][z-end-device=current()]/z-end-interface/id}?>
       <?end?>
-      <?set-context-node {/devices/device[name=current()]/config?>
+      <?set-context-node {/devices/device[name=$MANAGED_DEVICE]/config?>
       <?expand GetDeviceType?>
       <?if {ios:interface}?>
         <?set-context-node {interface/GigabitEthernet[name=concat('0/', $IFACE_ID)]}?>
@@ -126,7 +127,7 @@
       <?if {$IFACE_ID=''}?>
         <?set IFACE_ID={$PRIMARY_LOOPBACK_ID}?>
       <?end?>
-      <?set-context-node {/devices/device[name=current()]/config?>
+      <?set-context-node {/devices/device[name=$MANAGED_DEVICE]/config?>
       <?expand GetDeviceType?>
       <?if {ios:interface}?>
         <?set-context-node {interface/Loopback[name=$IFACE_ID]}?>
@@ -157,140 +158,146 @@
   <?set AS_NUMBER={as-number}?>
   <?set-root-node {/}?>
   <devices xmlns="http://tail-f.com/ns/ncs">
-    <device>
-      <name>{provider-edge/routers | link-state/routers}</name>
+    <?foreach {provider-edge/routers | link-state/routers}?>
       <?set DEVICE_NAME={.}?>
-      <?set IGP={../../../igp[devices/.=current()]/name}?>
-      <?set ROLE={local-name(..)}?>
-      <?set LOOPBACK_ID={../loopback-id}?>
-      <?if {$LOOPBACK_ID=''}?>
-        <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
-      <?end?>
+      <?expand GetManagedDevice?>
+      <device>
+        <name>{$MANAGED_DEVICE}</name>
+        <?set IGP={../../../igp[devices/.=current()]/name}?>
+        <?set ROLE={local-name(..)}?>
+        <?set LOOPBACK_ID={../loopback-id}?>
+        <?if {$LOOPBACK_ID=''}?>
+          <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
+        <?end?>
 
-      <config>
-        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <bgp>
-            <bgp-no-instance>
-              <id>{$AS_NUMBER}</id>
-              <bgp>
-                <router-id>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
-              </bgp>
+        <config>
+          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <bgp>
+              <bgp-no-instance>
+                <id>{$AS_NUMBER}</id>
+                <bgp>
+                  <router-id>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
+                </bgp>
 
-              <?expand ConfigureAddressFamily?>
+                <?expand ConfigureAddressFamily?>
 
-              <?if {count(../../route-reflector/routers) > 0}?>
-                <?foreach {../../route-reflector/routers}?>
-                  <?expand ConfigureNeighbourXR?>
-                <?end?>
-              <?else?>
-                <?foreach {../../provider-edge/routers[.!=$DEVICE_NAME] | ../../link-state/routers[.!=$DEVICE_NAME] }?>
-                  <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
+                <?if {count(../../route-reflector/routers) > 0}?>
+                  <?foreach {../../route-reflector/routers}?>
                     <?expand ConfigureNeighbourXR?>
                   <?end?>
-                <?end?>
-              <?end?>
-
-              <?expand ForEachExternalNeighbour macro=ConfigureNeighbourXR device_type='\'XR\''?>
-            </bgp-no-instance>
-          </bgp>
-        </router>
-
-        <router xmlns="urn:ios">
-          <bgp>
-            <as-no>{$AS_NUMBER}</as-no>
-            <bgp>
-              <router-id>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
-            </bgp>
-
-            <?foreach {../../provider-edge/routers[.!=$DEVICE_NAME]}?>
-              <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
-                <?expand ConfigureNeighbourIOS?>
-              <?end?>
-            <?end?>
-            <?expand ForEachExternalNeighbour macro=ConfigureNeighbourIOS device_type='\'IOS\''?>
-          </bgp>
-        </router>
-
-        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
-          <routing-options>
-            <autonomous-system>
-              <as-number>{$AS_NUMBER}</as-number>
-            </autonomous-system>
-          </routing-options>
-          <protocols>
-            <bgp>
-              <group>
-                <name>ibgp</name>
-                <type>internal</type>
-                <local-address>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</local-address>
-
-                <family>
-                  <inet-vpn when="{$ROLE='provider-edge'}">
-                    <unicast/>
-                  </inet-vpn>
-                </family>
-                <export>ibgp-export</export>
-
-                <?foreach {../../route-reflector/routers}?>
-                  <?expand SetIfaceContext external='{false()}'?>
-                  <neighbor>
-                    <name>{$IPV4_ADDRESS}</name>
-                  </neighbor>
+                <?else?>
+                  <?foreach {../../provider-edge/routers[.!=current()] | ../../link-state/routers[.!=current()] }?>
+                    <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
+                      <?expand ConfigureNeighbourXR?>
+                    <?end?>
+                  <?end?>
                 <?end?>
 
-              </group>
+                <?expand ForEachExternalNeighbour macro=ConfigureNeighbourXR device_type='\'XR\''?>
+              </bgp-no-instance>
             </bgp>
-          </protocols>
-          <policy-options>
-            <policy-statement>
-              <name>ibgp-export</name>
-              <term>
-                <name>next-hop-self</name>
-                <then>
-                  <next-hop>
-                    <self/>
-                  </next-hop>
-                </then>
-              </term>
-            </policy-statement>
-          </policy-options>
-        </configuration>
+          </router>
 
-      </config>
-    </device>
-
-    <device>
-      <name>{route-reflector/routers}</name>
-      <?set DEVICE_NAME={.}?>
-      <?set LOOPBACK_ID={../loopback-id}?>
-      <?if {$LOOPBACK_ID=''}?>
-        <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
-      <?end?>
-
-      <config>
-        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <bgp>
-            <bgp-no-instance>
-              <id>{string(../../as-number)}</id>
+          <router xmlns="urn:ios">
+            <bgp>
+              <as-no>{$AS_NUMBER}</as-no>
               <bgp>
-                <router-id>{/devices/device[name=current()]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
+                <router-id>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
               </bgp>
-              <?if {count(../../provider-edge/routers) > 0}?>
-                <?expand ConfigureAddressFamily role='\'provider-edge\''?>
-              <?end?>
-              <?if {count(../../link-state/routers) > 0}?>
-                <?expand ConfigureAddressFamily role='\'link-state\''?>
-              <?end?>
 
-              <?foreach {../../provider-edge/routers | ../../link-state/routers}?>
-                <?set ROLE={local-name(..)}?>
-                <?expand ConfigureNeighbourXR rrc=true()?>
+              <?foreach {../../provider-edge/routers[.!=current()]}?>
+                <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
+                  <?expand ConfigureNeighbourIOS?>
+                <?end?>
               <?end?>
-            </bgp-no-instance>
-          </bgp>
-        </router>
-      </config>
-    </device>
+              <?expand ForEachExternalNeighbour macro=ConfigureNeighbourIOS device_type='\'IOS\''?>
+            </bgp>
+          </router>
+
+          <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+            <routing-options>
+              <autonomous-system>
+                <as-number>{$AS_NUMBER}</as-number>
+              </autonomous-system>
+            </routing-options>
+            <protocols>
+              <bgp>
+                <group>
+                  <name>ibgp</name>
+                  <type>internal</type>
+                  <local-address>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</local-address>
+
+                  <family>
+                    <inet-vpn when="{$ROLE='provider-edge'}">
+                      <unicast/>
+                    </inet-vpn>
+                  </family>
+                  <export>ibgp-export</export>
+
+                  <?foreach {../../route-reflector/routers}?>
+                    <?expand SetIfaceContext external='{false()}'?>
+                    <neighbor>
+                      <name>{$IPV4_ADDRESS}</name>
+                    </neighbor>
+                  <?end?>
+
+                </group>
+              </bgp>
+            </protocols>
+            <policy-options>
+              <policy-statement>
+                <name>ibgp-export</name>
+                <term>
+                  <name>next-hop-self</name>
+                  <then>
+                    <next-hop>
+                      <self/>
+                    </next-hop>
+                  </then>
+                </term>
+              </policy-statement>
+            </policy-options>
+          </configuration>
+
+        </config>
+      </device>
+    <?end?>
+
+    <?foreach {route-reflector/routers}?>
+      <?set DEVICE_NAME={.}?>
+      <?expand GetManagedDevice?>
+      <device>
+        <name>{$MANAGED_DEVICE}</name>
+        <?set LOOPBACK_ID={../loopback-id}?>
+        <?if {$LOOPBACK_ID=''}?>
+          <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
+        <?end?>
+
+        <config>
+          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <bgp>
+              <bgp-no-instance>
+                <id>{string(../../as-number)}</id>
+                <bgp>
+                  <router-id>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
+                </bgp>
+                <?if {count(../../provider-edge/routers) > 0}?>
+                  <?expand ConfigureAddressFamily role='\'provider-edge\''?>
+                <?end?>
+                <?if {count(../../link-state/routers) > 0}?>
+                  <?expand ConfigureAddressFamily role='\'link-state\''?>
+                <?end?>
+
+                <?foreach {../../provider-edge/routers | ../../link-state/routers}?>
+                  <?set ROLE={local-name(..)}?>
+                  <?expand ConfigureNeighbourXR rrc=true()?>
+                <?end?>
+              </bgp-no-instance>
+            </bgp>
+          </router>
+        </config>
+      </device>
+    <?end?>
 
     <device>
       <name>{networks/network/device}</name>
