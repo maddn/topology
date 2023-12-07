@@ -1,6 +1,6 @@
-  eth{iface-id}:
+  eth${iface-id}:
     match:
-      macaddress: "{mac-address}"
+      macaddress: "${mac-address}"
     addresses:
-    - {ip-address}/24
-    set-name: eth{iface-id}
+    - ${ip-address}/24
+    set-name: eth${iface-id}
