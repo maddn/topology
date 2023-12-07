@@ -62,6 +62,29 @@ submodule bgp {
         "On each device in the routers list, a VPNv4 (and optional VPNv6)
          neighbour will be configured to each router in the
          route‑reflector/routers list.";
+      list family {
+        key name;
+        leaf name {
+          type enumeration {
+            enum l2vpn;
+            enum ip;
+          }
+        }
+        container policy {
+          leaf name {
+            type string;
+          }
+          leaf direction {
+            type enumeration {
+              enum in;
+              enum out;
+            }
+          }
+          leaf value {
+            type string;
+          }
+        }
+      }
     }
     container link-state {
       uses bgp-routers-grouping;

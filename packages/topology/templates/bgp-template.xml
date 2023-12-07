@@ -6,6 +6,9 @@
       <vpnv4 when="{$role='provider-edge'}">
         <unicast/>
       </vpnv4>
+      <l2vpn when="{$role='provider-edge'}">
+        <evpn/>
+      </l2vpn>
       <link-state when="{$role='link-state'}">
         <link-state/>
       </link-state>
@@ -28,6 +31,18 @@
             <route-reflector-client when="{$rrc}"/>
           </unicast>
         </vpnv4>
+        <l2vpn when="{$ROLE='provider-edge' and count(../../provider-edge/family[name='l2vpn']) > 0}">
+          <evpn>
+            <route-reflector-client when="{$rrc}"/>
+            <route-policy when="{not($rrc)}">
+              <direction>{../../provider-edge/family[name='l2vpn']/policy/direction}</direction>
+              <name>{name}</name>
+            </route-policy>
+          </evpn>
+        </l2vpn>
+        <ipv4 when="{$ROLE='provider-edge' and count(../../provider-edge/family[name='ip']) > 0}">
+          <unicast/>
+        </ipv4>
         <link-state when="{$ROLE='link-state'}">
           <link-state>
             <route-reflector-client when="{$rrc}"/>
@@ -40,6 +55,9 @@
             <route-reflector-client when="{$rrc}"/>
           </unicast>
         </vpnv6>
+        <ipv6 when="{$ROLE='provider-edge' and count(../../provider-edge/family[name='ip']) > 0}">
+          <unicast/>
+        </ipv6>
       </address-family>
     </neighbor>
   <?endmacro?>
@@ -105,7 +123,8 @@
     <?end?>
   <?endmacro?>
 
-  <?macro SetIfaceContext external?>
+  <?macro GetIpAddresses external?>
+    <?save-context ROUTER?>
     <?set IFACE_ID={../loopback-id}?>
     <?expand GetManagedDevice?>
     <?set TYPE=''?>
@@ -140,16 +159,17 @@
       <?end?>
     <?end?>
     <?expand GetCurrentIpAddresses type=$TYPE?>
+    <?switch-context ROUTER?>
   <?endmacro?>
 
   <?macro ConfigureNeighbourXR rrc=false() remote_as=$AS_NUMBER?>
-    <?expand SetIfaceContext external='{$remote_as != $AS_NUMBER}'?>
+    <?expand GetIpAddresses external='{$remote_as != $AS_NUMBER}'?>
     <?expand ConfigureNeighbourStatementXR ip_address=$IPV4_ADDRESS rrc=$rrc remote_as=$remote_as?>
     <?expand ConfigureNeighbourStatementXR ip_address=$IPV6_ADDRESS ipv6=true() rrc=$rrc remote_as=$remote_as?>
   <?endmacro?>
 
   <?macro ConfigureNeighbourIOS remote_as=$AS_NUMBER?>
-    <?expand SetIfaceContext external='{$remote_as != $AS_NUMBER'?>
+    <?expand GetIpAddresses external='{$remote_as != $AS_NUMBER'?>
     <?expand ConfigureNeighbourStatementIOS ip_address=$IPV4_ADDRESS remote_as=$remote_as?>
   <?endmacro?>
 
@@ -197,6 +217,10 @@
               </bgp-no-instance>
             </bgp>
           </router>
+          <route-policy xmlns="http://tail-f.com/ned/cisco-ios-xr">
+            <name>{../family/policy/name}</name>
+            <value>{value}</value>
+          </route-policy>
 
           <router xmlns="urn:ios">
             <bgp>
@@ -235,7 +259,7 @@
                   <export>ibgp-export</export>
 
                   <?foreach {../../route-reflector/routers}?>
-                    <?expand SetIfaceContext external='{false()}'?>
+                    <?expand GetIpAddresses external='{false()}'?>
                     <neighbor>
                       <name>{$IPV4_ADDRESS}</name>
                     </neighbor>

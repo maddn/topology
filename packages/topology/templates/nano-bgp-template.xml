@@ -14,6 +14,14 @@
       <provider-edge>
         <loopback-id>{provider-edge/loopback-id}</loopback-id>
         <routers>{provider-edge/routers}</routers>
+        <family>
+          <name>{provider-edge/family/name}</name>
+          <policy>
+            <name>{policy/name}</name>
+            <direction>{policy/direction}</direction>
+            <value>{policy/value}</value>
+          </policy>
+        </family>
       </provider-edge>
       <link-state>
         <loopback-id>{link-state/loopback-id}</loopback-id>
