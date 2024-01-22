@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 
 import NodePane from '../panels/NodePane';
 import InlineBtn from '../../common/buttons/InlineBtn';
+import * as ManagedTopology from './ManagedTopology';
 import * as IpConnectivity from './IpConnectivity';
 import * as BaseConfig from './BaseConfig';
 
@@ -93,6 +94,7 @@ export const Component = React.memo(function Component({ name }) {
       }
         { ...swapLabels(data, selection) }
     >
+      <ManagedTopology.Component name={name}/>
       <IpConnectivity.Component topology={name}/>
       <BaseConfig.Component topology={name}/>
     </NodePane>

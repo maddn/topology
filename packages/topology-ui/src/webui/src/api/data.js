@@ -12,7 +12,7 @@ export const dataApi = jsonRpcApi.injectEndpoints({
           path: keypath
         }
       }),
-      providesTags: ['data'],
+      providesTags: [ 'data' ],
       transformResponse: (response) => response?.result?.value
     }),
 
@@ -59,9 +59,10 @@ export const dataApi = jsonRpcApi.injectEndpoints({
           path: keypath
         }
       }),
-      async onQueryStarted({ keypath }, { dispatch, queryFulfilled }) {
+      invalidatesTags: (_, __, { tag }) => tag ? [ tag ] : [],
+      async onQueryStarted({ keypath, queryKey }, { dispatch, queryFulfilled }) {
         await queryFulfilled;
-        dispatch(updateQueryData(keypath));
+        dispatch(updateQueryData(keypath, undefined, undefined, queryKey));
       }
     }),
 

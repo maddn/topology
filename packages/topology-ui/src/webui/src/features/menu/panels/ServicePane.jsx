@@ -15,24 +15,28 @@ import { useActionMutation, useGetValueQuery } from 'api/data';
 
 
 const ServicePane = memo(function ServicePane(
-  { keypath, children, topology, label, ...rest })
+  { keypath, serviceKeypath, children, topology, title, label, ...rest })
 {
   console.debug('ServicePane Render');
 
-  const { data } = useGetValueQuery(`${keypath}/modified/devices`);
+  const { data } = useGetValueQuery(`${serviceKeypath.endsWith('/..') ?
+      serviceKeypath.substring(0,
+        serviceKeypath.lastIndexOf('/', serviceKeypath.length - 4)) :
+      serviceKeypath}/modified/devices`);
 
-  const isOpen = useSelector((state) => getOpenService(state) === keypath);
+  const isOpen = useSelector((state) => getOpenService(state) === serviceKeypath);
   const fade = useSelector((state) => !!getOpenService(state));
 
   const dispatch = useDispatch();
-  const toggled = useCallback((keypath) => dispatch(serviceToggled({ keypath, highlightedIcons: isOpen ? [] : data })));
+  const toggled = useCallback((keypath) => dispatch(serviceToggled({
+    keypath: serviceKeypath, highlightedIcons: isOpen ? [] : data })));
 
   const [ action ] = useActionMutation();
   const redeploy = useCallback(async (event) => {
     event.stopPropagation();
     await action({
       transType: 'read_write',
-      path: `${keypath}/touch`
+      path: `${serviceKeypath}/touch`
     });
     dispatch(stopThenGoToUrl(COMMIT_MANAGER_URL));
   });
@@ -40,6 +44,8 @@ const ServicePane = memo(function ServicePane(
   return (
     <NodePane
       keypath={keypath}
+      title={title || label}
+      underscore={serviceKeypath !== keypath}
       label={label}
       isOpen={isOpen}
       fade={fade}

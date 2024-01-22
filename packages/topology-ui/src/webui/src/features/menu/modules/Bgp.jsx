@@ -4,11 +4,14 @@ import { useMemo } from 'react';
 import DeviceList from '../panels/DeviceList';
 import ServicePane from '../panels/ServicePane';
 
-import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
-         selectItem, createItemsSelector } from 'api/query';
+import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
+         createItemsSelector } from 'api/query';
+import { getPath, useQueryState, useData } from '../panels/ServiceList';
 
 export const label = 'BGP Service';
-const path = '/topology:topologies/bgp';
+export const service = 'bgp';
+export const setTopologyInNewItem = true;
+
 const peRouters = 'provider-edge/routers';
 const lsRouters = 'link-state/routers';
 const routerReflectors = 'route-reflector/routers';
@@ -19,26 +22,27 @@ const selection = {
   'route-reflector/loopback-id':  'Route Reflector Loopback'
 };
 
-export function useQuery(itemSelector) {
+export function useQuery(itemSelector, managed) {
   return useQueryQuery({
-    xpathExpr : path,
-    selection : ['as-number', 'topology', ...Object.keys(selection) ]
+    xpathExpr : getPath(service, managed),
+    selection : ['as-number', 'topology', ...Object.keys(selection) ],
+    tag: 'managed-topology'
   }, { selectFromResult: itemSelector });
 }
 
 export function useFetchStatus() {
   return useMemoizeWhenFetched({
-    'BGP Services': useQueryState(path),
-    'PE Routers': useQueryState(`${path}/${peRouters}`),
-    'Link-State Routers': useQueryState(`${path}/${lsRouters}`),
-    'Router Reflectors': useQueryState(`${path}/${routerReflectors}`)
+    'BGP Services': useQueryState(service),
+    'PE Routers': useQueryState(`${service}/${peRouters}`),
+    'Link-State Routers': useQueryState(`${service}/${lsRouters}`),
+    'Router Reflectors': useQueryState(`${service}/${routerReflectors}`)
   });
 }
 
 export function Component({ name }) {
   console.debug('Bgp Render');
 
-  const { data } = useQuery(selectItem('name', name));
+  const [ data, serviceKeypath ] = useData(useQuery, name);
   const peSelector = useMemo(() => createItemsSelector('asNumber', name), [ name ]);
   const lsSelector = useMemo(() => createItemsSelector('asNumber', name), [ name ]);
   const rrSelector = useMemo(() => createItemsSelector('asNumber', name), [ name ]);
@@ -48,6 +52,7 @@ export function Component({ name }) {
     <ServicePane
       key={name}
       title={`AS ${name}`}
+      serviceKeypath={serviceKeypath}
       { ...{ label, keypath, ...swapLabels(data, selection) } }
     >
       <DeviceList

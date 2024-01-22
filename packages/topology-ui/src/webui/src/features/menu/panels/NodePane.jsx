@@ -15,6 +15,7 @@ import { useDeletePathMutation } from 'api/data';
 
 const NodePane = memo(function NodePane({
   title, label, keypath, level, isOpen, fade, nodeToggled,
+  underscore, queryTag, queryKey, disableDelete,
   disableGoTo, extraButtons, subHeader, children, ...rest
 }) {
   console.debug('NodePane Render');
@@ -32,7 +33,7 @@ const NodePane = memo(function NodePane({
   const [ deletePath ] = useDeletePathMutation();
   const deleteNode = useCallback(async (event) => {
     event.stopPropagation();
-    await deletePath({ keypath });
+    await deletePath({ keypath, tag: queryTag, queryKey });
     if (isOpen) { toggle(); }
   });
 
@@ -45,7 +46,8 @@ const NodePane = memo(function NodePane({
       variableHeight={true}
       header={
         <Fragment>
-          <span className="header__title-text">{title || label}</span>
+          <span className="header__title-text">{underscore ?
+            <u>{title.charAt(0)}</u> : title.charAt(0)}{title.substr(1)}</span>
           {!disableGoTo &&
             <InlineBtn
               type={IconTypes.BTN_GOTO}
@@ -55,12 +57,14 @@ const NodePane = memo(function NodePane({
             />
           }
           {extraButtons}
-          <InlineBtn
-            type={IconTypes.BTN_DELETE}
-            classSuffix="delete"
-            tooltip={`Delete ${label}`}
-            onClick={deleteNode}
-          />
+          {!disableDelete &&
+            <InlineBtn
+              type={IconTypes.BTN_DELETE}
+              classSuffix="delete"
+              tooltip={`Delete ${label}`}
+              onClick={deleteNode}
+            />
+          }
         </Fragment>
       }>
       {subHeader}

@@ -6,10 +6,13 @@ import FieldGroup from '../../common/FieldGroup';
 import DroppableNodeList from '../panels/DroppableNodeList';
 import CreatableService from '../panels/CreatableService';
 
-import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
-         selectItem, createItemsSelector } from 'api/query';
+import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
+         createItemsSelector } from 'api/query';
+import { getPath, useQueryState, useData } from '../panels/ServiceList';
 
-const path = '/topology:topologies/base-config';
+const service = 'base-config';
+const queryKey = service;
+
 const snmpServers = 'snmp-server/host';
 const staticRoutes = 'static-routes/route';
 
@@ -43,24 +46,26 @@ const managementRoutes = {
     'Loopback ID'
 };
 
-export function useQuery(itemSelector) {
+export function useQuery(itemSelector, managed) {
   return useQueryQuery({
-    xpathExpr: path,
+    xpathExpr: getPath(!managed && service, managed),
+    queryKey,
     selection: [
       'topology',
       ...Object.keys(selection),
       ...Object.keys(logging),
       ...Object.keys(grpc),
       ...Object.keys(managementRoutes),
-      ...Object.keys(pce) ]
+      ...Object.keys(pce) ],
+    tag: 'managed-topology'
   }, { selectFromResult: itemSelector });
 }
 
 export function useFetchStatus() {
   return useMemoizeWhenFetched({
-    'Base Config Services': useQueryState(path),
-    'SNMP Servers': useQueryState(`${path}/${snmpServers}`),
-    'Static Routes': useQueryState(`${path}/${staticRoutes}`)
+    'Base Config Services': useQueryState(service, queryKey),
+    'SNMP Servers': useQueryState(`${service}/${snmpServers}`),
+    'Static Routes': useQueryState(`${service}/${staticRoutes}`)
   });
 }
 
@@ -68,16 +73,22 @@ export function Component({ topology }) {
   console.debug('BaseConfig Render');
 
   const label = 'Base Config Service';
-  const keypath = `${path}{${topology}}`;
 
-  const { data } = useQuery(selectItem('name', topology));
+  const [ data, serviceKeypath ] = useData(
+     useQuery, topology, Object.keys(selection)[0]);
+  const keypath = data?.keypath;
+
   const snmpSelector = useMemo(() =>
     createItemsSelector('topology', topology), [ topology ]);
   const routesSelector = useMemo(() =>
     createItemsSelector('topology', topology), [ topology ]);
 
   return (data ?
-    <ServicePane { ...{ label, keypath, ...swapLabels(data, selection) } }>
+    <ServicePane
+      disableDelete={keypath !== serviceKeypath}
+      { ...{ label, keypath, serviceKeypath, queryKey,
+        ...swapLabels(data, selection) } }
+    >
       <FieldGroup title="Logging" { ...swapLabels(data, logging) } />
       <DroppableNodeList
         label="SNMP Server"
@@ -112,6 +123,7 @@ export function Component({ topology }) {
       />
       <FieldGroup title="PCE" { ...swapLabels(data, pce) } />
     </ServicePane> :
-    <CreatableService { ...{ label, keypath } } />
+    <CreatableService { ...{ label,
+      keypath: `${getPath(service)}{${topology}}` } } />
   );
 }

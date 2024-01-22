@@ -47,8 +47,8 @@ export function fetchStatus({ isFetching, isSuccess, isError }) {
   return isFetching ? '' : isSuccess ? 'OK' : isError ? 'Error' : 'OK';
 }
 
-export function useQueryState(path) {
-  return fetchStatus(query.useQueryState(path));
+export function useQueryState(path, queryKey) {
+  return fetchStatus(query.useQueryState({ xpathExpr: path, queryKey }));
 }
 
 export function createItemsSelector(key, value) {
@@ -96,9 +96,9 @@ const transformQueryResponse = (selection, response, keys, isLeafList) =>
     ), true)
   );
 
-export function updateQueryData(keypath, name, args) {
+export function updateQueryData(keypath, name, args, queryKey) {
   return jsonRpcApi.util.updateQueryData(
-    'query', removeKeys(keypath), draft => {
+    'query', { xpathExpr: removeKeys(keypath), queryKey }, draft => {
       const index = draft.findIndex(item => item.keypath === keypath);
       if (typeof args === 'string') {
         draft[index][camelCase(name)] = args;
@@ -123,12 +123,12 @@ export const queryApi = jsonRpcApi.injectEndpoints({
           selection
         }
       }),
-      providesTags: ['data'],
+      providesTags: (_, __, { tag }) => tag ? [ 'data', tag ] : [ 'data' ],
       transformResponse: (response, _, { selection, keys, isLeafList }) =>
         transformQueryResponse(selection, response, keys, isLeafList),
       serializeQueryArgs: (args) => typeof args.queryArgs === 'string'
         ? `query(${args.queryArgs})`
-        : `query(${args.queryArgs.xpathExpr})`,
+        : `${args.queryArgs.queryKey || 'query'}(${args.queryArgs.xpathExpr})`,
       async onCacheEntryAdded(
         args, { updateCachedData, cacheDataLoaded, cacheEntryRemoved, dispatch }
       ) {
@@ -154,4 +154,6 @@ export const queryApi = jsonRpcApi.injectEndpoints({
   })
 });
 
+
 export const { useQueryQuery, endpoints: { query } } = queryApi;
+export const { useQuerySubscription } = query;

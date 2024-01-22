@@ -5,11 +5,12 @@ import ServicePane from '../panels/ServicePane';
 import FieldGroup from '../../common/FieldGroup';
 import DroppableNodeList from '../panels/DroppableNodeList';
 
-import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
-         selectItem, createItemsSelector } from 'api/query';
+import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
+         createItemsSelector } from 'api/query';
+import { getPath, useQueryState, useData } from '../panels/ServiceList';
 
 export const label = 'Segment Routing Service';
-const path = '/topology:topologies/segment-routing';
+export const service = 'segment-routing';
 const flexAlgo = 'flex-algo';
 
 const selection = {
@@ -27,29 +28,30 @@ const srgb = {
   'srgb/upper-bound': 'Upper Bound'
 };
 
-export function useQuery(itemSelector) {
+export function useQuery(itemSelector, managed) {
   return useQueryQuery({
-    xpathExpr: path,
+    xpathExpr: getPath(service, managed),
     selection: [
       'igp',
       'deref(igp)/../topology',
       ...Object.keys(selection),
       ...Object.keys(srgb),
       ...Object.keys(srv6) ],
+    tag: 'managed-topology'
   }, itemSelector ? { selectFromResult: itemSelector } : undefined);
 }
 
 export function useFetchStatus() {
   return useMemoizeWhenFetched({
-    'Segment Routing Services': useQueryState(path),
-    'Flex Algos': useQueryState(`${path}/${flexAlgo}`)
+    'Segment Routing Services': useQueryState(service),
+    'Flex Algos': useQueryState(`${service}/${flexAlgo}`)
   });
 }
 
 export const Component = React.memo(function Component({ name }) {
   console.debug('SegmentRouting Render');
 
-  const { data } = useQuery(selectItem('name', name));
+  const [ data, serviceKeypath ] = useData(useQuery, name);
   const selector = useMemo(() => createItemsSelector('igp', name), [ name ]);
   const { keypath, topology } = data;
 
@@ -57,6 +59,7 @@ export const Component = React.memo(function Component({ name }) {
     <ServicePane
       key={name}
       title={`IGP ${name}`}
+      serviceKeypath={serviceKeypath}
       { ...{ label, keypath, topology, ...swapLabels(data, selection) }}
     >
       <FieldGroup title="SRGB" { ...swapLabels(data, srgb) } />

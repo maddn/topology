@@ -12,7 +12,7 @@ import { isFetching } from 'api/query';
 
 
 function NodeListWrapper({
-  title, label, path, level, disableCreate, fetching, newItemDefaults, children
+  title, label, keypath, level, disableCreate, fetching, newItemDefaults, children
 }) {
   console.debug('NodeListWrapper Render');
 
@@ -55,7 +55,7 @@ function NodeListWrapper({
               />
               <NewItem
                 btnRef={btnRef}
-                path={path}
+                path={keypath}
                 label={`${label} Name`}
                 isOpen={newItemOpen}
                 close={closeNewItem}

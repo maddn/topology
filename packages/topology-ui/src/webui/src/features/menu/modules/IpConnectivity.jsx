@@ -6,13 +6,14 @@ import FieldGroup from '../../common/FieldGroup';
 import DroppableNodeList from '../panels/DroppableNodeList';
 import CreatableService from '../panels/CreatableService';
 
-import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
-         selectItem, createItemsSelector } from 'api/query';
+import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
+         createItemsSelector } from 'api/query';
+import { getPath, useQueryState, useData } from '../panels/ServiceList';
 
-const topologyPath = '/topology:topologies/topology';
-const ipConnectivity = 'ip-connectivity';
+const service = 'topology/ip-connectivity';
+const queryKey = 'ip-connectivity';
+
 const loopbackInterfaces = 'loopback-interfaces/loopback';
-const path = `${topologyPath}/${ipConnectivity}`;
 
 const selection = {
   'boolean(ipv6)': 'IPv6'
@@ -26,19 +27,21 @@ const physicalInterfaces = {
 
 export function useFetchStatus() {
   return useMemoizeWhenFetched({
-    'IP Connectivity Services': useQueryState(path),
-    'Loopback Interfaces': useQueryState(`${path}/${loopbackInterfaces}`)
+    'IP Connectivity Services': useQueryState(service, queryKey),
+    'Loopback Interfaces': useQueryState(`${service}/${loopbackInterfaces}`)
   });
 }
 
-export function useQuery(itemSelector) {
+export function useQuery(itemSelector, managed) {
   return useQueryQuery({
-    xpathExpr: path,
+    xpathExpr: getPath(!managed && service, managed),
+    queryKey,
     selection: [
-      '../name',
+      managed ? 'topology' : '../name',
       'ipv6',
       ...Object.keys(selection),
       ...Object.keys(physicalInterfaces) ],
+    tag: 'managed-topology'
   }, { selectFromResult: itemSelector });
 }
 
@@ -46,17 +49,29 @@ export function Component({ topology }) {
   console.debug('IpConnectivity Render');
 
   const label = 'IP Connectivity Service';
-  const keypath = `${topologyPath}{${topology}}/${ipConnectivity}`;
+  const [ data, tmpKp ] = useData(useQuery, topology, 'ipv6', 'parentName');
+  const isManaged = data && 'name' in data;
 
-  const { data } = useQuery(selectItem('parentName', topology));
-  const selector = useMemo(() => createItemsSelector('parentName', topology), [ topology ]);
+  // This service keypath may not be returned by the query when there are no
+  // values (not possible in any other services since they have keys).
+  // Need to calculate the keypaths explicitly.
+  const serviceKeypath = isManaged ? tmpKp :
+    `${getPath('topology')}{${topology}}/ip-connectivity`;
+  const keypath = isManaged ? data.keypath : serviceKeypath;
+
+  const selector = useMemo(() => createItemsSelector(
+    isManaged ? 'topology' : 'parentName', topology), [ isManaged, topology ]);
 
   return (data ?
-    <ServicePane { ...{ label, keypath, ...swapLabels(data, selection) } }>
+    <ServicePane
+      disableDelete={isManaged}
+      { ...{ label, keypath, serviceKeypath, queryKey,
+        ...swapLabels(data, selection) } }
+    >
       <DroppableNodeList
         label="Loopback Interface"
         keypath={`${keypath}/${loopbackInterfaces}`}
-        baseSelect={[ 'id', '../../../name' ]}
+        baseSelect={[ 'id', isManaged ? '../../topology' : '../../../name' ]}
         labelSelect={{
           'ipv4-subnet-start':  'IPv4 Subnet Start',
           'ipv6-subnet-start':  'IPv6 Subnet Start',
