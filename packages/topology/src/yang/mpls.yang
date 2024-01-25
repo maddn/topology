@@ -12,11 +12,6 @@ submodule mpls {
   grouping mpls-service-grouping {
     list mpls {
       key igp;
-      leaf igp {
-        type leafref {
-          path "/topologies/igp/name";
-        }
-      }
 
       uses ncs:service-data;
       ncs:servicepoint mpls;
@@ -26,6 +21,12 @@ submodule mpls {
   }
 
   grouping mpls-grouping {
+    leaf igp {
+      type leafref {
+        path "../../igp/name";
+      }
+    }
+
     leaf ldp {
       type empty;
       tailf:info

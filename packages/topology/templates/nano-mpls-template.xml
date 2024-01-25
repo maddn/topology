@@ -5,12 +5,12 @@
 
   <topologies xmlns="http://example.com/topology">
     <mpls>
-      <igp>{string(igp[1]/name)}</igp>
-      <ldp when="{mpls/ldp}"/>
-      <rsvp when="{mpls/rsvp}"/>
-      <traffic-engineering when="{mpls/traffic-engineering}">
-        <pce when="{mpls/traffic-engineering/pce}">
-          <loopback-id>{mpls/traffic-engineering/pce/loopback-id}</loopback-id>
+      <igp>{mpls[igp=$IGP_NAME]/name}</igp>
+      <ldp when="{ldp}"/>
+      <rsvp when="{rsvp}"/>
+      <traffic-engineering when="{traffic-engineering}">
+        <pce when="{traffic-engineering/pce}">
+          <loopback-id>{traffic-engineering/pce/loopback-id}</loopback-id>
         </pce>
       </traffic-engineering>
     </mpls>

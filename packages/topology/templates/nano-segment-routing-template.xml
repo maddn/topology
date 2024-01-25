@@ -5,18 +5,18 @@
 
   <topologies xmlns="http://example.com/topology">
     <segment-routing>
-      <igp>{string(igp[1]/name)}</igp>
+      <igp>{segment-routing[igp=$IGP_NAME]/name}</igp>
       <srgb>
-        <lower-bound>{segment-routing/srgb/lower-bound}</lower-bound>
-        <upper-bound>{segment-routing/srgb/upper-bound}</upper-bound>
+        <lower-bound>{srgb/lower-bound}</lower-bound>
+        <upper-bound>{srgb/upper-bound}</upper-bound>
       </srgb>
-      <prefix-sid-start>{segment-routing/prefix-sid-start}</prefix-sid-start>
-      <pce when="{segment-routing/pce}"/>
-      <autoroute-profile-id>{segment-routing/autoroute-profile-id}</autoroute-profile-id>
-      <srv6 when="{segment-routing/srv6}">
-        <locator-prefix-start>{segment-routing/srv6/locator-prefix-start}</locator-prefix-start>
+      <prefix-sid-start>{prefix-sid-start}</prefix-sid-start>
+      <pce when="{pce}"/>
+      <autoroute-profile-id>{autoroute-profile-id}</autoroute-profile-id>
+      <srv6 when="{srv6}">
+        <locator-prefix-start>{srv6/locator-prefix-start}</locator-prefix-start>
       </srv6>
-      <flex-algo foreach="{segment-routing/flex-algo}">
+      <flex-algo foreach="{flex-algo}">
         <id>{id}</id>
         <metric-type-delay when="{metric-type-delay}"/>
         <affinity-exclude>{affinity-exclude}</affinity-exclude>

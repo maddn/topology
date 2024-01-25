@@ -16,7 +16,7 @@
             <primary when="{primary}"/>
           </loopback>
         </loopback-interfaces>
-        <physical-interfaces>
+        <physical-interfaces when="{physical-interfaces}">
           <ipv4-subnet-start>{physical-interfaces/ipv4-subnet-start}</ipv4-subnet-start>
           <ipv6-subnet-start>{physical-interfaces/ipv6-subnet-start}</ipv6-subnet-start>
         </physical-interfaces>

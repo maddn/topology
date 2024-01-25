@@ -311,22 +311,26 @@ submodule managed-topology-nano-plan {
         }
       }
 
-      ncs:create-component "'mpls'" {
-        ncs:pre-condition {
-          ncs:monitor "$SERVICE/mpls" {
-            ncs:trigger-expr ".";
+      ncs:multiplier {
+        ncs:foreach "$SERVICE/mpls" {
+          ncs:variable "IGP_NAME" {
+            ncs:value-expr "igp";
+          }
+          ncs:create-component "concat('mpls-', $IGP_NAME)" {
+            ncs:component-type-ref "mpls";
           }
         }
-        ncs:component-type-ref "mpls";
       }
 
-      ncs:create-component "'segment-routing'" {
-        ncs:pre-condition {
-          ncs:monitor "$SERVICE/segment-routing" {
-            ncs:trigger-expr ".";
+      ncs:multiplier {
+        ncs:foreach "$SERVICE/segment-routing" {
+          ncs:variable "IGP_NAME" {
+            ncs:value-expr "igp";
+          }
+          ncs:create-component "concat('segment-routing-', $IGP_NAME)" {
+            ncs:component-type-ref "segment-routing";
           }
         }
-        ncs:component-type-ref "segment-routing";
       }
 
       ncs:multiplier {

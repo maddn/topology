@@ -75,28 +75,17 @@ module topology {
         uses hidden-topology-link;
         uses bgp-grouping;
       }
-      container mpls {
-        must "count(../igp) > 0";
-        presence true;
+      list mpls {
+        key igp;
         uses mpls-grouping;
       }
-      container segment-routing {
-        must "count(../igp) > 0";
-        presence true;
+      list segment-routing {
+        key igp;
         uses segment-routing-grouping;
-        container srv6 {
-          when "../../ipv6";
-          presence true;
-          uses srv6-grouping;
-        }
       }
       container traffic-generator {
         uses hidden-topology-link;
         uses traffic-generator-grouping;
-      }
-      container second-igp {
-        uses hidden-topology-link;
-        uses igp-grouping;
       }
     }
   }

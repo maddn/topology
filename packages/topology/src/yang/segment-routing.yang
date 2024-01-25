@@ -30,28 +30,21 @@ submodule segment-routing {
     list segment-routing {
       tailf:sort-priority 1000;
       key igp;
-      leaf igp {
-        type leafref {
-          path "/topologies/igp/name";
-        }
-      }
 
       uses ncs:service-data;
       ncs:servicepoint segment-routing;
 
       uses segment-routing-grouping;
-
-      container srv6 {
-        when "deref(deref(../igp)/../topology)/../ip-connectivity/ipv6" {
-          tailf:dependency "/topologies/topology/ip-connectivity/ipv6";
-        }
-        presence true;
-        uses srv6-grouping;
-      }
     }
   }
 
   grouping segment-routing-grouping {
+    leaf igp {
+      type leafref {
+        path "../../igp/name";
+      }
+    }
+
     container srgb {
       tailf:info "Segement Routing Global Block.";
       description "These bounds are used to configure the SRGB on each router";
@@ -101,12 +94,17 @@ submodule segment-routing {
         tailf:info "Create an SRv6 locator for the flex-algo";
       }
     }
-  }
 
-  grouping srv6-grouping {
-    leaf locator-prefix-start {
-      type hexadectet;
-      default "fcbb";
+    container srv6 {
+      when "deref(deref(../igp)/../topology)/../ip-connectivity/ipv6" {
+        tailf:dependency "/topologies/topology/ip-connectivity/ipv6";
+      }
+      presence true;
+      leaf locator-prefix-start {
+        type hexadectet;
+        default "fcbb";
+      }
     }
   }
+
 }
