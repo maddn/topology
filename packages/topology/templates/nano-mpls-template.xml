@@ -5,7 +5,7 @@
 
   <topologies xmlns="http://example.com/topology">
     <mpls>
-      <igp>{mpls[igp=$IGP_NAME]/name}</igp>
+      <igp>{mpls[igp=$IGP_NAME]/igp}</igp>
       <ldp when="{ldp}"/>
       <rsvp when="{rsvp}"/>
       <traffic-engineering when="{traffic-engineering}">
