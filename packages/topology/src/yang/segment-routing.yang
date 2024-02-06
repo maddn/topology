@@ -64,9 +64,20 @@ submodule segment-routing {
       tailf:info
         "This value is added to the device ID to calculate the prefix-sid";
     }
-    leaf pce {
-      type empty;
+    container pce {
+      presence true;
       tailf:info "Configure the PCE peer from the base-config service.";
+      list precedence {
+        key peer;
+        leaf peer {
+          type leafref {
+            path "/topologies/base-config/pce/routers";
+          }
+        }
+        leaf value {
+          type uint8;
+        }
+      }
     }
     leaf autoroute-profile-id {
       type uint32;

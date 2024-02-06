@@ -44,6 +44,17 @@ submodule mpls {
       container pce {
         presence true;
         tailf:info "Configure the PCE peer from the base-config service.";
+        list precedence {
+          key peer;
+          leaf peer {
+            type leafref {
+              path "/topologies/base-config/pce/routers";
+            }
+          }
+          leaf value {
+            type uint8;
+          }
+        }
 
         leaf loopback-id {
           type uint8;

@@ -160,21 +160,21 @@
                   <id>{/autoroute-profile-id}</id>
                   <autoroute>
                     <include>
-                      <all/>
+                      <ipv4>
+                        <all/>
+                      </ipv4>
                     </include>
                   </autoroute>
                 </profile>
 
-                <?set-root-node {/}?>
-                <source-address>
-                  <ipv4>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
-                </source-address>
-
                 <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
                 <pce foreach="{routers}">
+                  <?set PRECEDENCE={/pce/precedence[peer=current()]/value}?>
+                  <?set-root-node {/}?>
                   <address>
                     <ipv4>
                       <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
+                      <precedence>{$PRECEDENCE}</precedence>
                       <password when="{../password}">
                         <type>clear</type>
                         <secret>{../password}</secret>
@@ -182,6 +182,11 @@
                     </ipv4>
                   </address>
                 </pce>
+
+                <?set-root-node {/}?>
+                <source-address>
+                  <ipv4>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$PRIMARY_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+                </source-address>
               </pcc>
             </traffic-eng>
 

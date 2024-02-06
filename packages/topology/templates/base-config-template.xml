@@ -65,7 +65,6 @@
           <login>{/login-banner}</login>
         </banner>
 -->
-
         <logging when="{/logging}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <trap>informational</trap>
           <events>
@@ -340,6 +339,7 @@
               <name>snmp linkup</name>
             </traps-list>
           </traps>
+          <packetsize>4096</packetsize>
         </snmp-server>
 
 
@@ -580,12 +580,22 @@
               </password>
             </user>
           </api>
-          <state-sync>
+          <?foreach {../routers[.!=current()]}?>
             <?set-root-node {/}?>
-            <ipv4 foreach="{../routers[.!=current()]}">
-              <address>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</address>
-            </ipv4>
-          </state-sync>
+            <api>
+              <sibling>
+                <ipv4>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</ipv4>
+              </sibling>
+            </api>
+            <state-sync>
+              <ipv4>
+                <address>{/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip}</address>
+              </ipv4>
+            </state-sync>
+          <?end?>
+          <segment-routing>
+            <strict-sid-only/>
+          </segment-routing>
         </pce>
       </config>
     </device>

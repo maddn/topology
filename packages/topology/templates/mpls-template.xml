@@ -153,19 +153,25 @@
                 <?if {$LOOPBACK_ID=""}?>
                   <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
                 <?end?>
-                <?set-root-node {/}?>
+
                 <peer>
+                  <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
+                  <?foreach {routers}?>
+                    <?set PRECEDENCE={/traffic-engineering/pce/precedence[peer=current()]/value}?>
+                    <?set-root-node {/}?>
+                    <ipv4>
+                      <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
+                      <precedence>{$PRECEDENCE}</precedence>
+                      <password when="{../password}">
+                        <type>clear</type>
+                        <secret>{../password}</secret>
+                      </password>
+                    </ipv4>
+                  <?end?>
+                  <?set-root-node {/}?>
                   <source>
                     <ipv4>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</ipv4>
                   </source>
-                  <?set-context-node {../../base-config[topology=current()/../topology]/pce}?>
-                  <ipv4 foreach="{routers}">
-                    <address>{string(/devices/device[name=current()]/config/interface/Loopback[id=$PCE_LOOPBACK_ID]/ipv4/address/ip)}</address>
-                    <password when="{../password}">
-                      <type>clear</type>
-                      <secret>{../password}</secret>
-                    </password>
-                  </ipv4>
                 </peer>
                 <stateful-client>
                   <instantiation/>

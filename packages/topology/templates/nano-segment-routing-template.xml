@@ -11,7 +11,12 @@
         <upper-bound>{srgb/upper-bound}</upper-bound>
       </srgb>
       <prefix-sid-start>{prefix-sid-start}</prefix-sid-start>
-      <pce when="{pce}"/>
+      <pce when="{pce}">
+        <precedence>
+          <peer>{pce/precedence/peer}</peer>
+          <value>{value}</value>
+        </precedence>
+      </pce>
       <autoroute-profile-id>{autoroute-profile-id}</autoroute-profile-id>
       <srv6 when="{srv6}">
         <locator-prefix-start>{srv6/locator-prefix-start}</locator-prefix-start>
