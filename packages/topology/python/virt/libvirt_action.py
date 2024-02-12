@@ -5,6 +5,8 @@ from ipaddress import IPv4Address
 from time import sleep
 from xml.etree.ElementTree import fromstring, tostring
 from xml.dom.minidom import parseString
+from libvirt import VIR_NETWORK_UPDATE_COMMAND_MODIFY, VIR_NETWORK_SECTION_PORTGROUP
+
 import base64
 import crypt
 import os
@@ -408,29 +410,50 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
         self._templates.load_template('templates', 'network.xml')
 
     def _define_network(self, hypervisor_name, network_id, mac_address,
-            isolated=False, path=None):
+            isolated=False, path=None, delay=None):
+        uuid = ''
         network_name = generate_network_name(network_id)
         bridge_name = generate_bridge_name(network_id)
         libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
-        if network_name not in libvirt.networks:
-            variables = {
-                'network': network_name,
-                'bridge': bridge_name,
-                'mac-address': mac_address,
-                'isolated': 'yes' if isolated else ''}
 
-            network_xml_str = self._templates.apply_template(
-                    'network.xml', variables)
-            self._log.info(f'[{hypervisor_name}] '
-                           f'Defining network {network_name}')
-            self._log.info(network_xml_str)
-            libvirt.conn.networkDefineXML(network_xml_str)
-            get_hypervisor_output_node(self._output,
-                    hypervisor_name).networks.create(network_name)
-            if path:
-                write_node_data(path, [
-                    ('host-bridge', bridge_name),
-                    ('mac-address', mac_address)])
+        if network_name in libvirt.networks:
+            network = libvirt.conn.networkLookupByName(network_name)
+            uuid = network.UUIDString()
+
+        variables = {
+            'uuid': uuid,
+            'network': network_name,
+            'bridge': bridge_name,
+            'mac-address': mac_address,
+            'isolated': 'yes' if isolated else '',
+            'delay': delay if delay else ''}
+
+        network_xml_str = self._templates.apply_template(
+                'network.xml', variables)
+        self._log.info(f'[{hypervisor_name}] '
+                       f'Defining network {network_name}')
+        self._log.info(network_xml_str)
+        libvirt.conn.networkDefineXML(network_xml_str)
+        get_hypervisor_output_node(self._output,
+                hypervisor_name).networks.create(network_name)
+        if path:
+            write_node_data(path, [
+                ('host-bridge', bridge_name),
+                ('mac-address', mac_address)])
+
+    def _update_network(self, hypervisor_name, network_id, mac_address,
+            isolated=False, delay=None):
+        libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
+        network_name = generate_network_name(network_id)
+
+        if network_name in libvirt.networks:
+            self._define_network(hypervisor_name, network_id, mac_address,
+                    isolated=isolated, delay=delay);
+            network = libvirt.conn.networkLookupByName(network_name)
+            network.update(
+                    VIR_NETWORK_UPDATE_COMMAND_MODIFY,
+                    VIR_NETWORK_SECTION_PORTGROUP, -1,
+                    '<portgroup name="dummy"/>')
 
     def _action(self, action, *args): #network_id, path
         hypervisor_name, network_id,  *args = args
@@ -466,7 +489,17 @@ class LinkNetwork(Network):
                 self._hypervisor_mgr.get_device_hypervisor(device_ids[0]),
                 network_id,
                 self._resource_mgr.generate_mac_address(*device_ids),
-                path=link._path)
+                path=link._path,
+                delay=link.libvirt.delay)
+
+    def update(self, link):
+        (network_id, device_ids) = self._network_mgr.get_link_network(link)
+        if network_id:
+            self._update_network(
+                self._hypervisor_mgr.get_device_hypervisor(device_ids[0]),
+                network_id,
+                self._resource_mgr.generate_mac_address(*device_ids),
+                delay=link.libvirt.delay)
 
     def _action(self, action, *args):
         link, = args
@@ -995,6 +1028,9 @@ class Topology():
             sleep(10)
             timer += 10
 
+    def get_link_network_helper(self):
+        return self._link_network
+
 
 class LibvirtAction(Action):
     @Action.action
@@ -1047,3 +1083,29 @@ class LibvirtAction(Action):
             libvirt_topology = Topology(topology, self.log, output, uinfo.username)
 
         run_action(action)
+
+
+class LibvirtNetworkAction(Action):
+    @Action.action
+    def cb_action(self, uinfo, name, kp, input, output, trans):
+        self.log.info('action name: ', name)
+
+        link = maagic.get_node(trans, kp[1:])
+        topology = maagic.get_node(trans, kp[4:])
+        self.log.info(topology._path)
+
+        action = name
+        if name == 'start':
+            action = 'create'
+        elif name == 'stop':
+            action = 'destroy'
+        elif name == 'set-delay':
+            write_node_data(link._path, [('libvirt/delay', input.delay)])
+            action = 'update'
+
+        action_output = output.libvirt_action.create()
+        action_output.action = action
+
+        libvirt_topology = Topology(topology, self.log, output, uinfo.username)
+        libvirt_topology.get_link_network_helper().action(
+                action, action_output, link)

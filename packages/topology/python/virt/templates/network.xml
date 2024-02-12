@@ -1,6 +1,11 @@
 <network>
   <name>${network}</name>
+  <uuid>${uuid}</uuid>
   <bridge name="${bridge}" stp="off"/>
   <mac address="${mac-address}"/>
   <port isolated="${isolated}"/>
+  <portgroup name="dummy"/>
+  <metadata xmlns:topology="http//example.com/topology">
+    <topology:delay>${delay}</topology:delay>
+  </metadata>
 </network>

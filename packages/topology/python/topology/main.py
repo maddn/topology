@@ -8,7 +8,7 @@ from ncs.application import Application
 from ncs.dp import Action
 from _ncs import maapi
 from virt.libvirt_get_objects import LibvirtGetObjects
-from virt.libvirt_action import LibvirtAction
+from virt.libvirt_action import LibvirtAction, LibvirtNetworkAction
 from virt.topology_status import CheckTopologyStatus
 from monitor.operational_status import OperationalStateMonitor
 from monitor.console_activity import ConsoleActivityMonitor
@@ -81,6 +81,7 @@ class Main(Application):
         self.log.info('Main RUNNING')
         self.register_action('libvirt-get-objects', LibvirtGetObjects)
         self.register_action('libvirt-action', LibvirtAction)
+        self.register_action('libvirt-network-action', LibvirtNetworkAction)
         self.register_action('check-topology-status', CheckTopologyStatus)
         self.register_action('operational-state-monitor', OperationalStateMonitor)
         self.register_action('console-activity-monitor', ConsoleActivityMonitor)

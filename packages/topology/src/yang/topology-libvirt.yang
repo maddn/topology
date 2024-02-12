@@ -54,6 +54,40 @@ submodule topology-libvirt {
             type string;
           }
         }
+        container libvirt {
+          action start {
+            tailf:actionpoint libvirt-network-action;
+            output {
+              uses libvirt-action-output-grouping;
+            }
+          }
+          action stop {
+            tailf:actionpoint libvirt-network-action;
+            output {
+              uses libvirt-action-output-grouping;
+            }
+          }
+          action update {
+            tailf:actionpoint libvirt-network-action;
+            output {
+              uses libvirt-action-output-grouping;
+            }
+          }
+          action set-delay {
+            tailf:actionpoint libvirt-network-action;
+            input {
+              leaf delay {
+                type int32;
+              }
+            }
+            output {
+              uses libvirt-action-output-grouping;
+            }
+          }
+          leaf delay {
+            type int32;
+          }
+        }
       }
 
       augment "topology/networks/network/devices/device/interface" {

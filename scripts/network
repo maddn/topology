@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [[ $2 != "updated" ]]; then
+ exit 0;
+fi
+
+network_xml=$(cat /etc/libvirt/qemu/networks/$1.xml)
+
+delay=${network_xml##*<ns0:delay>}
+delay=${delay%%</ns0:delay>*}
+
+bridge=${network_xml##*bridge name=\'}
+bridge=${bridge%%\'*}
+
+brctl=$(brctl show $bridge)
+
+interface1=${brctl##*[[:space:]]}
+interface2=${brctl%[^[:blank:]]*$interface1}
+interface2=${interface2##*[[:space:]]}
+
+if [[ $delay == ?(-)+([[:digit:]]) && $delay -gt 0 ]]; then
+  tc qdisc change dev $interface1 root netem delay $(($delay/2))ms
+  tc qdisc change dev $interface2 root netem delay $(($delay/2))ms
+else
+  tc qdisc change dev $interface1 root noqueue
+  tc qdisc change dev $interface2 root noqueue
+fi
+
+tc qdisc show dev $interface1 root >> /tmp/network.out
+tc qdisc show dev $interface2 root >> /tmp/network.out
