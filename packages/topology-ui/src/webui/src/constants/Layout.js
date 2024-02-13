@@ -7,6 +7,7 @@ export const DASHBOARD_URL = '/webui-one/Dashboard';
 export const DEVICE_MANAGER_URL = '/webui-one/DeviceManager';
 export const SERVICE_MANAGER_URL = '/webui-one/ServiceManager';
 export const PACKAGE_UPGRADE_URL = '/webui-one/PackageUpgrade';
+export const INSIGHTS_MANAGER_URL = '/webui-one/InsightsManager';
 export const LOGIN_URL = '/login.html';
 
 export const ICON_INITIAL_MAX_SIZE_PC = 10;

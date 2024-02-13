@@ -49,3 +49,13 @@ xmlstarlet edit \
     --inplace -N x=http://tail-f.com/yang/tailf-ncs-config \
     --subnode '/x:ncs-config/x:japi' --type elem --name 'query-timeout' --value 'PT600S' \
     $CONF_FILE
+
+# disable validate-utf8 (otherwise generates errors even with valid utf-8 strings)
+xmlstarlet edit \
+    --inplace -N x=http://tail-f.com/yang/tailf-ncs-config \
+    --subnode '/x:ncs-config' --type elem --name 'validate-utf8' \
+    $CONF_FILE
+xmlstarlet edit \
+    --inplace -N x=http://tail-f.com/yang/tailf-ncs-config \
+    --subnode '/x:ncs-config/x:validate-utf8' --type elem --name 'enabled' --value 'false' \
+    $CONF_FILE

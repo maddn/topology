@@ -73,6 +73,10 @@ class WebuiOne extends PureComponent {
         href  : Layout.PACKAGE_UPGRADE_URL,
         title : 'Package upgrade',
         abbreviation   : 'P'
+      }, {
+        href  : Layout.INSIGHTS_MANAGER_URL,
+        title : 'Insights manager',
+        abbreviation   : 'I'
       }]
     };
   }

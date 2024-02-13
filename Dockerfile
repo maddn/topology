@@ -1,4 +1,4 @@
-FROM debian:bullseye AS nso-build
+FROM debian:bookworm AS nso-build
 
 ARG USER_NAME=cisco
 ARG PASSWORD=cisco
@@ -32,7 +32,7 @@ RUN apt-get update \
      vim-tiny \
      xsltproc \
      xmlstarlet \
-  && pip3 install libvirt-python passlib pycdlib pyfatfs pyyaml setproctitle \
+  && pip3 install --break-system-packages libvirt-python passlib pycdlib pyfatfs pyyaml setproctitle \
   && apt-get -qy purge pkg-config python3-pip python3-dev \
   && apt-get -qy autoremove \
   && apt-get clean \
