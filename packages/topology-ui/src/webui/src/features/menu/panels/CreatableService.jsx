@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import Accordion from '../../common/Accordion';
 import InlineBtn from '../../common/buttons/InlineBtn';
 
-import { CONFIGURATION_EDITOR_URL } from 'constants/Layout';
+import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 import * as IconTypes from 'constants/Icons';
 
 import { getOpenService, serviceToggled } from '../menuSlice';
@@ -22,7 +22,7 @@ function CreatableService({ label, keypath }) {
   const [ create ] = useCreateMutation();
   const createNode = useCallback(() => {
     create({ keypath });
-    dispatch(stopThenGoToUrl(CONFIGURATION_EDITOR_URL + keypath));
+    dispatch(stopThenGoToUrl(CONFIGURATION_EDITOR_EDIT_URL + keypath));
   });
 
   const isOpen = useSelector((state) => getOpenService(state) === keypath);

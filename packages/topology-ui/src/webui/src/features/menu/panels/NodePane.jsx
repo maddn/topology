@@ -2,7 +2,7 @@ import React from 'react';
 import { Fragment, memo, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 
-import { CONFIGURATION_EDITOR_URL } from 'constants/Layout';
+import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 import * as IconTypes from 'constants/Icons';
 
 import FieldGroup from '../../common/FieldGroup';
@@ -27,7 +27,7 @@ const NodePane = memo(function NodePane({
   const dispatch = useDispatch();
   const goToNode = useCallback((event) => {
     event.stopPropagation();
-    dispatch(stopThenGoToUrl(CONFIGURATION_EDITOR_URL + keypath));
+    dispatch(stopThenGoToUrl(CONFIGURATION_EDITOR_EDIT_URL + keypath));
   });
 
   const [ deletePath ] = useDeletePathMutation();

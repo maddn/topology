@@ -4,7 +4,7 @@ import { PureComponent, createRef } from 'react';
 import { connect } from 'react-redux';
 import classNames from 'classnames';
 
-import { CONFIGURATION_EDITOR_URL } from 'constants/Layout';
+import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 import * as IconTypes from 'constants/Icons';
 
 import InlineBtn from './buttons/InlineBtn';
@@ -42,7 +42,7 @@ class NewItem extends PureComponent {
       await this.processDefaults(keypath, defaults || []);
       this.setState({ value: '' });
       close();
-      stopThenGoToUrl(CONFIGURATION_EDITOR_URL + keypath);
+      stopThenGoToUrl(CONFIGURATION_EDITOR_EDIT_URL + keypath);
     }
   };
 

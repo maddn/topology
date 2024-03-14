@@ -1,7 +1,7 @@
 import { useContext, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 
-import { CONFIGURATION_EDITOR_URL } from 'constants/Layout';
+import { CONFIGURATION_EDITOR_ACTIONS_URL } from 'constants/Layout';
 
 import { getExpandedIcons,
          getVisibleUnderlays, getZoomedContainer } from './topologySlice';
@@ -103,5 +103,5 @@ export const libvirtAction = (action, device) => async (dispatch, getState) => {
   const actionPath = `${openTopology}/libvirt/${action}`;
   await dispatch(setValue.initiate({
     actionPath, leaf: 'device', value: device}));
-  dispatch(stopThenGoToUrl(`${CONFIGURATION_EDITOR_URL}${actionPath}`));
+  dispatch(stopThenGoToUrl(`${CONFIGURATION_EDITOR_ACTIONS_URL}${actionPath}`));
 };

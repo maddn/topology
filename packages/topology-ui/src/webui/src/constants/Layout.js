@@ -1,7 +1,9 @@
 export const TITLE = 'Topology';
 
-export const COMMIT_MANAGER_URL = '/webui-one/CommitManager';
 export const CONFIGURATION_EDITOR_URL = '/webui-one/ConfigurationEditor';
+export const CONFIGURATION_EDITOR_EDIT_URL = `${CONFIGURATION_EDITOR_URL}/edit-config/containers/widgets`;
+export const CONFIGURATION_EDITOR_ACTIONS_URL = `${CONFIGURATION_EDITOR_URL}/actions/none/widgets`;
+export const COMMIT_MANAGER_URL = '/webui-one/CommitManager';
 export const ALARM_MANAGER_URL = '/webui-one/AlarmManager';
 export const DASHBOARD_URL = '/webui-one/Dashboard';
 export const DEVICE_MANAGER_URL = '/webui-one/DeviceManager';
