@@ -15,6 +15,8 @@ import BtnShowUnderlay from './BtnShowUnderlay';
 import BtnDefineIcon from './BtnDefine';
 import BtnUndefineIcon from './BtnUndefine';
 import BtnStartIcon from './BtnStart';
+import BtnRestartIcon from './BtnRestart';
+import BtnResetIcon from './BtnReset';
 import BtnStopIcon from './BtnStop';
 
 const getBtnIcon = (type, size) => {
@@ -45,6 +47,10 @@ const getBtnIcon = (type, size) => {
       return <BtnUndefineIcon size={size}/>;
     case IconTypes.BTN_START:
       return <BtnStartIcon size={size}/>;
+    case IconTypes.BTN_RESTART:
+      return <BtnRestartIcon size={size}/>;
+    case IconTypes.BTN_RESET:
+      return <BtnResetIcon size={size}/>;
     case IconTypes.BTN_STOP:
       return <BtnStopIcon size={size}/>;
   }

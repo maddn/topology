@@ -6,15 +6,19 @@ import * as IconTypes from '../../constants/Icons';
 
 import hljs from 'highlight.js';
 
+import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 import Accordion from '../common/Accordion';
 import InlineBtn from '../common/buttons/InlineBtn';
 
 import { handleError } from '../nso/nsoSlice';
 import { action } from '../../api/data';
+import { stopThenGoToUrl } from 'api/comet';
 import { libvirtAction } from '../topology/hooks';
 
 
-const mapDispatchToProps = { handleError, libvirtAction, action: action.initiate };
+const mapDispatchToProps = {
+  HandleError, stopThenGoToUrl, libvirtAction, action: action.initiate
+};
 
 const trim = (configLines) => {
   const indent = configLines.length > 0 ? configLines[0].search(/\S/) : 0;
@@ -108,10 +112,11 @@ class Config extends PureComponent {
       serviceMetaData: false
     };
     this.libvirtAction = this.libvirtAction.bind(this);
+    this.goToDevice = this.goToDevice.bind(this);
   }
 
   async componentDidMount() {
-    this.getConfig(undefined);
+    this.props.managed && this.getConfig(undefined);
   }
 
   async getConfig(format) {
@@ -160,6 +165,12 @@ class Config extends PureComponent {
     event.stopPropagation();
     const { device, libvirtAction } = this.props;
     libvirtAction(action, device);
+  }
+
+  async goToDevice(event, action) {
+    event.stopPropagation();
+    const { keypath, stopThenGoToUrl } = this.props;
+    stopThenGoToUrl(`${CONFIGURATION_EDITOR_EDIT_URL}${keypath}`);
   }
 
   highlightService(highlightedConfig) {
@@ -240,22 +251,29 @@ class Config extends PureComponent {
 
   render() {
     console.debug('Config Render');
-    const { device } = this.props;
+    const { device, managed } = this.props;
     const { format, serviceMetaData, isFetching, config } = this.state;
 
     return (
       <Accordion
         level="1"
         right={true}
-        startOpen={true}
+        startOpen={managed}
         variableHeight={true}
         header={<Fragment>
-          <span className="config-viewer__title-text">{device}</span>{
-          isFetching && <div className="loading__dots">
+          <span className="config-viewer__title-text">{device}{
+            !managed && ' (unmanaged)'}</span>
+          {isFetching && <div className="loading__dots">
             <span className="loading__dot"/>
             <span className="loading__dot"/>
             <span className="loading__dot"/>
           </div>}
+          <InlineBtn
+            type={IconTypes.BTN_GOTO}
+            classSuffix="goto"
+            tooltip={'View device in Configuration Editor'}
+            onClick={(event) => this.goToDevice(event)}
+          />
           <InlineBtn
             type={IconTypes.BTN_DEFINE}
             classSuffix="define"
@@ -280,8 +298,20 @@ class Config extends PureComponent {
             tooltip={'Undefine domain on KVM'}
             onClick={(event) => this.libvirtAction(event, 'undefine')}
           />
+          <InlineBtn
+            type={IconTypes.BTN_RESTART}
+            classSuffix="restart"
+            tooltip={'Reboot domain on KVM'}
+            onClick={(event) => this.libvirtAction(event, 'reboot')}
+          />
+          <InlineBtn
+            type={IconTypes.BTN_RESET}
+            classSuffix="hard-reset"
+            tooltip={'Hard reset domain on KVM (undefine and restart)'}
+            onClick={(event) => this.libvirtAction(event, 'hard-reset')}
+          />
         </Fragment>}>
-        <div className="config-viewer__panel">
+        {managed && <div className="config-viewer__panel">
           <div className="config-viewer__btn-row">
             {this.btn('cli', 'cli', 'Format configuration as Cisco-style CLI')}
             {this.btn('cb', 'curly-braces',
@@ -318,7 +348,7 @@ class Config extends PureComponent {
             className="loading__overlay"
             style={{ opacity: isFetching | 0 }}
           />
-        </div>
+        </div>}
       </Accordion>
     );
   }

@@ -26,6 +26,8 @@ export const BTN_DEFINE = 'btn-define';
 export const BTN_UNDEFINE = 'btn-undefine';
 export const BTN_START = 'btn-start';
 export const BTN_STOP = 'btn-stop';
+export const BTN_RESTART = 'btn-restart';
+export const BTN_RESET = 'btn-reset';
 
 // Other
 export const LABEL_FONT = '0.875em CiscoSansLight';
