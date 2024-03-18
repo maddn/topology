@@ -12,6 +12,7 @@ export const getVisibleUnderlays = state => state.topology.visibleUnderlays;
 export const getZoomedContainer = state => state.topology.zoomedContainer;
 export const getEditMode = state => state.topology.editMode;
 export const getConfigViewerVisible = state => state.topology.configViewerVisible;
+export const getLinkMetricsVisible = state => state.topology.linkMetricsVisible;
 export const getIconSize = state => state.topology.iconSize;
 export const getHighlightedIcons = state => state.topology.highlightedIcons;
 
@@ -24,7 +25,8 @@ const topologySlice = createSlice({
     dimensions: { width: 0, height: 0 },
     expandedIcons: [],
     visibleUnderlays: [],
-    editMode: false
+    editMode: false,
+    linkMetricsVisible: false
   },
   reducers: {
     dimensionsChanged: (state, action) => {
@@ -82,6 +84,10 @@ const topologySlice = createSlice({
       state.configViewerVisible = payload;
     },
 
+    linkMetricsToggled: (state, { payload }) => {
+      state.linkMetricsVisible = payload;
+    },
+
     iconSizeChanged: (state, action) => {
       state.iconSize = action.payload;
     }
@@ -100,5 +106,6 @@ export const {
   dimensionsChanged, itemDragged, iconHovered,
   connectionSelected, iconSelected, iconExpandToggled,
   underlayToggled, containerZoomToggled,
-  editModeToggled, configViewerToggled, iconSizeChanged } = actions;
+  editModeToggled, configViewerToggled, linkMetricsToggled,
+  iconSizeChanged } = actions;
 export default reducer;

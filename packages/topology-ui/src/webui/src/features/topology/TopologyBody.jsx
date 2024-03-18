@@ -55,12 +55,16 @@ const TopologyBody = React.memo(function TopologyBody () {
             />
             <div className="topology__layer">
               {devices.data && connections.data?.map(
-                ({ keypath, aEndDevice, zEndDevice }) =>
+                ({ keypath, aEndDevice, zEndDevice,
+                   igpMetric, teMetric, delayMetric }) =>
                   <Connection
                     key={`${aEndDevice} - ${zEndDevice}`}
                     keypath={keypath}
                     aEndDevice={aEndDevice}
                     zEndDevice={zEndDevice}
+                    igp={igpMetric}
+                    te={teMetric}
+                    delay={delayMetric}
                   />
               )}
               {devices.data?.map(({ id, name }) =>

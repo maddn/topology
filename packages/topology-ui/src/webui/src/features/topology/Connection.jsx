@@ -4,20 +4,23 @@ import { memo,
 import { useSelector, useDispatch } from 'react-redux';
 import classNames from 'classnames';
 
-import { BTN_DRAG, BTN_DELETE } from 'constants/Icons';
+import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
+import { BTN_DRAG, BTN_DELETE, BTN_GOTO } from 'constants/Icons';
 import { CIRCLE_ICON_RATIO, LINE_ICON_RATIO } from 'constants/Layout.js';
 
 import Interface from './Interface';
 import RoundButton from './RoundButton';
+import ConnectionInfo from './ConnectionInfo';
 
 import { getDraggedItem, getSelectedConnection, getEditMode,
-         connectionSelected } from './topologySlice';
+         getLinkMetricsVisible, connectionSelected } from './topologySlice';
 
 import { useIconPosition, useIsExpanded, useOpenTopologyName } from './hooks';
 
 import { LayoutContext } from './LayoutContext';
 import { useDevice } from './Icon';
 
+import { stopThenGoToUrl } from 'api/comet';
 import { useQueryQuery, createItemsSelector } from 'api/query';
 import { useDeletePathMutation } from 'api/data';
 
@@ -28,7 +31,8 @@ export function useConnectionsQuery() {
   const topology = useOpenTopologyName();
   return useQueryQuery({
     xpathExpr: '/topology:topologies/topology/links/link',
-    selection: [ '../../name', 'a-end-device', 'z-end-device' ]
+    selection: [ '../../name', 'a-end-device', 'z-end-device',
+                 'igp-metric', 'te-metric', 'delay-metric' ]
   }, { selectFromResult: useMemo(() =>
     createItemsSelector('parentName', topology), [ topology ])
   });
@@ -66,7 +70,8 @@ function lineAngle({ x1, y1, x2, y2 }) {
 
 // === Component ==============================================================
 
-const Connection = memo(function Connection({ keypath, aEndDevice, zEndDevice }) {
+const Connection = memo(function Connection({
+    keypath, aEndDevice, zEndDevice, igp, te, delay }) {
   console.debug('Connection Render');
 
   const dispatch = useDispatch();
@@ -74,6 +79,7 @@ const Connection = memo(function Connection({ keypath, aEndDevice, zEndDevice })
 
   const layout = useContext(LayoutContext);
 
+  const linkMetricsVisible = useSelector((state) => getLinkMetricsVisible(state));
   const editMode = useSelector((state) => getEditMode(state));
   const dragging = useSelector((state) => {
     const draggedItem = getDraggedItem(state);
@@ -95,7 +101,12 @@ const Connection = memo(function Connection({ keypath, aEndDevice, zEndDevice })
   };
 
   const deleteConn = useCallback(() => {
-    dispatch(deletePath({ keypath }));
+    deletePath({ keypath });
+  }, []);
+
+  const goToConn = useCallback((event) => {
+    event.stopPropagation();
+    dispatch(stopThenGoToUrl(CONFIGURATION_EDITOR_EDIT_URL + keypath));
   }, []);
 
   const { x: x1, y: y1, ...aEndIcon } = useIconPosition(useDevice(aEndDevice));
@@ -183,6 +194,24 @@ const Connection = memo(function Connection({ keypath, aEndDevice, zEndDevice })
         active={selected}
         type={BTN_DELETE}
         tooltip="Delete Connection"
+      />
+      <RoundButton
+        onClick={goToConn}
+        pcX="50"
+        pcY="50"
+        {...p3}
+        hide={!expanded}
+        size={circleSize}
+        active={expanded}
+        type={BTN_GOTO}
+        tooltip="View Connection in Configuration Editor"
+      />
+      <ConnectionInfo
+        actualLineAngle={actualLineAngle}
+        hide={!linkMetricsVisible || expanded}
+        igp={igp}
+        te={te}
+        delay={delay}
       />
     </div>
   );

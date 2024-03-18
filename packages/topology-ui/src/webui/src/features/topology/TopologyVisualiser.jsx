@@ -8,8 +8,11 @@ import TopologyBody from './TopologyBody';
 import ToggleButton from './ToggleButton';
 import IconSizeSlider from './IconSizeSlider';
 
-import { getDraggedItem, getEditMode, getConfigViewerVisible,
-         editModeToggled, configViewerToggled } from './topologySlice';
+import { getDraggedItem,
+         getEditMode, editModeToggled,
+         getConfigViewerVisible, configViewerToggled,
+         getLinkMetricsVisible, linkMetricsToggled
+} from './topologySlice';
 
 
 function TopologyVisualiser () {
@@ -19,6 +22,8 @@ function TopologyVisualiser () {
   const editMode = useSelector((state) => getEditMode(state));
   const configViewerVisible = useSelector((state) =>
     getConfigViewerVisible(state));
+  const linkMetricsVisible = useSelector((state) =>
+    getLinkMetricsVisible(state));
 
   const dispatch = useDispatch();
 
@@ -40,6 +45,11 @@ function TopologyVisualiser () {
           handleToggle={(value) => {dispatch(configViewerToggled(value));}}
           checked={configViewerVisible}
           label="Show Device Config"
+          />
+        <ToggleButton
+          handleToggle={(value) => {dispatch(linkMetricsToggled(value));}}
+          checked={linkMetricsVisible}
+          label="Show Link Metrics"
           />
         <IconSizeSlider/>
         <div className={classNames('container__layer', 'container__overlay', {
