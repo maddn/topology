@@ -111,11 +111,12 @@ submodule topology-base {
           }
           leaf igp-metric {
             type uint32;
-            default 10;
           }
           leaf te-metric {
             type uint32;
-            default 10;
+          }
+          leaf delay-metric {
+            type uint32;
           }
           leaf affinity {
             type string;

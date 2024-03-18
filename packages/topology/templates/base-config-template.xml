@@ -9,7 +9,7 @@
     <?end?>
   <?endmacro?>
 
-  <?macro InterfaceBaseConfig device_name interface_id lldp=false()?>
+  <?macro InterfaceBaseConfig device_name interface_id delay_metric=false()?>
     <device tags="nocreate">
       <name>{$device_name}</name>
       <config>
@@ -34,6 +34,14 @@
             </cdp>
           </GigabitEthernet>
         </interface>
+        <performance-measurement xmlns="http://tail-f.com/ned/cisco-ios-xr" tags="merge" when="{$delay_metric}">
+          <interface>
+            <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
+            <delay-measurement>
+              <advertise-delay>{$delay_metric}</advertise-delay>
+            </delay-measurement>
+          </interface>
+        </performance-measurement>
       </config>
     </device>
   <?endmacro?>
@@ -445,12 +453,12 @@
       <?expand InterfaceBaseConfig
         device_name=a-end-device
         interface_id=a-end-interface/id
-        lldp=boolean(lldp)
+        delay_metric=delay-metric
       ?>
       <?expand InterfaceBaseConfig
         device_name=z-end-device
         interface_id=z-end-interface/id
-        lldp=boolean(lldp)
+        delay_metric=delay-metric
       ?>
     <?end?>
     <?foreach {deref(topology)/../networks/network}?>
