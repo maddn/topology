@@ -18,7 +18,7 @@ function MenuSidebar() {
       <NodeListWrapper
         title="Topologies"
         label={Topology.label}
-        path={Topology.path}
+        keypath={Topology.path}
         fetching={Topology.useFetchStatus()}
       >
         {Topology.useQuery().data?.map(({ name }) =>

@@ -17,7 +17,7 @@ import { libvirtAction } from '../topology/hooks';
 
 
 const mapDispatchToProps = {
-  HandleError, stopThenGoToUrl, libvirtAction, action: action.initiate
+  handleError, stopThenGoToUrl, libvirtAction, action: action.initiate
 };
 
 const trim = (configLines) => {

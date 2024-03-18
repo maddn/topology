@@ -64,9 +64,13 @@ export function useDevicesQuery() {
 }
 
 export function useDevice(name) {
-  return __useDevicesQuery(selectItemWithArray([
+  const device = __useDevicesQuery(selectItemWithArray([
     [ 'parentName', useOpenTopologyName() ], [ 'name', name ]
   ])).data;
+  if (name && !device) {
+    console.error(`Device ${name} doesn't exist`);
+  }
+  return device;
 }
 
 export function usePlatformsQuery(itemSelector) {
