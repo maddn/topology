@@ -10,6 +10,7 @@ import LoadBalancer from './LoadBalancer';
 import WebServer from './WebServer';
 import Antenna from './Antenna';
 import Cpe from './Cpe';
+import Probe from './Probe';
 import Generic from './Generic';
 
 export default function(props) {
@@ -40,6 +41,8 @@ export default function(props) {
       return <Antenna colour={colour} size={size} />;
     case Icons.CPE:
       return <Cpe colour={colour} size={size} />;
+    case Icons.PROBE:
+      return <Probe colour={colour} size={size} />;
     default:
       return <Generic colour={colour} size={size} />;
   }

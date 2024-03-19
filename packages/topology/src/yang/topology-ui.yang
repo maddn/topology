@@ -20,6 +20,7 @@ submodule topology-ui {
       enum "firewall";
       enum "generic";
       enum "load-balancer";
+      enum "probe";
       enum "router";
       enum "service-chain";
       enum "switch";

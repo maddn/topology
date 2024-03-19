@@ -9,6 +9,7 @@ export const LOAD_BALANCER = 'load-balancer';
 export const WEB_SERVER = 'web-server';
 export const ANTENNA = 'antenna';
 export const CPE = 'cpe';
+export const PROBE = 'probe';
 export const GENERIC = 'generic';
 
 // Button icons
