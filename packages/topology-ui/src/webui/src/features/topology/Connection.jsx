@@ -2,6 +2,7 @@ import React from 'react';
 import { memo,
          useRef, useContext, useEffect, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { createSelector } from '@reduxjs/toolkit';
 import classNames from 'classnames';
 
 import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
@@ -27,15 +28,41 @@ import { useDeletePathMutation } from 'api/data';
 
 // === Queries ================================================================
 
-export function useConnectionsQuery() {
-  const topology = useOpenTopologyName();
+function __useConnectionsQuery(selectFromResult) {
   return useQueryQuery({
     xpathExpr: '/topology:topologies/topology/links/link',
     selection: [ '../../name', 'a-end-device', 'z-end-device',
                  'igp-metric', 'te-metric', 'delay-metric' ]
-  }, { selectFromResult: useMemo(() =>
-    createItemsSelector('parentName', topology), [ topology ])
-  });
+  }, { selectFromResult });
+}
+
+export function useConnectionsQuery() {
+  const topology = useOpenTopologyName();
+  return __useConnectionsQuery(useMemo(() =>
+    createItemsSelector('parentName', topology), [ topology ]));
+}
+
+function getConnectedDevices(topology, device, connections) {
+  return connections?.reduce(
+    (accumulator, { parentName, aEndDevice, zEndDevice }) => {
+      if (parentName === topology && (
+          device === aEndDevice || device === zEndDevice)) {
+        accumulator.push(device === aEndDevice ? zEndDevice : aEndDevice);
+      }
+      return accumulator;
+    }, []
+  );
+}
+
+export function useConnectedDevices(name) {
+  const topology = useOpenTopologyName();
+
+  const selector = useMemo(() => createSelector(
+    result => JSON.stringify(getConnectedDevices(topology, name, result.data) || []),
+    devices => ({ data: JSON.parse(devices) })
+  ), [ name ]);
+
+  return __useConnectionsQuery(selector).data;
 }
 
 

@@ -22,8 +22,8 @@ import { getSelectedIcon, getEditMode, getHighlightedIcons,
          iconExpandToggled } from './topologySlice';
 import { getOpenTopology } from '../menu/menuSlice';
 
-import { useIconPosition, useConnectedDevices, useIsExpanded,
-         useOpenTopologyName,} from './hooks';
+import { useIconPosition, useIsExpanded, useOpenTopologyName } from './hooks';
+import { useConnectedDevices } from './Connection';
 
 import { LayoutContext} from './LayoutContext';
 import { isSafari, connectPngDragPreview } from './DragLayerCanvas';
@@ -200,7 +200,7 @@ const Icon = memo(function Icon ({ name }) {
     collect: (monitor) => ({
       canDrop: monitor.canDrop()
     })
-  }));
+  }), [ connectedDevices ]);
 
   const handleOnClick = () => {
     if (editMode && name ) {

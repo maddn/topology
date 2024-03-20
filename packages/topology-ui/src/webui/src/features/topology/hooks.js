@@ -7,7 +7,6 @@ import { getExpandedIcons,
          getVisibleUnderlays, getZoomedContainer } from './topologySlice';
 import { getOpenTopologyName, getOpenTopology } from '../menu/menuSlice';
 
-import { useConnectionsQuery } from './Connection';
 import { LayoutContext } from './LayoutContext';
 
 import { stopThenGoToUrl } from 'api/comet';
@@ -81,17 +80,6 @@ export function useIconPositionCalculator() {
 
 export function useIsExpanded(name) {
   return useSelector((state) => getExpandedIcons(state)?.includes(name));
-}
-
-export function useConnectedDevices(name) {
-  const { data } = useConnectionsQuery();
-  return data?.reduce(
-    (accumulator, { aEndDevice, zEndDevice }) => {
-      if (name === aEndDevice || name === zEndDevice) {
-        accumulator.push(name === aEndDevice ? zEndDevice : aEndDevice);
-      }
-      return accumulator;
-    }, []);
 }
 
 export function useOpenTopologyName() {
