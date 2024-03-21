@@ -81,6 +81,14 @@ submodule topology-ui {
 
   grouping topology-layout-grouping {
     container layout {
+      leaf background-offset {
+        type enumeration {
+          enum odd;
+          enum even;
+          enum none;
+        }
+      }
+
       list container {
         key hypervisor;
         ordered-by user;

@@ -27,8 +27,21 @@ export function useLayoutsQuery() {
   }, { selectFromResult: selector });
 }
 
+export function useLayoutOffsetQuery() {
+  const topology = useOpenTopologyName();
+  const selector = useMemo(() =>
+    createItemsSelector('parentName', topology), [ topology ]);
+  return useQueryQuery({
+    xpathExpr: '/topology:topologies/topology/layout',
+    selection: [
+      '../name',
+      'background-offset' ]
+  }, { selectFromResult: selector });
+}
+
 const calculateLayout = (
-  basicLayout, dimensions, iconHeightPc, iconWidthPc, zoomedContainerName
+  basicLayout, dimensions,
+  iconHeightPc, iconWidthPc, zoomedContainerName, backgroundOffsetPc
 ) => {
   console.debug('Reselect layout');
   if (!basicLayout || !dimensions) {
@@ -59,12 +72,12 @@ const calculateLayout = (
       width: width - iconWidthPc,
       height: 100 - iconHeightPc * 1.5,
       backgroundWidth: (index === 0)
-        ? width + iconWidthPc / 4
+        ? width - backgroundOffsetPc / 4
         : (index === (basicLayout.length - 1))
-          ? width - iconWidthPc / 4
+          ? width - backgroundOffsetPc / 4
           : (index % 2)
-            ? width - iconWidthPc / 2
-            : width + iconWidthPc / 2
+            ? width + backgroundOffsetPc / 2
+            : width - backgroundOffsetPc / 2
     };
     accumulator[name] = {
       name, index, title, connectionColour, pc,
@@ -86,6 +99,8 @@ export const LayoutContextProvider = React.memo(function Context({ children }) {
   const iconSize = useSelector((state) => getIconSize(state));
 
   const { data } = useLayoutsQuery();
+  const { data: offset } = useLayoutOffsetQuery();
+  const { backgroundOffset } = offset?.length > 0 ? offset[0] : 'none';
 
   const context = useMemo(() => {
     const { width, height } = dimensions || {};
@@ -93,8 +108,12 @@ export const LayoutContextProvider = React.memo(function Context({ children }) {
     const iconHeightPc = height > width ? iconSize*width/height : iconSize;
     const iconWidthPc = width > height ? iconSize*height/width : iconSize;
 
-    const containers = calculateLayout(data,
-      dimensions, iconHeightPc, iconWidthPc, zoomedContainerName);
+    const backgroundOffsetPc = 0 +
+      (backgroundOffset === 'odd' ? iconWidthPc : 0) -
+      (backgroundOffset === 'even' ? iconWidthPc : 0);
+
+    const containers = calculateLayout(data, dimensions,
+      iconHeightPc, iconWidthPc, zoomedContainerName, backgroundOffsetPc);
 
     const pxToScreenPc = ({ x, y }) => ({
       pcX: x / width * 100,
