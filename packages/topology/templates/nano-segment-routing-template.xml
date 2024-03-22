@@ -11,6 +11,7 @@
         <upper-bound>{srgb/upper-bound}</upper-bound>
       </srgb>
       <prefix-sid-start>{prefix-sid-start}</prefix-sid-start>
+      <prefix-sid-strict-spf-start>{prefix-sid-strict-spf-start}</prefix-sid-strict-spf-start>
       <pce when="{pce}">
         <precedence>
           <peer>{pce/precedence/peer}</peer>

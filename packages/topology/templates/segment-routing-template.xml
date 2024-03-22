@@ -105,6 +105,13 @@
                         <prefix-sid>
                           <absolute>{number(/prefix-sid-start) + number($DEVICE_ID)}</absolute>
                         </prefix-sid>
+                        <prefix-sid-strict-spf when="{/prefix-sid-strict-spf-start}">
+                          <prefix-sid>
+                            <strict-spf>
+                              <absolute>{number(/prefix-sid-strict-spf-start) + number($DEVICE_ID)}</absolute>
+                            </strict-spf>
+                          </prefix-sid>
+                        </prefix-sid-strict-spf>
                         <prefix-sid-algorithm>
                           <prefix-sid>
                             <?set FLEX_ALGO_INDEX=1?>

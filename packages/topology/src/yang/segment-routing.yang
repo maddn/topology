@@ -64,6 +64,12 @@ submodule segment-routing {
       tailf:info
         "This value is added to the device ID to calculate the prefix-sid";
     }
+    leaf prefix-sid-strict-spf-start {
+      type sid;
+      default 17000;
+      tailf:info
+        "Same as prefix-sid-start, but calculates strict-spf";
+    }
     container pce {
       presence true;
       tailf:info "Configure the PCE peer from the base-config service.";
