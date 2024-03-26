@@ -8,6 +8,7 @@
       <igp>{mpls[igp=$IGP_NAME]/igp}</igp>
       <ldp when="{ldp}"/>
       <rsvp when="{rsvp}"/>
+      <oam when="{oam}"/>
       <traffic-engineering when="{traffic-engineering}">
         <pce when="{traffic-engineering/pce}">
           <loopback-id>{traffic-engineering/pce/loopback-id}</loopback-id>

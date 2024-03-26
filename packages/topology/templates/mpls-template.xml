@@ -23,6 +23,8 @@
               </attribute-names>
             </interface>
           </traffic-eng>
+
+          <oam when="{/oam}"/>
         </mpls>
 
         <rsvp xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{/rsvp}">

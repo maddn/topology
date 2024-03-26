@@ -37,6 +37,10 @@ submodule mpls {
       tailf:info
         "Enable RSVP on each interface connected to another device in the IGP.";
     }
+    leaf oam {
+      type empty;
+      tailf:info "Enabled MPLS OAM.";
+    }
     container traffic-engineering {
       presence true;
       tailf:info
