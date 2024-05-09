@@ -63,6 +63,17 @@
   visibility: hidden;
 }
 
+.btn--console,
+.btn--console-connected,
+.btn--console-disconnect {
+  margin-left: -0.5em;
+  margin-right: 0.5em;
+}
+
+.btn--console-connected {
+  color: var(--danger);
+}
+
 /* Colours */
 
 .btn--active,
@@ -92,7 +103,8 @@
 .btn__inline.btn--cancel:hover,
 .btn__inline.btn--delete:hover,
 .btn__inline.btn--stop:hover,
-.btn__inline.btn--undefine:hover {
+.btn__inline.btn--undefine:hover,
+.btn__inline.btn--console-disconnect:hover {
   background-color: var(--danger) !important;
   border-color: var(--danger);
   color: var(--danger);
@@ -100,7 +112,8 @@
 
 /* White hover on open accordion header */
 .accordion--open > .accordion__header .btn__inline:hover,
-.container__layer > .header > .btn__inline:hover {
+.container__layer > .header > .btn__inline:hover,
+.terminal__viewer-body > .header > .btn__inline:hover {
   background-color: var(--background);
   color: var(--header);
 }
@@ -114,6 +127,7 @@
 .btn__inline:hover.btn__round,
 .btn__inline:hover.btn__round.btn--delete,
 .btn__inline:hover.btn__round.btn--stop,
-.btn__inline:hover.btn__round.btn--undefine {
+.btn__inline:hover.btn__round.btn--undefine,
+.btn__inline:hover.btn__round.btn--console-disconnect {
   color: var(--background);
 }

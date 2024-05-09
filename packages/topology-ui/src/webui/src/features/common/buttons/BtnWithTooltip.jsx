@@ -18,6 +18,10 @@ import BtnStartIcon from './BtnStart';
 import BtnRestartIcon from './BtnRestart';
 import BtnResetIcon from './BtnReset';
 import BtnStopIcon from './BtnStop';
+import BtnConsoleIcon from './BtnConsole';
+import BtnConsoleConnectedIcon from './BtnConsoleConnected';
+import BtnConsoleDisconnectIcon from './BtnConsoleDisconnect';
+import BtnHideConsoleViewerIcon from './BtnHideConsoleViewer';
 
 const getBtnIcon = (type, size) => {
   switch (type) {
@@ -53,6 +57,14 @@ const getBtnIcon = (type, size) => {
       return <BtnResetIcon size={size}/>;
     case IconTypes.BTN_STOP:
       return <BtnStopIcon size={size}/>;
+    case IconTypes.BTN_CONSOLE:
+      return <BtnConsoleIcon size={size}/>;
+    case IconTypes.BTN_CONSOLE_CONNECTED:
+      return <BtnConsoleConnectedIcon size={size}/>;
+    case IconTypes.BTN_CONSOLE_DISCONNECT:
+      return <BtnConsoleDisconnectIcon size={size}/>;
+    case IconTypes.BTN_HIDE_CONSOLE_VIEWER:
+      return <BtnHideConsoleViewerIcon size={size}/>;
   }
 };
 

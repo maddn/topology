@@ -7,6 +7,7 @@ import WebuiOne from 'features/nso/WebuiOne';
 import MenuSidebar from 'features/menu/MenuSidebar';
 import TopologyVisualiser from 'features/topology/TopologyVisualiser';
 import ConfigViewer from 'features/config/ConfigViewer';
+import TerminalViewer from 'features/terminal/TerminalViewer';
 
 class App extends PureComponent {
   render() {
@@ -15,7 +16,10 @@ class App extends PureComponent {
       <DndProvider backend={HTML5Backend}>
         <WebuiOne>
           <MenuSidebar/>
-          <TopologyVisualiser/>
+          <div className="centre-pane">
+            <TopologyVisualiser/>
+            <TerminalViewer/>
+          </div>
           <ConfigViewer/>
         </WebuiOne>
       </DndProvider>

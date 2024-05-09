@@ -10,6 +10,8 @@ import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 import Accordion from '../common/Accordion';
 import InlineBtn from '../common/buttons/InlineBtn';
 
+import { getOpenTerminals, terminalToggled,
+         getConsoleViewerHidden } from '../topology/topologySlice';
 import { handleError } from '../nso/nsoSlice';
 import { action } from '../../api/data';
 import { stopThenGoToUrl } from 'api/comet';
@@ -17,7 +19,17 @@ import { libvirtAction } from '../topology/hooks';
 
 
 const mapDispatchToProps = {
-  handleError, stopThenGoToUrl, libvirtAction, action: action.initiate
+  handleError, stopThenGoToUrl, libvirtAction, terminalToggled,
+  action: action.initiate
+};
+
+const mapStateToProps = (state, { device }) => {
+  const openTerminals = getOpenTerminals(state);
+  return ({
+    consoleState: (openTerminals[0] == device) &&
+      !getConsoleViewerHidden(state) ? 'Active' :
+      openTerminals.includes(device) ? 'Connected' : 'Disconnected'
+  });
 };
 
 const trim = (configLines) => {
@@ -113,6 +125,7 @@ class Config extends PureComponent {
     };
     this.libvirtAction = this.libvirtAction.bind(this);
     this.goToDevice = this.goToDevice.bind(this);
+    this.terminalToggled = this.terminalToggled.bind(this);
   }
 
   async componentDidMount() {
@@ -171,6 +184,12 @@ class Config extends PureComponent {
     event.stopPropagation();
     const { keypath, stopThenGoToUrl } = this.props;
     stopThenGoToUrl(`${CONFIGURATION_EDITOR_EDIT_URL}${keypath}`);
+  }
+
+  terminalToggled(event) {
+    event.stopPropagation();
+    const { device, terminalToggled } = this.props;
+    terminalToggled(device);
   }
 
   highlightService(highlightedConfig) {
@@ -247,20 +266,36 @@ class Config extends PureComponent {
     );
   };
 
-
-
   render() {
     console.debug('Config Render');
-    const { device, managed } = this.props;
+    const { device, managed, consoleState } = this.props;
     const { format, serviceMetaData, isFetching, config } = this.state;
 
     return (
       <Accordion
         level="1"
         right={true}
-        startOpen={managed}
+        startOpen={false}
         variableHeight={true}
         header={<Fragment>
+          <InlineBtn
+            type={IconTypes.BTN_CONSOLE}
+            classSuffix={consoleState == 'Disconnected' ? 'console' : 'hidden'}
+            tooltip={'Connect to device console'}
+            onClick={this.terminalToggled}
+          />
+          <InlineBtn
+            type={IconTypes.BTN_CONSOLE_CONNECTED}
+            classSuffix={consoleState == 'Connected' ? 'console-connected' : 'hidden'}
+            tooltip={'Switch to device console'}
+            onClick={this.terminalToggled}
+          />
+          <InlineBtn
+            type={IconTypes.BTN_CONSOLE_DISCONNECT}
+            classSuffix={consoleState == 'Active' ? 'console-disconnect' : 'hidden'}
+            tooltip={'Disconnect from device console'}
+            onClick={this.terminalToggled}
+          />
           <span className="config-viewer__title-text">{device}{
             !managed && ' (unmanaged)'}</span>
           {isFetching && <div className="loading__dots">
@@ -354,4 +389,4 @@ class Config extends PureComponent {
   }
 }
 
-export default connect(null, mapDispatchToProps)(Config);
+export default connect(mapStateToProps, mapDispatchToProps)(Config);

@@ -59,3 +59,9 @@ xmlstarlet edit \
     --inplace -N x=http://tail-f.com/yang/tailf-ncs-config \
     --subnode '/x:ncs-config/x:validate-utf8' --type elem --name 'enabled' --value 'false' \
     $CONF_FILE
+
+xmlstarlet edit \
+    --inplace -N x=http://tail-f.com/yang/tailf-ncs-config \
+    --subnode '/x:ncs-config/x:webui' --type elem --name 'content-security-policy' \
+    --value "default-src 'self'; connect-src 'self' ws:; img-src 'self' data:; block-all-mixed-content; base-uri 'self'; frame-ancestors 'none'" \
+    $CONF_FILE

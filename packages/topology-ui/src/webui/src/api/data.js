@@ -72,12 +72,18 @@ export const dataApi = jsonRpcApi.injectEndpoints({
         transType,
         params: { path, params }
       }),
-      transformResponse: (response) => response?.result.reduce(
-        (accumulator, { name, value }) => {
-          accumulator[name] = value;
-          return accumulator;
-        }, {}
-      )
+      transformResponse: (response) => {
+        if (Array.isArray(response?.result)) {
+          return response?.result.reduce(
+            (accumulator, { name, value }) => {
+              accumulator[name] = value;
+              return accumulator;
+            }, {}
+          )
+        } else {
+          return response?.result;
+        }
+      }
     }),
 
   })

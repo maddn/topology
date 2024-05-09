@@ -15,6 +15,8 @@ export const getConfigViewerVisible = state => state.topology.configViewerVisibl
 export const getLinkMetricsVisible = state => state.topology.linkMetricsVisible;
 export const getIconSize = state => state.topology.iconSize;
 export const getHighlightedIcons = state => state.topology.highlightedIcons;
+export const getOpenTerminals = state => state.topology.openTerminals;
+export const getConsoleViewerHidden = state => state.topology.consoleViewerHidden;
 
 
 // === Reducer ================================================================
@@ -26,7 +28,8 @@ const topologySlice = createSlice({
     expandedIcons: [],
     visibleUnderlays: [],
     editMode: false,
-    linkMetricsVisible: false
+    linkMetricsVisible: false,
+    openTerminals: []
   },
   reducers: {
     dimensionsChanged: (state, action) => {
@@ -90,6 +93,19 @@ const topologySlice = createSlice({
 
     iconSizeChanged: (state, action) => {
       state.iconSize = action.payload;
+    },
+
+    terminalToggled: (state, { payload }) => {
+      state.openTerminals = state.openTerminals[0] == payload ?
+        state.consoleViewerHidden ? state.openTerminals :
+        state.openTerminals.slice(1) : state.openTerminals.includes(payload)
+        ? [ payload, ...state.openTerminals.filter(terminal => terminal !== payload) ]
+        : [ payload, ...state.openTerminals ];
+      state.consoleViewerHidden = false;
+    },
+
+    hideConsoleViewer: (state) => {
+      state.consoleViewerHidden = true;
     }
   },
 
@@ -107,5 +123,5 @@ export const {
   connectionSelected, iconSelected, iconExpandToggled,
   underlayToggled, containerZoomToggled,
   editModeToggled, configViewerToggled, linkMetricsToggled,
-  iconSizeChanged } = actions;
+  iconSizeChanged, terminalToggled, hideConsoleViewer } = actions;
 export default reducer;

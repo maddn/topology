@@ -29,6 +29,10 @@ export const BTN_START = 'btn-start';
 export const BTN_STOP = 'btn-stop';
 export const BTN_RESTART = 'btn-restart';
 export const BTN_RESET = 'btn-reset';
+export const BTN_CONSOLE = 'btn-conosle';
+export const BTN_CONSOLE_CONNECTED = 'btn-console-connected';
+export const BTN_CONSOLE_DISCONNECT = 'btn-console-disconnect';
+export const BTN_HIDE_CONSOLE_VIEWER = 'btn-hide-console-viewer';
 
 // Other
 export const LABEL_FONT = '0.875em CiscoSansLight';

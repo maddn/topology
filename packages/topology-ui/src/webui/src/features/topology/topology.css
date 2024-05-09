@@ -1,13 +1,19 @@
+.centre-pane {
+  height: 100%;
+  max-width: 1200px;
+  position: sticky;
+  top: 0px;
+  width: 48%;
+}
+
 .topology {
   background: var(--background);
   display: flex;
   flex: 1 0 auto;
   flex-direction: column;
   height: 100%;
-  max-width: 1200px;
-  position: sticky;
-  top: 0px;
-  width: 48%;
+  position: relative;
+  width: 100%;
 }
 
 .topology--edit-mode {
