@@ -16,9 +16,10 @@ RUN apt-get update \
      libexpat1 \
      libxml2-utils \
      libvirt-dev \
+     make \
+     nodejs \
      openssh-client \
      openssh-server \
-     make \
      pkg-config \
      python3 \
      python3-dev \
