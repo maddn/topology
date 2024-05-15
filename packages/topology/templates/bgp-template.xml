@@ -85,13 +85,16 @@
     </address-family>
   <?endmacro?>
 
-  <?macro ForEachExternalNeighbour macro device_type?>
-    <?foreach {deref(../../topology)/../links/link[a-end-device=current()]/z-end-device | deref(../../topology)/../links/link[z-end-device=current()]/a-end-device}?>
-      <?foreach {../../../../bgp[as-number!=$AS_NUMBER]/provider-edge/routers[.=current()]}?>
-        <?set REMOTE_AS={../../as-number}?>
-        <?if {$REMOTE_AS != ''}?>
-            <?expand $macro remote_as=$REMOTE_AS?>
-        <?end?>
+  <?macro ConfigureNeighbourStatementJunos ip_address?>
+    <neighbor>
+      <name>{$ip_address}</name>
+    </neighbor>
+  <?endmacro?>
+
+  <?macro ForEveryOtherRouter macro?>
+    <?foreach {../../provider-edge/routers[.!=current()] | ../../link-state/routers[.!=current()] }?>
+      <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
+        <?expand $macro?>
       <?end?>
     <?end?>
   <?endmacro?>
@@ -123,60 +126,51 @@
     <?end?>
   <?endmacro?>
 
-  <?macro GetIpAddresses external?>
+  <?macro GetLoopbackIpAddresses?>
     <?save-context ROUTER?>
     <?set IFACE_ID={../loopback-id}?>
+    <?if {$IFACE_ID=''}?>
+      <?set IFACE_ID={$PRIMARY_LOOPBACK_ID}?>
+    <?end?>
     <?expand GetManagedDevice?>
-    <?set TYPE=''?>
-    <?if $external?>
-      <?set IFACE_ID={deref(../../topology)/../links/link[a-end-device=current()][z-end-device=$DEVICE_NAME]/a-end-interface/id}?>
-      <?if {$IFACE_ID=''}?>
-        <?set IFACE_ID={deref(../../topology)/../links/link[a-end-device=$DEVICE_NAME][z-end-device=current()]/z-end-interface/id}?>
-      <?end?>
-      <?set-context-node {/devices/device[name=$MANAGED_DEVICE]/config?>
-      <?expand GetDeviceType?>
-      <?if {ios:interface}?>
-        <?set-context-node {interface/GigabitEthernet[name=concat('0/', $IFACE_ID)]}?>
-      <?else?>
-        <?if {cisco-ios-xr:interface}?>
-          <?set-context-node {interface/GigabitEthernet[id=concat('0/0/0/', $IFACE_ID)]}?>
-        <?end?>
-      <?end?>
-    <?else?>
-      <?if {$IFACE_ID=''}?>
-        <?set IFACE_ID={$PRIMARY_LOOPBACK_ID}?>
-      <?end?>
-      <?set-context-node {/devices/device[name=$MANAGED_DEVICE]/config?>
-      <?expand GetDeviceType?>
-      <?if {ios:interface}?>
-        <?set-context-node {interface/Loopback[name=$IFACE_ID]}?>
-      <?end?>
-      <?if {cisco-ios-xr:interface}?>
-        <?set-context-node {interface/Loopback[id=$IFACE_ID]}?>
-      <?end?>
-      <?if {junos:configuration}?>
-        <?set-context-node {configuration/interfaces/interface[name='lo0']/unit[name='0']}?>
-      <?end?>
+    <?set-context-node {/devices/device[name=$MANAGED_DEVICE]/config?>
+    <?expand GetDeviceType?>
+    <?if {ios:interface}?>
+      <?set-context-node {interface/Loopback[name=$IFACE_ID]}?>
+    <?end?>
+    <?if {cisco-ios-xr:interface}?>
+      <?set-context-node {interface/Loopback[id=$IFACE_ID]}?>
+    <?end?>
+    <?if {junos:configuration}?>
+      <?set-context-node {configuration/interfaces/interface[name='lo0']/unit[name='0']}?>
     <?end?>
     <?expand GetCurrentIpAddresses type=$TYPE?>
     <?switch-context ROUTER?>
   <?endmacro?>
 
   <?macro ConfigureNeighbourXR rrc=false() remote_as=$AS_NUMBER?>
-    <?expand GetIpAddresses external='{$remote_as != $AS_NUMBER}'?>
+    <?expand GetLoopbackIpAddresses?>
     <?expand ConfigureNeighbourStatementXR ip_address=$IPV4_ADDRESS rrc=$rrc remote_as=$remote_as?>
     <?expand ConfigureNeighbourStatementXR ip_address=$IPV6_ADDRESS ipv6=true() rrc=$rrc remote_as=$remote_as?>
   <?endmacro?>
 
   <?macro ConfigureNeighbourIOS remote_as=$AS_NUMBER?>
-    <?expand GetIpAddresses external='{$remote_as != $AS_NUMBER'?>
+    <?expand GetLoopbackIpAddresses?>
     <?expand ConfigureNeighbourStatementIOS ip_address=$IPV4_ADDRESS remote_as=$remote_as?>
+    <?expand ConfigureNeighbourStatementIOS ip_address=$IPV6_ADDRESS ipv6=true() remote_as=$remote_as?>
+  <?endmacro?>
+
+  <?macro ConfigureNeighbourJunos?>
+    <?expand GetLoopbackIpAddresses?>
+    <?expand ConfigureNeighbourStatementJunos ip_address=$IPV4_ADDRESS?>
+    <?expand ConfigureNeighbourStatementJunos ip_address=$IPV6_ADDRESS?>
   <?endmacro?>
 
   <?set PRIMARY_LOOPBACK_ID={deref(topology)/../ip-connectivity/loopback-interfaces/loopback[primary]/id}?>
   <?set IPV6={boolean(deref(topology)/../ip-connectivity/ipv6)}?>
   <?set AS_NUMBER={as-number}?>
   <?set-root-node {/}?>
+
   <devices xmlns="http://tail-f.com/ns/ncs">
     <?foreach {provider-edge/routers | link-state/routers}?>
       <?set DEVICE_NAME={.}?>
@@ -206,14 +200,8 @@
                     <?expand ConfigureNeighbourXR?>
                   <?end?>
                 <?else?>
-                  <?foreach {../../provider-edge/routers[.!=current()] | ../../link-state/routers[.!=current()] }?>
-                    <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
-                      <?expand ConfigureNeighbourXR?>
-                    <?end?>
-                  <?end?>
+                  <?expand ForEveryOtherRouter macro=ConfigureNeighbourXR?>
                 <?end?>
-
-                <?expand ForEachExternalNeighbour macro=ConfigureNeighbourXR device_type='\'XR\''?>
               </bgp-no-instance>
             </bgp>
           </router>
@@ -226,15 +214,16 @@
             <bgp>
               <as-no>{$AS_NUMBER}</as-no>
               <bgp>
-                <router-id>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
+                <router-id>{/devices/device[name=$DEVICE]/config/interface/Loopback[name=$LOOPBACK_ID]/ip/address/primary/address}</router-id>
               </bgp>
 
-              <?foreach {../../provider-edge/routers[.!=current()]}?>
-                <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
+              <?if {count(../../route-reflector/routers) > 0}?>
+                <?foreach {../../route-reflector/routers}?>
                   <?expand ConfigureNeighbourIOS?>
                 <?end?>
+              <?else?>
+                <?expand ForEveryOtherRouter macro=ConfigureNeighbourIOS?>
               <?end?>
-              <?expand ForEachExternalNeighbour macro=ConfigureNeighbourIOS device_type='\'IOS\''?>
             </bgp>
           </router>
 
@@ -249,7 +238,7 @@
                 <group>
                   <name>ibgp</name>
                   <type>internal</type>
-                  <local-address>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</local-address>
+                  <local-address>{/devices/device[name=$DEVICE]/config/configuration/interfaces/interface[name='lo0']/unit[name='0']/family/inet/address[1]/name}</local-address>
 
                   <family>
                     <inet-vpn when="{$ROLE='provider-edge'}">
@@ -258,11 +247,12 @@
                   </family>
                   <export>ibgp-export</export>
 
-                  <?foreach {../../route-reflector/routers}?>
-                    <?expand GetIpAddresses external='{false()}'?>
-                    <neighbor>
-                      <name>{$IPV4_ADDRESS}</name>
-                    </neighbor>
+                  <?if {count(../../route-reflector/routers) > 0}?>
+                    <?foreach {../../route-reflector/routers}?>
+                      <?expand ConfigureNeighbourJunos?>
+                    <?end?>
+                  <?else?>
+                    <?expand ForEveryOtherRouter macro=ConfigureNeighbourJunos?>
                   <?end?>
 
                 </group>
@@ -346,6 +336,121 @@
          </router>
       </config>
     </device>
+
+    <?foreach {customer-edge/vrf}?>
+      <?foreach {router}?>
+        <?set DEVICE_NAME={name}?>
+        <?expand GetManagedDevice topology_device=name?>
+        <device>
+          <name>{$MANAGED_DEVICE}</name>
+
+          <?save-context ROUTER?>
+          <?foreach {deref(../../../topology)/../links/link[a-end-device=current()/name]/z-end-device | deref(../../../topology)/../links/link[z-end-device=current()/name]/a-end-device}?>
+            <?foreach {../../../../bgp[as-number!=$AS_NUMBER]/provider-edge/routers[.=current()]}?>
+              <?set REMOTE_AS={../../as-number}?>
+              <?set IFACE_ID={deref(../../topology)/../links/link[a-end-device=current()][z-end-device=$DEVICE_NAME]/z-end-interface/id}?>
+              <?if {$IFACE_ID=''}?>
+                <?set IFACE_ID={deref(../../topology)/../links/link[a-end-device=$DEVICE_NAME][z-end-device=current()]/a-end-interface/id}?>
+              <?end?>
+              <?switch-context ROUTER?>
+
+              <config>
+                <vrf xmlns="urn:ios">
+                  <definition>
+                    <name>{../name}</name>
+                    <rd>{vlan-id}:{vlan-id}</rd>
+                    <address-family>
+                      <ipv4 when="{address-family='ipv4'}"/>
+                      <ipv6 when="{address-family='ipv6'}"/>
+                    </address-family>
+                  </definition>
+                </vrf>
+
+                <interface xmlns="urn:ios">
+                  <GigabitEthernet tags="merge">
+                    <name>0/{string($IFACE_ID)}.{string(../vlan-id)}</name>
+                    <encapsulation>
+                      <dot1Q>
+                        <vlan-id>{../vlan-id}</vlan-id>
+                      </dot1Q>
+                    </encapsulation>
+                    <cdp>
+                      <enable>false</enable>
+                    </cdp>
+                    <vrf>
+                      <forwarding>{../name}</forwarding>
+                    </vrf>
+                    <ip when="{../address-family='ipv4'}">
+                      <address>
+                        <primary>
+                          <address>{ipv4-address-start}.2</address>
+                          <mask>255.255.255.0</mask>
+                        </primary>
+                      </address>
+                    </ip>
+                    <ipv6 when="{../address-family='ipv6'}">
+                      <address>
+                        <prefix-list>
+                          <prefix>{ipv6-address-start}::2/64</prefix>
+                        </prefix-list>
+                      </address>
+                    </ipv6>
+                  </GigabitEthernet>
+                </interface>
+
+                <router xmlns="urn:ios">
+                  <bgp>
+                    <as-no>{$AS_NUMBER}</as-no>
+
+                    <address-family when="{../address-family='ipv4'}">
+                      <ipv4>
+                        <af>unicast</af>
+                      </ipv4>
+                      <with-vrf>
+                        <ipv4>
+                          <af>unicast</af>
+                          <vrf>
+                            <name>{string(../name)}</name>
+                            <neighbor>
+                              <id>{ipv4-address-start}.1</id>
+                              <activate/>
+                            </neighbor>
+                            <neighbor>
+                              <id>{ipv4-address-start}.1</id>
+                              <remote-as>{$REMOTE_AS}</remote-as>
+                            </neighbor>
+                          </vrf>
+                        </ipv4>
+                      </with-vrf>
+                    </address-family>
+
+                    <address-family when="{../address-family='ipv6'}">
+                      <ipv6-with-vrf>
+                        <ipv6>
+                          <af>unicast</af>
+                          <vrf>
+                            <name>{string(../name)}</name>
+                            <neighbor>
+                              <id>{ipv6-address-start}::1</id>
+                              <activate/>
+                            </neighbor>
+                            <neighbor>
+                              <id>{ipv6-address-start}::1</id>
+                              <remote-as>{$REMOTE_AS}</remote-as>
+                            </neighbor>
+                          </vrf>
+                        </ipv6>
+                      </ipv6-with-vrf>
+
+                    </address-family>
+                  </bgp>
+                </router>
+              </config>
+            <?end?>
+          <?end?>
+        </device>
+      <?end?>
+    <?end?>
 
   </devices>
 </config-template>

@@ -5,6 +5,8 @@ submodule bgp {
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
+  include ip-connectivity;
+
   description
     "This submodule contains the BGP service which will configure BGP
      neighbours based on their role.";
@@ -82,6 +84,46 @@ submodule bgp {
           }
           leaf value {
             type string;
+          }
+        }
+      }
+    }
+    container customer-edge {
+      list vrf {
+        key name;
+        leaf name {
+          type string;
+        }
+        leaf address-family {
+          type enumeration {
+            enum ipv4;
+            enum ipv6;
+          }
+        }
+        leaf vlan-id {
+          type uint16;
+        }
+        list router {
+          key name;
+          leaf name {
+            type string;
+            tailf:non-strict-leafref {
+              path "deref(../../../../topology)/../devices/device/device-name";
+            }
+          }
+          choice address-family {
+            leaf ipv4-address-start {
+              type tailf:octet-list {
+                tailf:value-length 3;
+              }
+              when "../../address-family='ipv4'";
+            }
+            leaf ipv6-address-start {
+              type hexadectet-list {
+                pattern '.*(:.*){0,4}';
+              }
+              when "../../address-family='ipv6'";
+            }
           }
         }
       }

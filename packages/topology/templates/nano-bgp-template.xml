@@ -23,6 +23,18 @@
           </policy>
         </family>
       </provider-edge>
+      <customer-edge>
+        <vrf foreach="{customer-edge/vrf}">
+          <name>{name}</name>
+          <vlan-id>{vlan-id}</vlan-id>
+          <router foreach="{router}">
+            <name>{name}</name>
+            <ipv4-address-start when="{../address-family='ipv4'}">{ipv4-address-start}</ipv4-address-start>
+            <ipv6-address-start when="{../address-family='ipv6'}">{ipv6-address-start}</ipv6-address-start>
+          </router>
+          <address-family>{address-family}</address-family>
+        </vrf>
+      </customer-edge>
       <link-state>
         <loopback-id>{link-state/loopback-id}</loopback-id>
         <routers>{link-state/routers}</routers>
