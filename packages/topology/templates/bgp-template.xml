@@ -1,14 +1,19 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
                  servicepoint="bgp">
 
-  <?macro ConfigureAddressFamily role=$ROLE?>
+  <?macro ConfigureAddressFamily role=$ROLE rr=false()?>
     <address-family>
       <vpnv4 when="{$role='provider-edge'}">
         <unicast/>
       </vpnv4>
-      <l2vpn when="{$role='provider-edge'}">
+      <l2vpn when="{$role='provider-edge' and count(../../provider-edge/family[name='l2vpn']) > 0}">
         <evpn/>
       </l2vpn>
+      <ipv4 when="{$role='provider-edge' and count(../../provider-edge/family[name='mvpn']) > 0}">
+        <mvpn>
+          <global-table-multicast when="{$rr}"/>
+        </mvpn>
+      </ipv4>
       <link-state when="{$role='link-state'}">
         <link-state/>
       </link-state>
@@ -41,7 +46,14 @@
           </evpn>
         </l2vpn>
         <ipv4 when="{$ROLE='provider-edge' and count(../../provider-edge/family[name='ip']) > 0}">
-          <unicast/>
+          <unicast>
+            <route-reflector-client when="{$rrc}"/>
+          </unicast>
+        </ipv4>
+        <ipv4 when="{$ROLE='provider-edge' and count(../../provider-edge/family[name='mvpn']) > 0}">
+          <mvpn>
+            <route-reflector-client when="{$rrc}"/>
+          </mvpn>
         </ipv4>
         <link-state when="{$ROLE='link-state'}">
           <link-state>
@@ -56,7 +68,9 @@
           </unicast>
         </vpnv6>
         <ipv6 when="{$ROLE='provider-edge' and count(../../provider-edge/family[name='ip']) > 0}">
-          <unicast/>
+          <unicast>
+            <route-reflector-client when="{$rrc}"/>
+          </unicast>
         </ipv6>
       </address-family>
     </neighbor>
@@ -296,7 +310,7 @@
                   <router-id>{/devices/device[name=$DEVICE]/config/interface/Loopback[id=$LOOPBACK_ID]/ipv4/address/ip}</router-id>
                 </bgp>
                 <?if {count(../../provider-edge/routers) > 0}?>
-                  <?expand ConfigureAddressFamily role='\'provider-edge\''?>
+                  <?expand ConfigureAddressFamily role='\'provider-edge\'' rr=true()?>
                 <?end?>
                 <?if {count(../../link-state/routers) > 0}?>
                   <?expand ConfigureAddressFamily role='\'link-state\''?>

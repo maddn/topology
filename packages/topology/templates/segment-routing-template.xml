@@ -171,6 +171,7 @@
                         <all/>
                       </ipv4>
                     </include>
+                    <force-sr-include/>
                   </autoroute>
                 </profile>
 

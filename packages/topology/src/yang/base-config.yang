@@ -173,6 +173,10 @@ submodule base-config {
       }
     }
 
+    leaf multicast {
+      type empty;
+    }
+
     container pce {
       leaf-list routers {
         type string;
@@ -185,6 +189,19 @@ submodule base-config {
       }
       leaf password {
         type string;
+      }
+      container p2mp {
+        presence true;
+        leaf min-label {
+          type uint32 {
+            range "16..1048575";
+          }
+        }
+        leaf max-label {
+          type uint32 {
+            range "16..1048575";
+          }
+        }
       }
     }
 

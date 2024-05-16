@@ -46,6 +46,7 @@
     </device>
   <?endmacro?>
 
+  <?expand GetPCEVariables?>
   <devices xmlns="http://tail-f.com/ns/ncs">
     <device tags="nocreate">
       <name>{deref(topology)/../devices/device/device-name}</name>
@@ -89,6 +90,9 @@
           </host>
           <console>{/logging/console}</console>
           <hostnameprefix>{device-name}</hostnameprefix>
+          <source-interface>
+            <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
+          </source-interface>
         </logging>
 
         <configuration when="{/logging}" xmlns="http://xml.juniper.net/xnm/1.1/xnm">
@@ -430,6 +434,25 @@
           </GigabitEthernet>
         </interface>
 
+        <multicast-routing xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{multicast}">
+          <address-family>
+            <ipv4>
+              <interface>
+                <name>Loopback{$PRIMARY_LOOPBACK_ID}</name>
+                <enable/>
+              </interface>
+              <mdt>
+                <source>
+                  <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
+                </source>
+                <static>
+                  <segment-routing/>
+                </static>
+              </mdt>
+            </ipv4>
+          </address-family>
+        </multicast-routing>
+
         <!-- IOS Devices -->
         <ipv6 xmlns="urn:ios">
           <unicast-routing/>
@@ -566,7 +589,6 @@
       </device>
     <?end?>
 
-    <?expand GetPCEVariables?>
     <device>
       <name>{pce/routers}</name>
       <?set-root-node {/devices/device[name=current()]}?>
@@ -603,6 +625,14 @@
           <?end?>
           <segment-routing>
             <strict-sid-only/>
+            <traffic-eng>
+              <p2mp when="{../p2mp}">
+                <label-range>
+                  <min>{../p2mp/min-label}</min>
+                  <max>{../p2mp/max-label}</max>
+                </label-range>
+              </p2mp>
+            </traffic-eng>
           </segment-routing>
         </pce>
       </config>

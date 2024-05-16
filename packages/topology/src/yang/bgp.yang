@@ -70,6 +70,7 @@ submodule bgp {
           type enumeration {
             enum l2vpn;
             enum ip;
+            enum mvpn;
           }
         }
         container policy {

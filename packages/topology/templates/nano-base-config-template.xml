@@ -39,10 +39,15 @@
           <loopback-id>{static-routes/loopback-to-management/loopback-id}</loopback-id>
         </loopback-to-management>
       </static-routes>
+      <multicast when="{multicast}"/>
       <pce when="{pce}">
         <routers>{pce/routers}</routers>
         <loopback-id>{pce/loopback-id}</loopback-id>
         <password>{pce/password}</password>
+        <p2mp when="{pce/p2mp}">
+          <min-label>{pce/p2mp/min-label}</min-label>
+          <max-label>{pce/p2mp/max-label}</max-label>
+        </p2mp>
       </pce>
     </base-config>
   </topologies>
