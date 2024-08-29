@@ -87,12 +87,16 @@
             <address>{/logging/syslog-server/ip-address}</address>
             <vrf>default</vrf>
             <port>{/logging/syslog-server/port}</port>
+            <severity>debugging</severity>
           </host>
           <console>{/logging/console}</console>
           <hostnameprefix>{device-name}</hostnameprefix>
           <source-interface>
             <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
           </source-interface>
+          <format>
+            <rfc5424/>
+          </format>
         </logging>
 
         <configuration when="{/logging}" xmlns="http://xml.juniper.net/xnm/1.1/xnm">
