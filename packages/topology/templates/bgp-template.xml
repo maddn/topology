@@ -107,7 +107,7 @@
 
   <?macro ForEveryOtherRouter macro?>
     <?foreach {../../provider-edge/routers[.!=current()] | ../../link-state/routers[.!=current()] }?>
-      <?if {count(../../../igp[name=$IGP]/routers[.=current()]) = 1}?>
+      <?if {count(../../../igp[name=$IGP][routers=current()]) = 1}?>
         <?expand $macro?>
       <?end?>
     <?end?>
@@ -191,7 +191,7 @@
       <?expand GetManagedDevice?>
       <device>
         <name>{$MANAGED_DEVICE}</name>
-        <?set IGP={../../../igp[devices/.=current()]/name}?>
+        <?set IGP={../../../igp[devices=current()]/name}?>
         <?set ROLE={local-name(..)}?>
         <?set LOOPBACK_ID={../loopback-id}?>
         <?if {$LOOPBACK_ID=''}?>

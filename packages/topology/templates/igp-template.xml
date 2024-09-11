@@ -68,7 +68,7 @@
   <devices xmlns="http://tail-f.com/ns/ncs">
 
     <?foreach {deref(topology)/../links/link}?>
-      <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
+      <?if {/devices=current()/a-end-device and /devices=current()/z-end-device}?>
         <?expand LinkEndpointIGP device=a-end-device interface_id=a-end-interface/id?>
         <?expand LinkEndpointIGP device=z-end-device interface_id=z-end-interface/id?>
       <?end?>
@@ -88,7 +88,7 @@
                 <net>
                   <id>{$NET_ADDRESS}</id>
                 </net>
-                <distribute when="{count(../../bgp[topology=/../name]/link-state/routers[.=current()]) > 0}">
+                <distribute when="{count(../../bgp[topology=/../name]/link-state[routers=current()]) > 0}">
                   <link-state/>
                 </distribute>
                 <address-family>
@@ -101,7 +101,7 @@
                       <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) > 0}">
                         <static/>
                       </redistribute>
-                      <redistribute when="{count(../../traffic-generator[topology=/../name]/devices[.=current()]) = 1}">
+                      <redistribute when="{count(../../traffic-generator[topology=/../name][devices=current()]) = 1}">
                         <static/>
                       </redistribute>
                       <redistribute when="{count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]/redistribute-link) > 0}">
@@ -176,7 +176,7 @@
                 </level>
               </isis>
             </protocols>
-            <?if {count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) + count(../../traffic-generator[topology=/../name]/devices[.=current()]) > 0}?>
+            <?if {count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) + count(../../traffic-generator[topology=/../name][devices=current()]) > 0}?>
               <policy-options>
                 <policy-statement>
                   <name>export-statics</name>

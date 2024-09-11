@@ -279,7 +279,7 @@
 
     <?set-root-node {.}?>
     <?foreach {deref(/topology)/../links/link}?>
-      <?if {count(/devices[.=current()/a-end-device]) > 0 and count(/devices[.=current()/z-end-device]) > 0}?>
+      <?if {/devices=current()/a-end-device and /devices=current()/z-end-device}?>
         <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
         <?expand LinkEndpointSR device=a-end-device interface_id=a-end-interface/id?>
         <?expand LinkEndpointSR device=z-end-device interface_id=z-end-interface/id?>
