@@ -1,5 +1,5 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
-  servicepoint="base-config">
+                 servicepoint="base-config">
 
   <?macro GetPCEVariables?>
     <?set PCE_LOOPBACK_ID={../base-config[topology=current()/topology]/pce/loopback-id}?>
@@ -103,8 +103,8 @@
           <system>
             <syslog>
               <host>
-                <name>{/logging/syslog-server/ip-address</name>
-                <port>{/logging/syslog-server/port</port>
+                <name>{/logging/syslog-server/ip-address}</name>
+                <port>{/logging/syslog-server/port}</port>
               </host>
               <file>
                 <name>interactive-commands</name>
@@ -655,11 +655,10 @@
         <ip xmlns="urn:ios">
           <route>
             <?foreach {deref(/topology)/../devices/device[device-name!=current()/device]}?>
-              <?expand GetManagedDeviceFromContext?>
               <ip-route-forwarding-list>
-                <prefix>{$LOOPBACK_SUBNET_START}.{current()/id}</prefix>
+                <prefix>{$LOOPBACK_SUBNET_START}.{id}</prefix>
                 <mask>255.255.255.255</mask>
-                <forwarding-address>{deref(/topology)/../devices/device[device-name=$MANAGED_DEVICE]/management-interface/ip-address}</forwarding-address>
+                <forwarding-address>{management-interface/ip-address}</forwarding-address>
               </ip-route-forwarding-list>
             <?end?>
           </route>

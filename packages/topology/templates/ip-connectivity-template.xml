@@ -1,24 +1,6 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
   servicepoint="ip-connectivity">
 
-  <?macro GetManagedDeviceFromContext?>
-    <?set MANAGED_DEVICE={device-name}?>
-    <?if {control-plane-id}?>
-      <?set MANAGED_DEVICE={deref(control-plane-id)/../device-name}?>
-    <?else?>
-      <?if {deref(definition)/../device-type='vMX'}?>
-        <?set MANAGED_DEVICE=''?>
-      <?end?>
-    <?end?>
-  <?endmacro?>
-
-  <?macro GetManagedDevice topology_device=.?>
-    <?save-context CURRENT_CONTEXT?>
-    <?set-context-node {deref($topology_device)/..}?>
-    <?expand GetManagedDeviceFromContext?>
-    <?switch-context CURRENT_CONTEXT?>
-  <?endmacro?>
-
   <?macro GetSortedDeviceIds device_id_1 device_id_2?>
     <?set LOWER_DEVICE_ID='{$device_id_1}'?>
     <?set HIGHER_DEVICE_ID='{$device_id_2}'?>
@@ -117,9 +99,8 @@
 
   <devices xmlns="http://tail-f.com/ns/ncs">
     <?foreach {../devices/device}?>
-      <?expand GetManagedDeviceFromContext?>
-      <device tags="nocreate">
-        <name>{$MANAGED_DEVICE}</name>
+      <device tags="nocreate" when="{not(control-plan-id)}">
+        <name>{device-name}</name>
         <?set DEVICE_ID={id}?>
         <config>
 
@@ -202,19 +183,17 @@
       <?expand GetSortedDeviceIds
         device_id_1=deref(a-end-device)/../id
         device_id_2=deref(z-end-device)/../id
-    ?>
-      <?expand GetManagedDevice topology_device=a-end-device?>
+      ?>
       <?expand GigabitEthernetAddresses
-        device_name=$MANAGED_DEVICE
+        device_name=a-end-device
         device_id=deref(a-end-device)/../id
         interface_id=a-end-interface/id
         connected_device_name=z-end-device
         connected_interface_id=z-end-interface/id
       ?>
       <?set A_END_IPV4_ADDRESS={$IPV4_ADDRESS}?>
-      <?expand GetManagedDevice topology_device=z-end-device?>
       <?expand GigabitEthernetAddresses
-        device_name=$MANAGED_DEVICE
+        device_name=z-end-device
         device_id=deref(z-end-device)/../id
         interface_id=z-end-interface/id
         connected_device_name=a-end-device
@@ -241,11 +220,10 @@
 
     <?foreach {../networks/network}?>
       <?foreach {devices/device}?>
-        <?expand GetManagedDevice topology_device=name?>
         <?set IPV4_ADDRESS={concat(../../ipv4-subnet-start, '.', deref(name)/../id)}?>
         <devices xmlns="http://tail-f.com/ns/ncs">
           <device tags="nocreate">
-            <name>{$MANAGED_DEVICE}</name>
+            <name>{name}</name>
             <config>
               <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
                 <GigabitEthernet tags="merge">

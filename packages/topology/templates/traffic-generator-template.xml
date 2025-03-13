@@ -1,29 +1,26 @@
 <config-template xmlns="http://tail-f.com/ns/config/1.0"
                  servicepoint="traffic-generator">
   <devices xmlns="http://tail-f.com/ns/ncs">
-    <?foreach {devices}?>
-      <?expand GetManagedDevice?>
-      <device>
-        <name>{$MANAGED_DEVICE}</name>
-        <?set DEVICE_ID={deref(.)/../id}?>
-        <config>
-          <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
-            <static>
-              <address-family>
-                <ipv4>
-                  <unicast>
-                    <routes-if foreach="{/destinations}">
-                      <net>{.}.{$DEVICE_ID}.0/24</net>
-                      <interface>Null0</interface>
-                      <description>TraGenSer</description>
-                    </routes-if>
-                  </unicast>
-                </ipv4>
-              </address-family>
-            </static>
-          </router>
-        </config>
-      </device>
-    <?end?>
+    <device>
+      <name>{devices}</name>
+      <?set DEVICE_ID={deref(.)/../id}?>
+      <config>
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <static>
+            <address-family>
+              <ipv4>
+                <unicast>
+                  <routes-if foreach="{/destinations}">
+                    <net>{.}.{$DEVICE_ID}.0/24</net>
+                    <interface>Null0</interface>
+                    <description>TraGenSer</description>
+                  </routes-if>
+                </unicast>
+              </ipv4>
+            </address-family>
+          </static>
+        </router>
+      </config>
+    </device>
   </devices>
 </config-template>

@@ -112,8 +112,6 @@ class NetworkManager():
 
         self._device_ids = {device.device_name:int(device.id)
                             for device in topology.devices.device}
-        self._device_names = {int(device.id):device.device_name
-                              for device in topology.devices.device}
         self._networks = {network.external_bridge or network.name:
                 f'{force_maagic_leaf_val2str(network, "ipv4-subnet-start")}.0'
                 for network in topology.networks.network}
@@ -126,8 +124,12 @@ class NetworkManager():
                           self._device_ids[link.z_end_device])
             hypervisors = (hypervisor_mgr.get_device_hypervisor(device_ids[0]),
                            hypervisor_mgr.get_device_hypervisor(device_ids[1]))
-            iface_ids = (link.a_end_interface.id or device_ids[1],
-                         link.z_end_interface.id or device_ids[0])
+            iface_ids = (link.a_end_interface.id
+                            if link.a_end_interface.id is not None
+                            else device_ids[1],
+                         link.z_end_interface.id
+                            if link.z_end_interface.id is not None
+                            else device_ids[0])
             sorted_device_ids = sort_link_device_ids(device_ids)
             network_id = None
             bridges = (None, None)
@@ -347,13 +349,13 @@ class DomainXmlBuilder():
             'disk', 'sdb', 'usb'))
 
     def add_data_ifaces(self, include_null_interfaces, model_type,
-            min_ifaces = 0, first_iface = 0):
+            min_ifaces = 0, first_iface = 0, device_id = None):
         for iface_id in range(first_iface,
                 self._network_mgr.get_num_device_ifaces()):
             bridge_name = self._network_mgr.get_iface_bridge_name(
-                    self._device_id, iface_id)
+                    device_id or self._device_id, iface_id)
             network_id = self._network_mgr.get_iface_network_id(
-                    self._device_id, iface_id)
+                    device_id or self._device_id, iface_id)
 
             if (bridge_name or network_id or include_null_interfaces
                     or iface_id < (min_ifaces - 1)):
@@ -367,7 +369,7 @@ class DomainXmlBuilder():
 
                 if network_id or bridge_name:
                     self._network_mgr.write_iface_data(
-                        self._device_id, iface_id, [
+                        device_id or self._device_id, iface_id, [
                                 ('id', iface_id),
                                 ('host-interface', iface_dev_name),
                                 ('mac-address', mac_address)])
@@ -448,7 +450,7 @@ class Network(LibvirtObject): #pylint: disable=too-few-public-methods
 
         if network_name in libvirt.networks:
             self._define_network(hypervisor_name, network_id, mac_address,
-                    isolated=isolated, delay=delay);
+                    isolated=isolated, delay=delay)
             network = libvirt.conn.networkLookupByName(network_name)
             network.update(
                     VIR_NETWORK_UPDATE_COMMAND_MODIFY,
@@ -885,11 +887,13 @@ class Domain(LibvirtObject):
             xml_builder.add_extra_mgmt_ifaces(VMX_EXTRA_MGMT_NETWORKS,
                     device.control_plane_id or device.id)
 
-        xml_builder.add_data_ifaces(
-                dev_def.device_type in ('XRv-9000', 'vJunos-Evolved', 'vMX'),
-                'e1000' if dev_def.device_type in ('XRv-9000', 'IOSv') else 'virtio',
-                4 if dev_def.device_type == 'IOSv' else 0,
-                1 if dev_def.device_type == 'IOSv' else 0)
+        if dev_def.device_type != 'vMX' or device.control_plane_id:
+            xml_builder.add_data_ifaces(
+                    dev_def.device_type in ('XRv-9000', 'vJunos-Evolved', 'vMX'),
+                    'e1000' if dev_def.device_type in ('XRv-9000', 'IOSv') else 'virtio',
+                    4 if dev_def.device_type == 'IOSv' else 0,
+                    1 if dev_def.device_type == 'IOSv' else 0,
+                    device.control_plane_id)
 
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
         self._log.info(domain_xml_str)
@@ -1004,12 +1008,12 @@ class Topology():
                     self._extra_network.action(action, output,
                             [ device.id ], f'{network_name}-{device.id}',
                             None, (0xfd, 0xff-idx))
-            if dev_def.device_type== 'vMX' and device.control_plane_id:
+            if dev_def.device_type == 'vMX' and not device.control_plane_id:
                 for (idx, network_name) in enumerate(
                         set(VMX_EXTRA_MGMT_NETWORKS)):
                     self._extra_network.action(action, output, [ device.id ],
-                            f'{network_name}-{device.control_plane_id}',
-                            None, (0xfc, device.control_plane_id))
+                            f'{network_name}-{device.id}',
+                            None, (0xfc, device.id))
             if dev_def.device_type != 'Linux':
                 self._isolated_network.action(action, output, int(device.id))
             self._domain.action(action, output, device)

@@ -146,8 +146,7 @@
     <?if {$IFACE_ID=''}?>
       <?set IFACE_ID={$PRIMARY_LOOPBACK_ID}?>
     <?end?>
-    <?expand GetManagedDevice?>
-    <?set-context-node {/devices/device[name=$MANAGED_DEVICE]/config?>
+    <?set-context-node {/devices/device[name=current()]/config?>
     <?expand GetDeviceType?>
     <?if {ios:interface}?>
       <?set-context-node {interface/Loopback[name=$IFACE_ID]}?>
@@ -188,9 +187,8 @@
   <devices xmlns="http://tail-f.com/ns/ncs">
     <?foreach {provider-edge/routers | link-state/routers}?>
       <?set DEVICE_NAME={.}?>
-      <?expand GetManagedDevice?>
       <device>
-        <name>{$MANAGED_DEVICE}</name>
+        <name>{current()}</name>
         <?set IGP={../../../igp[devices=current()]/name}?>
         <?set ROLE={local-name(..)}?>
         <?set LOOPBACK_ID={../loopback-id}?>
@@ -293,9 +291,8 @@
 
     <?foreach {route-reflector/routers}?>
       <?set DEVICE_NAME={.}?>
-      <?expand GetManagedDevice?>
       <device>
-        <name>{$MANAGED_DEVICE}</name>
+        <name>{current()}</name>
         <?set LOOPBACK_ID={../loopback-id}?>
         <?if {$LOOPBACK_ID=''}?>
           <?set LOOPBACK_ID={$PRIMARY_LOOPBACK_ID}?>
@@ -354,9 +351,8 @@
     <?foreach {customer-edge/vrf}?>
       <?foreach {router}?>
         <?set DEVICE_NAME={name}?>
-        <?expand GetManagedDevice topology_device=name?>
         <device>
-          <name>{$MANAGED_DEVICE}</name>
+          <name>{name}</name>
 
           <?save-context ROUTER?>
           <?foreach {deref(../../../topology)/../links/link[a-end-device=current()/name]/z-end-device | deref(../../../topology)/../links/link[z-end-device=current()/name]/a-end-device}?>

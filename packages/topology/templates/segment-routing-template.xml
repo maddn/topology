@@ -2,9 +2,8 @@
   servicepoint="segment-routing">
 
   <?macro LinkEndpointSR device interface_id?>
-    <?expand GetManagedDevice topology_device=$device?>
     <device>
-      <name>{$MANAGED_DEVICE}</name>
+      <name>{$device}</name>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis>
@@ -62,10 +61,9 @@
 
   <devices xmlns="http://tail-f.com/ns/ncs">
     <?foreach {devices}?>
-      <?expand GetManagedDevice?>
       <?set DEVICE_ID={deref(.)/../id}?>
       <device>
-        <name>{$MANAGED_DEVICE}</name>
+        <name>{current()}</name>
         <config>
           <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
             <isis>
