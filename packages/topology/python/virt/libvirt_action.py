@@ -5,7 +5,8 @@ from ipaddress import IPv4Address
 from time import sleep
 from xml.etree.ElementTree import fromstring, tostring
 from xml.dom.minidom import parseString
-from libvirt import VIR_NETWORK_UPDATE_COMMAND_MODIFY, VIR_NETWORK_SECTION_PORTGROUP
+from libvirt import (VIR_NETWORK_UPDATE_COMMAND_MODIFY,
+                     VIR_NETWORK_SECTION_PORTGROUP, VIR_DOMAIN_UNDEFINE_NVRAM)
 
 import base64
 import crypt
@@ -320,14 +321,14 @@ class DomainXmlBuilder():
 
         return (mgmt_ip_address, mac_address, iface_dev_name)
 
-    def add_extra_mgmt_ifaces(self, ifaces, device_id=None):
+    def add_extra_mgmt_ifaces(self, ifaces, device_id=None, dev_type='virtio'):
         for (idx, network_name) in enumerate(ifaces):
             network_id = f'{network_name}-{device_id}' if (
                     device_id) else network_name
             self._domain_xml_devices.append(self._get_iface_xml(network_id,
                 self._generate_iface_dev_name(f'{network_name}'),
                 self._generate_mac_address(0xfe-idx),
-                'virtio'))
+                dev_type))
 
     def add_disk(self, storage_pool, base_image):
         self._domain_xml_devices.append(self._get_disk_xml(
@@ -336,7 +337,7 @@ class DomainXmlBuilder():
     def add_day0_cdrom(self, storage_pool):
         self._domain_xml_devices.append(self._get_raw_disk_xml(
             generate_day0_volume_name(self._device_name), storage_pool,
-            'cdrom', 'hdc', 'ide'))
+            'cdrom', 'hdc', 'sata'))
 
     def add_day0_disk(self, storage_pool):
         self._domain_xml_devices.append(self._get_raw_disk_xml(
@@ -880,7 +881,7 @@ class Domain(LibvirtObject):
                 ('host-interface', iface_dev_name)])
 
         if dev_def.device_type == 'XRv-9000':
-            xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS)
+            xml_builder.add_extra_mgmt_ifaces(XRV9K_EXTRA_MGMT_NETWORKS, None, 'e1000')
         if dev_def.device_type == 'vJunos-Evolved':
             xml_builder.add_extra_mgmt_ifaces(VJUNOS_EXTRA_MGMT_NETWORKS, device.id)
         if dev_def.device_type == 'vMX':
@@ -940,8 +941,11 @@ class Domain(LibvirtObject):
             if self._action_allowed(domain.isActive(), action):
                 self._log.info(f'[{libvirt.name}] '
                                f'Running {action} on domain {device_name} ')
-                domain_action_method = getattr(domain, action)
-                domain_action_method()
+                if action == 'undefine':
+                    domain.undefineFlags(VIR_DOMAIN_UNDEFINE_NVRAM)
+                else:
+                    domain_action_method = getattr(domain, action)
+                    domain_action_method()
                 get_hypervisor_output_node(
                         self._output, libvirt.name).domains.create(device_name)
                 return True
