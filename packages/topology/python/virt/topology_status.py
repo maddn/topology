@@ -14,6 +14,20 @@ ACTION_STATUS_MAP = {
     'destroy': 'defined',
     'undefine': 'undefined'}
 
+def write_node_data(path, leaf_value_pairs):
+    with maapi.single_write_trans('admin', 'python') as trans:
+        for leaf, value in leaf_value_pairs:
+            if value is None:
+                trans.safe_delete(f'{path}/{leaf}')
+            else:
+                trans.set_elem(value, f'{path}/{leaf}')
+        trans.apply()
+
+def get_hypervisor_output_node(output, hypervisor_name):
+    if hypervisor_name in output.hypervisor:
+        return output.hypervisor[hypervisor_name]
+    return output.hypervisor.create(hypervisor_name)
+
 def update_operational_status(node, status):
     with maapi.single_write_trans('admin', 'python', db=OPERATIONAL) as trans:
         trans.set_elem(status, f'{node._path}/operational-status')

@@ -76,7 +76,7 @@
 -->
         <logging when="{/logging}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <trap>informational</trap>
-          <events>
+          <events when="{deref(definition)/../device-type != 'XRd'}">
             <level>informational</level>
             <link-status>software-interfaces</link-status>
           </events>
@@ -221,7 +221,7 @@
           </vty>
         </line>
 
-        <telnet xmlns="http://tail-f.com/ned/cisco-ios-xr">
+        <telnet when="{deref(definition)/../device-type != 'XRd'}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <vrf>
             <name>default</name>
             <telnet-server-list>
@@ -313,7 +313,7 @@
           </http>
         </ip>
 
-        <ntp xmlns="http://tail-f.com/ned/cisco-ios-xr">
+        <ntp when="{deref(definition)/../device-type != 'XRd'}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <server>
             <server-list>
               <name>{/ntp-server}</name>

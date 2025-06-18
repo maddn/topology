@@ -5,6 +5,7 @@ ARG PASSWORD=cisco
 
 RUN apt-get update \
   && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+  && apt-get purge -qy unattended-upgrades \
   && apt-get install -qy --no-install-recommends \
      ant \
      build-essential \
@@ -33,7 +34,15 @@ RUN apt-get update \
      vim-tiny \
      xsltproc \
      xmlstarlet \
-  && pip3 install --break-system-packages libvirt-python passlib pycdlib pyfatfs pyyaml setproctitle \
+  && pip3 install --break-system-packages \
+     docker \
+     libvirt-python \
+     paramiko \
+     passlib \
+     pycdlib \
+     pyfatfs \
+     pyyaml \
+     setproctitle \
   && apt-get -qy purge pkg-config python3-pip python3-dev \
   && apt-get -qy autoremove \
   && apt-get clean \

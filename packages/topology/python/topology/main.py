@@ -1,4 +1,3 @@
-# -*- mode: python; python-indent: 4 -*-
 import socket
 import json
 import yaml
@@ -8,7 +7,7 @@ from ncs.application import Application
 from ncs.dp import Action
 from _ncs import maapi
 from virt.libvirt_get_objects import LibvirtGetObjects
-from virt.libvirt_action import LibvirtAction, LibvirtNetworkAction
+from virt.virt_topology import LibvirtAction, LibvirtNetworkAction
 from virt.topology_status import CheckTopologyStatus
 from monitor.operational_status import OperationalStateMonitor
 from monitor.console_activity import ConsoleActivityMonitor

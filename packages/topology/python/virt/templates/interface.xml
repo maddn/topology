@@ -1,8 +1,10 @@
 <interface type="${interface-type}">
   <mac address="${mac-address}"/>
+  <source address="127.0.0.1" port="${source}">
+    <local address="127.0.0.1" port="${dest}"/>
+  </source>
   <source network="${network}"/>
   <source bridge="${bridge}"/>
   <target dev="${dev}"/>
   <model type="${model-type}"/>
 </interface>
-

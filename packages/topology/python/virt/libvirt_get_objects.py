@@ -1,7 +1,6 @@
-# -*- mode: python; python-indent: 4 -*-
 from ncs.dp import Action
 from ncs import maagic
-from virt.libvirt_connection import LibvirtConnection
+from virt.connection_libvirt import ConnectionLibvirt
 
 
 def create_list_item(name, yang_list):
@@ -34,7 +33,7 @@ class LibvirtGetObjects(Action):
         hypervisor = maagic.get_node(trans, kp[1:])
         trans.maapi.install_crypto_keys()
 
-        with LibvirtConnection(hypervisor) as libvirt_conn:
+        with ConnectionLibvirt(hypervisor) as libvirt_conn:
             if name == 'domains':
                 libvirt_conn.populate_domains()
                 dict_dict_to_yang_list(libvirt_conn.domains, output.domain)
