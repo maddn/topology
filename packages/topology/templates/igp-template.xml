@@ -30,6 +30,23 @@
           </isis>
         </router>
 
+        <interface xmlns="urn:ios">
+          <GigabitEthernet>
+            <name>0/{string($interface_id)}</name>
+            <isis>
+              <circuit-type>level-2-only</circuit-type>
+              <network>point-to-point</network>
+            </isis>
+            <ip>
+              <router>
+                <isis>
+                  <tag>{string(/name)}</tag>
+                </isis>
+              </router>
+            </ip>
+          </GigabitEthernet>
+        </interface>
+
         <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
           <interfaces>
             <interface>
@@ -141,6 +158,29 @@
           </isis>
         </router>
 
+        <router xmlns="urn:ios">
+          <isis-container when="{../is-is}">
+            <isis>
+              <area-tag>{string(../name)}</area-tag>
+              <net>
+                <tag>{$NET_ADDRESS}</tag>
+              </net>
+              <is-type>level-2-only</is-type>
+              <metric-style>
+                <wide/>
+              </metric-style>
+              <passive-interface>
+                <interface>
+                  <name>Loopback{/loopback-interfaces/loopback[primary]/id}</name>
+                </interface>
+              </passive-interface>
+              <router-id>
+                <Loopback>{/loopback-interfaces/loopback[primary]/id}</Loopback>
+              </router-id>
+            </isis>
+          </isis-container>
+        </router>
+
         <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
           <interfaces>
             <interface>
@@ -171,6 +211,9 @@
                 <name>2</name>
                 <wide-metrics-only/>
               </level>
+              <topologies when="{/ipv6}">
+                <ipv6-unicast/>
+              </topologies>
             </isis>
           </protocols>
           <?if {count(../../base-config[topology=/../name]/static-routes/route[source-device=current()]) + count(../../traffic-generator[topology=/../name][devices=current()]) > 0}?>
