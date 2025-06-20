@@ -107,7 +107,7 @@
 
   <?macro ForEveryOtherRouter macro?>
     <?foreach {../../provider-edge/routers[.!=current()] | ../../link-state/routers[.!=current()] }?>
-      <?if {count(../../../igp[name=$IGP][routers=current()]) = 1}?>
+      <?if {count(../../../igp[name=$IGP][devices=current()]) = 1}?>
         <?expand $macro?>
       <?end?>
     <?end?>
@@ -173,9 +173,13 @@
     <?expand ConfigureNeighbourStatementIOS ip_address=$IPV6_ADDRESS ipv6=true() remote_as=$remote_as?>
   <?endmacro?>
 
-  <?macro ConfigureNeighbourJunos?>
+  <?macro ConfigureNeighbourJunosIpv4?>
     <?expand GetLoopbackIpAddresses?>
     <?expand ConfigureNeighbourStatementJunos ip_address=$IPV4_ADDRESS?>
+  <?endmacro?>
+
+  <?macro ConfigureNeighbourJunosIpv6?>
+    <?expand GetLoopbackIpAddresses?>
     <?expand ConfigureNeighbourStatementJunos ip_address=$IPV6_ADDRESS?>
   <?endmacro?>
 
@@ -250,7 +254,7 @@
                 <group>
                   <name>ibgp</name>
                   <type>internal</type>
-                  <local-address>{/devices/device[name=$DEVICE]/config/configuration/interfaces/interface[name='lo0']/unit[name='0']/family/inet/address[1]/name}</local-address>
+                  <local-address>{substring-before(/devices/device[name=$DEVICE]/config/configuration/interfaces/interface[name='lo0']/unit[name='0']/family/inet/address[1]/name, '/')}</local-address>
 
                   <family>
                     <inet-vpn when="{$ROLE='provider-edge'}">
@@ -261,10 +265,31 @@
 
                   <?if {count(../../route-reflector/routers) > 0}?>
                     <?foreach {../../route-reflector/routers}?>
-                      <?expand ConfigureNeighbourJunos?>
+                      <?expand ConfigureNeighbourJunosIpv4?>
                     <?end?>
                   <?else?>
-                    <?expand ForEveryOtherRouter macro=ConfigureNeighbourJunos?>
+                    <?expand ForEveryOtherRouter macro=ConfigureNeighbourJunosIpv4?>
+                  <?end?>
+
+                </group>
+                <group when="{$IPV6}">
+                  <name>ibgp-ipv6</name>
+                  <type>internal</type>
+                  <local-address>{substring-before(/devices/device[name=$DEVICE]/config/configuration/interfaces/interface[name='lo0']/unit[name='0']/family/inet6/address[1]/name, '/')}</local-address>
+
+                  <family>
+                    <inet6-vpn when="{$ROLE='provider-edge'}">
+                      <unicast/>
+                    </inet6-vpn>
+                  </family>
+                  <export>ibgp-export</export>
+
+                  <?if {count(../../route-reflector/routers) > 0}?>
+                    <?foreach {../../route-reflector/routers}?>
+                      <?expand ConfigureNeighbourJunosIpv6?>
+                    <?end?>
+                  <?else?>
+                    <?expand ForEveryOtherRouter macro=ConfigureNeighbourJunosIpv6?>
                   <?end?>
 
                 </group>
