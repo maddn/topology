@@ -42,6 +42,15 @@
             </delay-measurement>
           </interface>
         </performance-measurement>
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <protocols tags="merge">
+            <lldp when="{lldp}">
+              <interface>
+                <name>et-0/0/{string($interface_id)}</name>
+              </interface>
+            </lldp>
+          </protocols>
+        </configuration>
       </config>
     </device>
   <?endmacro?>
@@ -132,11 +141,13 @@
           <timestamps>
             <debug>
               <datetime>
+                <datetime/>
                 <msec/>
               </datetime>
             </debug>
             <log>
               <datetime>
+                <datetime/>
                 <localtime/>
                 <msec/>
                 <show-timezone/>
@@ -257,7 +268,21 @@
           <port>{/grpc/port}</port>
           <no-tls/>
           <address-family>ipv4</address-family>
+          <service-layer/>
         </grpc>
+
+        <xnetconf xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <agent>
+            <tty/>
+          </agent>
+        </xnetconf>
+        <xxml xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <tty-agent>
+            <agent>
+              <tty/>
+            </agent>
+          </tty-agent>
+        </xxml>
 
         <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
           <system>
@@ -276,7 +301,19 @@
 
         <configuration when="{/grpc}" xmlns="http://xml.juniper.net/xnm/1.1/xnm">
           <system>
+            <schema>
+              <openconfig>
+                <unhide/>
+              </openconfig>
+            </schema>
             <services>
+              <extension-service>
+                <notification>
+                  <allow-clients>
+                    <address>0.0.0.0/0</address>
+                  </allow-clients>
+                </notification>
+              </extension-service>
               <extension-service>
                 <request-response>
                   <grpc>
@@ -356,6 +393,9 @@
             </traps-list>
           </traps>
           <packetsize>4096</packetsize>
+          <trap>
+            <link>ietf</link>
+          </trap>
         </snmp-server>
 
 
@@ -466,11 +506,6 @@
           <bundle-name>authenticated</bundle-name>
         </multilink>
         <redundancy xmlns="urn:ios"/>
-        <ethernet xmlns="urn:ios">
-          <lmi>
-            <ce/>
-          </lmi>
-        </ethernet>
         <control-plane xmlns="urn:ios"/>
 
       </config>
@@ -638,7 +673,11 @@
               </p2mp>
             </traffic-eng>
           </segment-routing>
+          <distribute>
+            <link-state/>
+          </distribute>
         </pce>
+        <lslib-server xmlns="http://tail-f.com/ned/cisco-ios-xr"/>
       </config>
     </device>
 
