@@ -23,19 +23,21 @@
             <GigabitEthernet tags="merge">
               <id>0/0/0/{string($interface_id)}</id>
               <description>{$DESCRIPTION}</description>
-              <ipv4>
-                <address>
-                  <ip>{$IPV4_ADDRESS}</ip>
-                  <mask>255.255.255.0</mask>
-                </address>
-              </ipv4>
-              <ipv6 when="{/physical-interfaces/ipv6-subnet-start}">
-                <address>
-                  <prefix-list>
-                    <prefix>{$IPV6_ADDRESS}/112</prefix>
-                  </prefix-list>
-                </address>
-              </ipv6>
+              <?if {not(exclude-ip-connectivity)}?>
+                <ipv4>
+                  <address>
+                    <ip>{$IPV4_ADDRESS}</ip>
+                    <mask>255.255.255.0</mask>
+                  </address>
+                </ipv4>
+                <ipv6 when="{/physical-interfaces/ipv6-subnet-start}">
+                  <address>
+                    <prefix-list>
+                      <prefix>{$IPV6_ADDRESS}/112</prefix>
+                    </prefix-list>
+                  </address>
+                </ipv6>
+              <?end?>
               <shutdown tags="delete"/>
             </GigabitEthernet>
           </interface>
@@ -44,24 +46,26 @@
             <GigabitEthernet tags="merge">
               <name>0/{string($interface_id)}</name>
               <description>{$DESCRIPTION}</description>
-              <ip>
-                <no-address>
-                  <address tags="delete"/>
-                </no-address>
-                <address>
-                  <primary>
-                    <address>{$IPV4_ADDRESS}</address>
-                    <mask>255.255.255.0</mask>
-                  </primary>
-                </address>
-              </ip>
-              <ipv6 when="{/physical-interfaces/ipv6-subnet-start}">
-                <address>
-                  <prefix-list>
-                    <prefix>{$IPV6_ADDRESS}/112</prefix>
-                  </prefix-list>
-                </address>
-              </ipv6>
+              <?if {not(exclude-ip-connectivity)}?>
+                <ip>
+                  <no-address>
+                    <address tags="delete"/>
+                  </no-address>
+                  <address>
+                    <primary>
+                      <address>{$IPV4_ADDRESS}</address>
+                      <mask>255.255.255.0</mask>
+                    </primary>
+                  </address>
+                </ip>
+                <ipv6 when="{/physical-interfaces/ipv6-subnet-start}">
+                  <address>
+                    <prefix-list>
+                      <prefix>{$IPV6_ADDRESS}/112</prefix>
+                    </prefix-list>
+                  </address>
+                </ipv6>
+              <?end?>
               <shutdown tags="delete"/>
             </GigabitEthernet>
           </interface>
@@ -73,20 +77,22 @@
                 <description>{$DESCRIPTION}</description>
                 <unit>
                   <name>0</name>
-                  <family>
-                    <inet>
-                      <address>
-                        <name>{$IPV4_ADDRESS}/24</name>
-                      </address>
-                    </inet>
-                  </family>
-                  <family>
-                    <inet6 when="{/physical-interfaces/ipv6-subnet-start}">
-                      <address>
-                        <name>{$IPV6_ADDRESS}/112</name>
-                      </address>
-                    </inet6>
-                  </family>
+                  <?if {not(exclude-ip-connectivity)}?>
+                    <family>
+                      <inet>
+                        <address>
+                          <name>{$IPV4_ADDRESS}/24</name>
+                        </address>
+                      </inet>
+                    </family>
+                    <family>
+                      <inet6 when="{/physical-interfaces/ipv6-subnet-start}">
+                        <address>
+                          <name>{$IPV6_ADDRESS}/112</name>
+                        </address>
+                      </inet6>
+                    </family>
+                  <?end?>
                 </unit>
               </interface>
             </interfaces>
