@@ -127,6 +127,9 @@ submodule topology-base {
           leaf lldp {
             type empty;
           }
+          leaf exclude-ip-connectivity {
+            type empty;
+          }
         }
       }
 
