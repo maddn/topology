@@ -23,6 +23,7 @@ packages:
 - unzip
 
 runcmd:
+- [ apt-get, -y, -qq, remove, unattended-upgrades ]
 - [ chown, -R, ${username}:${username}, /home/${username} ]
 - [ su, -, ${username}, -c, "mkdir -p tgs && unzip -o tgs.zip -d tgs" ]
 - [ su, -, ${username}, -c, "pip3 install -r tgs/requirements.txt" ]
