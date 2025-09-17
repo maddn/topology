@@ -20,6 +20,17 @@
             </address-family>
           </static>
         </router>
+
+        <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+          <routing-options>
+            <static>
+              <route foreach="{/destinations}">
+                <name>{.}.{$DEVICE_ID}.0/24</name>
+                <discard/>
+              </route>
+            </static>
+          </routing-options>
+        </configuration>
       </config>
     </device>
   </devices>
