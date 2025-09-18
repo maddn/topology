@@ -1,7 +1,6 @@
 FROM debian:bookworm AS nso-build
 
 ARG USER_NAME=cisco
-ARG PASSWORD=cisco
 
 RUN apt-get update \
   && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
@@ -115,11 +114,12 @@ RUN rm -rf \
   /opt/ncs/current/src/tools \
   /opt/ncs/current/src/yang
 
-RUN useradd --no-log-init \
-            --create-home \
-            --shell /bin/bash \
-            --groups sudo,adm \
-            ${USER_NAME} && \
+RUN --mount=type=secret,id=PASSWORD,env=PASSWORD \
+  useradd --no-log-init \
+          --create-home \
+          --shell /bin/bash \
+          --groups sudo,adm \
+          ${USER_NAME} && \
   echo "${USER_NAME}:${PASSWORD}" | chpasswd
 
 EXPOSE 22 80 443 830 2024

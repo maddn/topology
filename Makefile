@@ -10,7 +10,11 @@ docker-build:
 	  echo "Unable to find NSO installer binary"; \
 	  exit 1; \
 	fi
-	docker build --build-arg NSO_INSTALL_FILE=$(nso_install_file) --progress=plain --target nso-build -t $(IMAGE_NAME) .
+	PASSWORD=cisco docker buildx build \
+	  --build-arg NSO_INSTALL_FILE=$(nso_install_file) \
+	  --secret id=PASSWORD,env=PASSWORD \
+	  --target nso-build \
+	  -t $(IMAGE_NAME) .
 
 docker-start: docker-run docker-wait-started
 
