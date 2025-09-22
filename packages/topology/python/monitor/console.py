@@ -24,17 +24,18 @@ class Console(spawn_context.Process):
                 try:
                     with Telnet(self._host, self._port) as telnet:
                         while not self.stop_event.is_set():
-                            line = telnet.read_until(b'\n', timeout=30)
+                            line = telnet.read_until(b'\n', timeout=10)
                             if line:
                                 with open(self._file, 'a+b') as log_file:
                                     log_file.write(line)
                                 self._send_message(
                                         line.decode('utf-8').strip('\r\n '))
-                except EOFError:
-                    pass
-                except ConnectionRefusedError:
-                    pass
-                self.stop_event.wait(10)
+                except (EOFError, ConnectionRefusedError,
+                        ConnectionResetError) as err:
+                    with open(self._file, 'a', encoding='utf-8') as log_file:
+                        log_file.write(f'{str(err)}\r\n')
+                        log_file.write(traceback.format_exc())
+                self.stop_event.wait(timeout=10)
 
         except Exception as err:
             with open(self._file, 'a', encoding='utf-8') as log_file:

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import threading
+import traceback
 from ncs import maapi, maagic, OPERATIONAL
 from ncs.dp import Action
 from monitor.console import Console
@@ -53,8 +54,12 @@ class ConsoleProcessManager(threading.Thread):
                 self._update_device_console_activity(timestamp, line)
         except:
             self.stop()
+            self._log.error(traceback.format_exc())
             raise
         finally:
+            if not self._console.queue.empty():
+                message = self._console.queue.get_nowait()
+                self._log.info('Queue not empty: ', message)
             self._console.join()
 
 
@@ -77,15 +82,26 @@ class ConsoleActivityMonitor(Action):
                     topology_name, device_name, self.log)
             self._console_mgmt_threads[name].start()
 
-    def stop_console(self, name):
+    def _stop_console(self, name):
         if name in self._console_mgmt_threads:
             (status, _) = self.console_status(name)
             if status == 'running':
                 self.log.info(f'Stopping {name} console process')
                 console_mgmt_thread = self._console_mgmt_threads[name]
                 console_mgmt_thread.stop()
+
+    def _join_console(self, name):
+        if name in self._console_mgmt_threads:
+            (status, _) = self.console_status(name)
+            if status == 'running':
+                self.log.info(f'Joining {name} console process')
+                console_mgmt_thread = self._console_mgmt_threads[name]
                 console_mgmt_thread.join()
             del self._console_mgmt_threads[name]
+
+    def stop_console(self, name):
+        self._stop_console(name)
+        self._join_console(name)
 
     def console_status(self, name):
         if name in self._console_mgmt_threads:
@@ -95,8 +111,11 @@ class ConsoleActivityMonitor(Action):
     def stop(self):
         self.log.info('Stopping all consoles')
         loggers = list(self._console_mgmt_threads)
+        self.log.info(loggers)
         for name in loggers:
-            self.stop_console(name)
+            self._stop_console(name)
+        for name in loggers:
+            self._join_console(name)
         super().stop()
 
     @Action.action
