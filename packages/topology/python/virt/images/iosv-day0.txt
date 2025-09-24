@@ -7,7 +7,7 @@ interface GigabitEthernet0/0
  no shutdown
 !
 ip route 10.16.0.0 255.255.0.0 ${gateway-address}
-ip route 198.18.128.0 255.255.128.0 ${gateway-address}
+ip route 198.18.128.0 255.255.192.0 ${gateway-address}
 line aux 0
  privilege level 15
 line vty 0 4

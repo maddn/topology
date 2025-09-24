@@ -26,7 +26,7 @@
   <devices>
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
 
-    <!-- Access: Console (telnet localhost 16101) -->
+    <!-- Access: Console (telnet localhost 16001) -->
     <serial type='tcp'>
        <source mode="bind" host="0.0.0.0" service="160${id}"/>
        <protocol type="telnet"/>
