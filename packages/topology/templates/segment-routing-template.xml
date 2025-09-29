@@ -73,7 +73,9 @@
                   <ipv4>
                     <unicast>
                       <segment-routing>
-                        <mpls/>
+                        <mpls>
+                          <sr-prefer/>
+                        </mpls>
                       </segment-routing>
                     </unicast>
                   </ipv4>
