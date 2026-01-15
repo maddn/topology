@@ -42,6 +42,7 @@ RUN apt-get update \
      pyfatfs \
      pyyaml \
      setproctitle \
+     telnetlib3 \
   && apt-get -qy purge pkg-config python3-pip python3-dev \
   && apt-get -qy autoremove \
   && apt-get clean \

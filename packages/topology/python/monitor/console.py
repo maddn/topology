@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 import multiprocessing
-from telnetlib import Telnet
 import traceback
 from datetime import datetime
 import setproctitle
+
+from telnetlib3.telnetlib import Telnet
 
 spawn_context = multiprocessing.get_context('spawn')
 
