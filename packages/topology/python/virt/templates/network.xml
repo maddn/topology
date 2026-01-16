@@ -1,11 +1,15 @@
 <network>
   <name>${network}</name>
   <uuid>${uuid}</uuid>
-  <bridge name="${bridge}" stp="off"/>
+  <bridge name="${bridge}"/>
+  <forward mode="${forward}"/>
   <mac address="${mac-address}"/>
   <port isolated="${isolated}"/>
   <portgroup name="dummy"/>
   <metadata xmlns:topology="http//example.com/topology">
-    <topology:delay>${delay}</topology:delay>
+    <topology:topology>
+      <topology:delay>${delay}</topology:delay>
+      <topology:existing-bridge>${existing-bridge}</topology:existing-bridge>
+    </topology:topology>
   </metadata>
 </network>

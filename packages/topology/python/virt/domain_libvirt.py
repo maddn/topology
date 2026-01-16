@@ -1,10 +1,8 @@
-#!/usr/bin/python3
 from abc import abstractmethod
 from libvirt import (VIR_DOMAIN_UNDEFINE_NVRAM)
 from ncs import maapi
 from virt.domain import Domain
-from virt.network import generate_network_id, \
-        generate_network_name, generate_iface_dev_name
+from virt.network import generate_network_id, generate_network_name
 from virt.template import xml_to_string
 from virt.topology_status import get_hypervisor_output_node, write_node_data
 from virt.volume import generate_volume_name, generate_day0_volume_name
@@ -27,7 +25,7 @@ class DomainXmlBuilder():
                 self._device_id, last_octet, True)
 
     def _generate_iface_dev_name(self, other_id):
-        return generate_iface_dev_name(self._device_id, other_id)
+        return f'vtap-{self._device_id}-{other_id}'
 
     def _get_disk_xml(self, volume_name, pool_name, base_image_name):
         return self._templates.apply_xml_template('disk.xml', {

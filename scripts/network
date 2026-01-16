@@ -1,10 +1,292 @@
 #!/bin/bash
 
-if [[ $2 != "updated" ]]; then
+# Valid scenarios:
+#
+# 1. Existing bridge (any number of interfaces)
+#       veth pairs created for each container interface
+#           One end added to the bridge, other end moved to container namespace
+#       VM tap interfaces left as is (should already be in the bridge)
+# 2. Two interfaces (no bridge)
+#       a. Two containers
+#             single veth pair created between the containers
+#       b. One container, one VM
+#             VM tap interface moved into container namespace and renamed
+#       c. Two VMs
+#             Nothing - UDP networking handled by libvirt
+
+
+LOG_FILE=/tmp/libvirt-network-hook.log
+
+if [[ $2 != "updated" && $2 != "stopped" ]]; then
  exit 0;
 fi
 
+log() {
+  message=$1
+  echo $message >> $LOG_FILE
+}
+
+is_container_interface () {
+  interface=$1
+  [[ $interface == veth* || $interface == e1* ]]
+  return $?
+}
+
+check_container_interface_exists() {
+  pid=$1
+  interface=$2
+  ip netns exec $pid ip link show $interface
+  if [[ $? -ne 0 ]]; then
+    log "Interface $interface does not exist in container namespace: $pid"
+    exit 0
+  fi
+}
+
+check_container_interface_does_not_exist() {
+  pid=$1
+  interface=$2
+  ip netns exec $pid ip link show $interface
+  if [[ $? -eq 0 ]]; then
+    log "Interface $interface already exists in container namespace: $pid"
+    exit 0
+  fi
+}
+
+check_interface_exists() {
+  interface=$1
+  ip link show $interface
+  if [[ $? -ne 0 ]]; then
+    log "Interface $interface does not exist"
+    exit 0
+  fi
+}
+
+check_is_existing_xrd_interface() {
+  interface=$1
+  device=$2
+
+  device_type=$(docker exec $device sh -c "test -d /var/cisco/xrd && echo xrd")
+  if [[ $device_type == "xrd" ]]; then
+    interface_id=${interface##veth-*-}
+    docker exec $device sh -c "ip netns exec vrf-default ip link show Gi0_0_0_$interface_id" >/dev/null 2>&1
+    if [[ $? -eq 0 ]]; then
+      echo true
+    else
+      echo false
+    fi
+  fi
+}
+
+fix_existing_xrd_interface() {
+  interface=$1
+  device=$2
+
+  device_type=$(docker exec $device sh -c "test -d /var/cisco/xrd && echo xrd")
+  if [[ $device_type == "xrd" ]]; then
+    log "Fixing existing XRd interface: $device / $interface"
+    interface_id=${interface##veth-*-}
+    docker exec $device sh -c "ip netns exec vrf-default ip link delete Gi0_0_0_$interface_id"
+    docker exec $device sh -c "killall spp"
+  fi
+}
+
+move_interface_into_container () {
+  interface=$1
+  device=$2
+  pid=$3
+  new_name=$4
+
+  check_interface_exists $interface
+  log "Moving: tap interface $interface  -->  Container: $device [namespace: $pid] / $new_name"
+
+  is_existing_xrd_interface=$(check_is_existing_xrd_interface $new_name $device)
+  ip link set $interface down
+  ip link set $interface netns $pid
+  ip netns exec $pid ip link set $interface name $new_name
+  ip netns exec $pid ip link set $new_name up
+
+  if [[ $is_existing_xrd_interface == true ]]; then
+    fix_existing_xrd_interface $new_name $device
+  fi
+
+  exit 0
+}
+
+move_interface_out_of_container () {
+  interface=$1
+  device=$2
+  pid=$3
+  original_name=$4
+
+  check_container_interface_exists $pid $interface
+  log "Moving: tap interface from container: $device [namespace: $pid] / $interface  -->  $original_name"
+
+  ip netns exec $pid ip link set $interface down
+  ip netns exec $pid ip link set $interface name $original_name
+  ip netns exec $pid ip link set $original_name netns 1
+  ip link set $original_name up
+  exit 0
+}
+
+
+echo >> $LOG_FILE
+printf -v date '%(%Y-%m-%d %H:%M:%S)T'
+log "[$date] Network hook triggered: action [$2]"
+
+if [[ ! -d /var/run/netns ]]; then
+  mkdir -p /var/run/netns
+fi
+
 network_xml=$(cat /etc/libvirt/qemu/networks/$1.xml)
+
+num_interfaces=$(grep -o '<ns0:interface>' <<< $network_xml | wc -l)
+
+if [[ ! ${network_xml} == *"<ns0:existing-bridge/>"* ]]; then
+  existing_bridge=${network_xml#*<ns0:existing-bridge>}
+  existing_bridge=${existing_bridge%%</ns0:existing-bridge>*}
+fi
+
+bridge=${network_xml#*<bridge name=\'}
+bridge=${bridge%%\'*}
+
+log "Network [$1] Bridge [$bridge] Interfaces [$num_interfaces]"
+if [[ -n $existing_bridge ]]; then
+  log "Existing bridge: $existing_bridge"
+fi
+
+
+if [[ $num_interfaces -eq 2 && -z $existing_bridge ]]; then
+  a_end_device=${network_xml#*<ns0:device>}
+  z_end_device=${a_end_device#*</ns0:device>}
+  z_end_device=${z_end_device#*<ns0:device>}
+
+  a_end_device=${a_end_device%%</ns0:device>*}
+  z_end_device=${z_end_device%%</ns0:device>*}
+
+  a_end_interface=${network_xml#*<ns0:name>}
+  z_end_interface=${a_end_interface#*</ns0:name>}
+  z_end_interface=${z_end_interface#*<ns0:name>}
+
+  a_end_interface=${a_end_interface%%</ns0:name>*}
+  z_end_interface=${z_end_interface%%</ns0:name>*}
+
+  log "Link network"
+  log "A End: Device [$a_end_device] Interface [$a_end_interface]"
+  log "Z End: Device [$z_end_device] Interface [$z_end_interface]"
+
+
+  if is_container_interface $a_end_interface; then
+    pid_a=$(sudo docker inspect -f '{{.State.Pid}}' $a_end_device)
+    if [[ -n $pid_a ]]; then
+      log "Linking A End Container PID: $pid_a"
+      ln -sf /proc/$pid_a/ns/net /var/run/netns/$pid_a
+    fi
+  fi
+
+  if is_container_interface $z_end_interface; then
+    pid_z=$(sudo docker inspect -f '{{.State.Pid}}' $z_end_device)
+    if [[ -n $pid_z ]]; then
+      log "Linking Z End Container PID: $pid_z"
+      ln -sf /proc/$pid_z/ns/net /var/run/netns/$pid_z
+    fi
+  fi
+
+  if [[ $2 == "updated" ]]; then
+
+    if [[ -n $pid_a && -n $pid_z ]]; then
+      check_container_interface_does_not_exist $pid_a $a_end_interface
+      check_container_interface_does_not_exist $pid_z $z_end_interface
+
+      log "Creating veth pair: $a_end_interface [namespace: $pid_a]  <--->  $z_end_interface [namespace: $pid_z]"
+
+      a_end_is_existing_xrd_interface=$(check_is_existing_xrd_interface $a_end_interface $a_end_device)
+      z_end_is_existing_xrd_interface=$(check_is_existing_xrd_interface $z_end_interface $z_end_device)
+
+      ip link add $a_end_interface type veth peer name $z_end_interface
+      ip link set $a_end_interface netns $pid_a
+      ip link set $z_end_interface netns $pid_z
+      ip netns exec $pid_a ip link set $a_end_interface up
+      ip netns exec $pid_z ip link set $z_end_interface up
+
+      if [[ $a_end_is_existing_xrd_interface == true ]]; then
+        fix_existing_xrd_interface $a_end_interface $a_end_device
+      fi
+      if [[ $z_end_is_existing_xrd_interface == true ]]; then
+        fix_existing_xrd_interface $z_end_interface $z_end_device
+      fi
+      exit 0
+
+    elif [[ -n $pid_a ]]; then
+      move_interface_into_container $z_end_interface $a_end_device $pid_a $a_end_interface
+
+    elif [[ -n $pid_z ]]; then
+      move_interface_into_container $a_end_interface $z_end_device $pid_z $z_end_interface
+
+    else
+      # Two VMs, ensure both TAP interfaces exist in the bridge
+      check_interface_exists $a_end_interface
+      check_interface_exists $z_end_interface
+      bridge_interfaces=$(brctl show $bridge)
+      if [[ ! $bridge_interfaces == *"$a_end_interface"* ]]; then
+        log "Fixing missing tap interface in bridge: $a_end_interface --> $bridge"
+        brctl addif $bridge $a_end_interface
+      fi
+      if [[ ! $bridge_interfaces == *"$z_end_interface"* ]]; then
+        log "Fixing missing tap interface in bridge: $z_end_interface --> $bridge"
+        brctl addif $bridge $z_end_interface
+      fi
+      exit 0
+    fi
+
+  elif [[ $2 == "stopped" ]]; then
+
+    if [[ -n $pid_a && -z $pid_z ]]; then
+      move_interface_out_of_container $a_end_interface $a_end_device $pid_a $z_end_interface
+    fi
+    if [[ -n $pid_z && -z $pid_a ]]; then
+      move_interface_out_of_container $z_end_interface $z_end_device $pid_z $a_end_interface
+    fi
+
+  fi
+
+elif [[ -n $bridge && $2 == "updated" ]]; then
+
+  search_string=${network_xml}
+  for i in $(seq 1 $num_interfaces); do
+    pid=""
+    search_string=${search_string#*<ns0:device>}
+    device=${search_string%%</ns0:device>*}
+
+    search_string=${search_string#*<ns0:name>}
+    interface=${search_string%%</ns0:name>*}
+
+    log "Device [$device] Interface [$interface]"
+
+    if is_container_interface $interface; then
+      pid=$(sudo docker inspect -f '{{.State.Pid}}' $device)
+      if [[ -n $pid ]]; then
+        log "Linking Container PID: $pid"
+        ln -sf /proc/$pid/ns/net /var/run/netns/$pid
+      fi
+    fi
+
+    if [[ -n $pid ]]; then
+      check_container_interface_does_not_exist $pid $interface
+      peer_interface=${interface}-host
+      log "Creating veth pair: $interface [namespace: $pid]  <--->  $bridge [host]"
+      ip link add $interface type veth peer name $peer_interface
+      ip link set $interface netns $pid
+      ip netns exec $pid ip link set $interface up
+      brctl addif $bridge $peer_interface
+      ip link set $peer_interface up
+    fi
+  done
+  exit 0
+fi
+
+exit 0
+
+#TODO: update following to work with new veth links
 
 delay=${network_xml##*<ns0:delay>}
 delay=${delay%%</ns0:delay>*}

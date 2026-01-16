@@ -1,0 +1,4 @@
+<topology:interface xmlns:topology="http//example.com/topology">
+  <topology:device>${device}</topology:device>
+  <topology:name>${interface}</topology:name>
+</topology:interface>

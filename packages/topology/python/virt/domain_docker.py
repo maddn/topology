@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from virt.domain import Domain
-from virt.network import generate_bridge_name
+from virt.network import generate_bridge_name, generate_iface_dev_name
 from virt.topology_status import write_node_data, get_hypervisor_output_node
 
 
@@ -23,6 +23,9 @@ class DomainDocker(Domain):
     def _get_mgmt_iface(self, device):
         pass
 
+    def _generate_iface_dev_name(self, device_id, iface_id):
+        return generate_iface_dev_name(device_id, iface_id)
+
     def get_docker_ifaces(self, device, first_iface = 0, device_id = None):
         device_id = int(device.id)
         docker_ifaces = []
@@ -37,15 +40,12 @@ class DomainDocker(Domain):
                 bridge_name = generate_bridge_name(network_id)
 
             if bridge_name:
-                octets = sorted(( device_id, iface_id ))
-                ip_address_start = f'10.{octets[0]}.{octets[1]}' if iface_id > 0 else '10.11.12'
-                docker_ifaces.append(( iface_id, bridge_name, ip_address_start ))
+                docker_ifaces.append(( iface_id, bridge_name ))
 
         docker_ifaces.append(( None, self._resource_mgr.mgmt_bridge, None ))
         return sorted(docker_ifaces, key=lambda x: x[1])
 
     def _define(self, device):
-        networks = {}
         device_name = device.device_name
         docker = self._hypervisor_mgr.get_device_docker(device.id)
         self._log.info(f'[{docker.name}] Defining domain {device_name}')
@@ -59,14 +59,15 @@ class DomainDocker(Domain):
         mgmt_ip_address = self._resource_mgr.generate_mgmt_ip_address(device.id)
 
         ifaces = self.get_docker_ifaces(device)
-        for (iface_id, bridge_name, _) in ifaces:
+        for (iface_id, _) in ifaces:
             if iface_id is not None:
                 mac_address = self._resource_mgr.generate_mac_address(
                         device.id, iface_id, True)
-                networks[bridge_name] = mac_address
                 self._network_mgr.write_iface_data( device.id, iface_id, [
                         ('id', iface_id),
-                        ('mac-address', mac_address) ])
+                        ('host-interface', self._generate_iface_dev_name(
+                                           device.id, iface_id)),
+                        ('mac-address', mac_address)])
 
         mac_address = self._resource_mgr.generate_mac_address(device.id, 0xff, True)
 
@@ -95,17 +96,8 @@ class DomainDocker(Domain):
     def undefine_container(self, docker, device):
         docker.remove(device.device_name)
         docker.delete_network(self._resource_mgr.mgmt_bridge)
-        ifaces = self.get_docker_ifaces(device)
-        for iface in ifaces:
-            if iface[0] is not None:
-                docker.delete_network(iface[1])
 
     def create_container(self, docker, device):
-        ifaces = self.get_docker_ifaces(device)
-        for (iface_id, bridge_name, _) in ifaces:
-            if iface_id is not None:
-                docker.create_network(bridge_name, None, False)
-
         docker.start(device.device_name)
 
     def shutdown_container(self, docker, device):

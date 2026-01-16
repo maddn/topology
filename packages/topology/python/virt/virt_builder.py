@@ -56,9 +56,10 @@ class VirtBuilder():
     def topology_networks(self, action, output, devices):
         for device_type, topology_networks_class in \
                 self._factory.topology_networks_registry.items():
-            topology_networks_class(self._factory)(action, output, [
-                device.id for device in devices
-                if self._get_device_type(device) == device_type ])
+            device_ids = [ device.id for device in devices
+                           if self._get_device_type(device) == device_type ]
+            if device_ids:
+                topology_networks_class(self._factory)(action, output, device_ids)
 
     def volume(self, action, output, device):
         device_type = self._get_device_type(device)

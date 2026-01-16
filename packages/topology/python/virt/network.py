@@ -7,6 +7,7 @@ from libvirt import (VIR_NETWORK_UPDATE_COMMAND_MODIFY,
 
 from virt.topology_status import write_node_data, get_hypervisor_output_node
 from virt.virt_base import VirtBase
+from virt.template import xml_to_string
 
 _ncs = __import__('_ncs')
 
@@ -47,7 +48,7 @@ class NetworkManager():
                         f'network (device {key[0]} interface {key[1]})')
 
             value = (bridge or network, path, dest)
-            if bridge:
+            if bridge and not dest:
                 self._bridge_ifaces[key] = value
             else:
                 self._network_ifaces[key] = value
@@ -77,10 +78,10 @@ class NetworkManager():
             sorted_device_ids = sort_link_device_ids(device_ids)
             network_id = None
             bridges = (None, None)
-            if hypervisors[0] == hypervisors[1]:
-                network_id = generate_network_id(*sorted_device_ids)
-                self._link_networks[sorted_device_ids] = network_id
-            else:
+            network_id = generate_network_id(*sorted_device_ids)
+            self._link_networks[sorted_device_ids] = network_id
+
+            if hypervisors[0] != hypervisors[1]:
                 bridges = (link.external_connection.a_end_bridge or
                            hypervisor_mgr.get_external_bridge(hypervisors[0]),
                            link.external_connection.z_end_bridge or
@@ -126,7 +127,12 @@ class NetworkManager():
     def get_network_device_ids(self, network):
         return [ device_id for (
             (device_id, iface_id), value) in self._network_ifaces.items()
-                if value[1] == network ]
+                if value[0] == network ]
+
+    def get_bridge_device_ids(self, bridge):
+        return [ device_id for (
+            (device_id, iface_id), value) in self._bridge_ifaces.items()
+                if value[0] == bridge ]
 
     def get_iface_network_id(self, device_id, iface_id):
         return self._network_ifaces.get((device_id, iface_id), [None])[0]
@@ -148,30 +154,53 @@ class NetworkManager():
 class Network(VirtBase): #pylint: disable=too-few-public-methods
     def _load_templates(self):
         self._templates.load_template('templates', 'network.xml')
+        self._templates.load_template('templates', 'network-interface.xml')
 
     def _define_network(self, hypervisor_name, network_id, mac_address,
-            isolated=False, path=None, delay=None):
+            isolated=False, path=None, delay=None, existing_bridge_name=None,
+            interfaces=[]):
         uuid = ''
         network_name = generate_network_name(network_id)
-        bridge_name = generate_bridge_name(network_id)
         libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
 
         if network_name in libvirt.networks:
-            network = libvirt.conn.networkLookupByName(network_name)
-            uuid = network.UUIDString()
+            if delay or interfaces:
+                network = libvirt.conn.networkLookupByName(network_name)
+                uuid = network.UUIDString()
+            else:
+                self._log.info(f'[{hypervisor_name}] '
+                       f'Network {network_name} already defined')
+                return
+
+        bridge_name = existing_bridge_name or generate_bridge_name(network_id)
 
         variables = {
             'uuid': uuid,
             'network': network_name,
             'bridge': bridge_name,
-            'mac-address': mac_address,
+            'forward': 'bridge' if existing_bridge_name else '',
+            'mac-address': mac_address if not existing_bridge_name else '',
             'isolated': 'yes' if isolated else '',
-            'delay': delay if delay else ''}
+            'delay': delay if delay else '',
+            'existing-bridge': existing_bridge_name or ''
+         }
 
-        network_xml_str = self._templates.apply_template(
+        network_xml = self._templates.apply_xml_template(
                 'network.xml', variables)
-        self._log.info(f'[{hypervisor_name}] '
-                       f'Defining network {network_name}')
+
+        topology_metadata = network_xml.find('metadata').find(
+                'topology:topology', {
+                    'topology': 'http//example.com/topology' })
+
+        for interface in interfaces:
+            topology_metadata.append(
+                    self._templates.apply_xml_template(
+                        'network-interface.xml', interface ))
+
+        network_xml_str = xml_to_string(network_xml)
+
+        self._log.info(f'[{hypervisor_name}] {"Re-d" if uuid else "D"}'
+                       f'efining network {network_name}')
         self._log.info(network_xml_str)
         libvirt.conn.networkDefineXML(network_xml_str)
         get_hypervisor_output_node(self._output,
@@ -187,15 +216,14 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
         network_name = generate_network_name(network_id)
 
         if network_name in libvirt.networks:
-            self._define_network(hypervisor_name, network_id, mac_address,
-                    isolated=isolated, delay=delay)
+            self._log.info(f'[{hypervisor_name}] Updating network {network_name}')
             network = libvirt.conn.networkLookupByName(network_name)
             network.update(
                     VIR_NETWORK_UPDATE_COMMAND_MODIFY,
                     VIR_NETWORK_SECTION_PORTGROUP, -1,
                     '<portgroup name="dummy"/>')
 
-    def _action(self, action, *args): #network_id, path
+    def _action(self, action, *args): #hypervisor_name, network_id, path
         hypervisor_name, network_id,  *args = args
         path = args[0] if args else None
 
@@ -221,33 +249,68 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
         return set(self._hypervisor_mgr.get_device_hypervisor(device_id)
                    for device_id in device_ids)
 
-class LinkNetwork(Network):
-    def define(self, link):
-        (network_id, device_ids) = self._network_mgr.get_link_network(link)
-        if network_id:
-            self._define_network(
-                self._hypervisor_mgr.get_device_hypervisor(device_ids[0]),
-                network_id,
-                self._resource_mgr.generate_mac_address(*device_ids),
-                path=link._path,
-                delay=link.libvirt.delay)
 
-    def update(self, link):
+class LinkNetwork(Network):
+    def _get_link_hypervisors(self, link):
+        return (
+            self._hypervisor_mgr.get_device_name_hypervisor(link.a_end_device),
+            self._hypervisor_mgr.get_device_name_hypervisor(link.z_end_device)
+        )
+
+    def _define(self, hypervisor_name, link):
         (network_id, device_ids) = self._network_mgr.get_link_network(link)
-        if network_id:
-            self._update_network(
-                self._hypervisor_mgr.get_device_hypervisor(device_ids[0]),
-                network_id,
-                self._resource_mgr.generate_mac_address(*device_ids),
-                delay=link.libvirt.delay)
+        (a_end_hypervisor, z_end_hypervisor) = self._get_link_hypervisors(link)
+
+        interfaces = []
+        existing_bridge_name = None
+
+        if a_end_hypervisor == hypervisor_name:
+            if link.a_end_interface.host_interface:
+                interfaces.append({
+                        'device': link.a_end_device,
+                        'interface': link.a_end_interface.host_interface
+                })
+            existing_bridge_name = link.external_connection.a_end_bridge
+        if z_end_hypervisor == hypervisor_name:
+            if link.z_end_interface.host_interface:
+                interfaces.append({
+                        'device': link.z_end_device,
+                        'interface': link.z_end_interface.host_interface
+                })
+            existing_bridge_name=link.external_connection.z_end_bridge
+
+        if a_end_hypervisor == z_end_hypervisor:
+            existing_bridge_name = None
+
+        self._define_network(
+            hypervisor_name,
+            network_id,
+            self._resource_mgr.generate_mac_address(*device_ids),
+            path=link._path,
+            delay=link.libvirt.delay,
+            existing_bridge_name=existing_bridge_name,
+            interfaces=interfaces
+        )
+
+    def _update(self, hypervisor_name, link):
+        (network_id, _) = self._network_mgr.get_link_network(link)
+        self._define(hypervisor_name, link)
+        self._update_network(hypervisor_name, network_id)
 
     def _action(self, action, *args):
         link, = args
-        (network_id, device_ids) = self._network_mgr.get_link_network(link)
-        if network_id:
-            super()._action(action,
-                self._hypervisor_mgr.get_device_hypervisor(device_ids[0]),
-                network_id, link._path)
+        (network_id, _) = self._network_mgr.get_link_network(link)
+        (a_end_hypervisor, z_end_hypervisor) = self._get_link_hypervisors(link)
+        if hasattr(self, f'_{action}'):
+            action_method = getattr(self, f'_{action}')
+            action_method(a_end_hypervisor, *args)
+            if a_end_hypervisor != z_end_hypervisor:
+                action_method(z_end_hypervisor, *args)
+        else:
+            super()._action(action, a_end_hypervisor, network_id, link._path)
+            if a_end_hypervisor != z_end_hypervisor:
+                super()._action(action, z_end_hypervisor, network_id, link._path)
+
 
 class IsolatedNetwork(Network):
     def _get_hypervisor_network(self, device_id):
@@ -264,20 +327,37 @@ class IsolatedNetwork(Network):
         super()._action(action, *self._get_hypervisor_network(device_id))
 
 class ExtraNetwork(Network):
-    def define(self, device_ids, network_id, path, mac_octets):
-        if not device_ids:
-            device_ids = self._network_mgr.get_network_device_ids(network_id)
-        for (idx, hypervisor_name) in enumerate(
-                self._get_hypervisors(device_ids)):
-            mac_address = self._resource_mgr.generate_mac_address(
-                    mac_octets[0] - 0x10*idx, mac_octets[1])
-            self._define_network(
-                    hypervisor_name, network_id, mac_address, path=path)
+    def _define(self, hypervisor_name, hypervisor_index, network_id, path,
+               mac_octets, existing_bridge_name=None, interfaces=[]):
+        mac_address = self._resource_mgr.generate_mac_address(
+                mac_octets[0] - hypervisor_index, mac_octets[1])
+        self._define_network(
+                hypervisor_name, network_id, mac_address,
+                existing_bridge_name=existing_bridge_name,
+                path=path, interfaces=interfaces)
+
+    def _update(self, *args):
+        (hypervisor_name, _, network_id, *_) = args
+        self._define(*args)
+        self._update_network(hypervisor_name, network_id)
 
     def _action(self, action, *args):
-        device_ids, network_id, path, _ = args
-        for hypervisor_name in self._get_hypervisors(device_ids):
-            super()._action(action, hypervisor_name, network_id, path)
+        device_ids, *new_args = args
+        if not device_ids:
+            network_id, _, __, bridge_name, *_ = new_args
+            if bridge_name:
+                device_ids = self._network_mgr.get_bridge_device_ids(bridge_name)
+            else:
+                device_ids = self._network_mgr.get_network_device_ids(network_id)
+
+        if hasattr(self, f'_{action}'):
+            action_method = getattr(self, f'_{action}')
+            for (idx, hypervisor_name) in enumerate(
+                    self._get_hypervisors(device_ids)):
+                action_method(hypervisor_name, idx, *new_args)
+        else:
+            for hypervisor_name in self._get_hypervisors(device_ids):
+                super()._action(action, hypervisor_name, *new_args)
 
 
 class DomainNetworks(VirtBase):

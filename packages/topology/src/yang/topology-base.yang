@@ -130,6 +130,16 @@ submodule topology-base {
           leaf exclude-ip-connectivity {
             type empty;
           }
+          leaf destroy-behaviour {
+            type enumeration {
+              enum safe;
+              enum immediate;
+            }
+            default safe;
+            config false;
+            description
+              "Set automatically depending on the link device types";
+          }
         }
       }
 
