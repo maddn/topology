@@ -6,6 +6,20 @@ from virt.domain_docker import DomainDocker
 
 @VirtFactory.register_domain('XRd')
 class XRdDomain(DomainDocker):
+    CONFIG_TARGET = '/startup.cfg'
+    CAPABILITIES = [
+        'NET_ADMIN',
+        'SYS_ADMIN',
+        'IPC_LOCK',
+        'SYS_NICE',
+        'SYS_PTRACE',
+        'SYS_RESOURCE'
+    ]
+    DEVICES = [
+        '/dev/fuse',
+        '/dev/net/tun'
+    ]
+
     def _get_mgmt_iface(self, device):
         mgmt_iface_idx = next((
             idx for idx, iface in enumerate(self.get_docker_ifaces(device))

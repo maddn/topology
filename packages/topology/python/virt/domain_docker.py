@@ -8,6 +8,12 @@ from virt.topology_status import write_node_data, get_hypervisor_output_node
 class DomainDocker(Domain):
 
     SHUTDOWN_SUPPORTED = True
+    CAPABILITIES = []
+    COMMAND = None
+    CONFIG_TARGET = None
+    DEVICES = []
+    PRIVILEGED = False
+    POST_START_COMMANDS = []
 
     @abstractmethod
     def _get_domain_env(self, device):
@@ -67,11 +73,16 @@ class DomainDocker(Domain):
         docker.create(
                 device.device_name,
                 dev_def.base_image,
+                mac_address,
                 self._resource_mgr.mgmt_bridge,
                 mgmt_ip_address,
-                mac_address=mac_address,
-                environment=self._get_domain_env(device),
-                networks=networks)
+                [],
+                self._get_domain_env(device),
+                self.CAPABILITIES,
+                self.COMMAND,
+                self.CONFIG_TARGET,
+                self.DEVICES,
+                self.PRIVILEGED)
 
         write_node_data(device.management_interface._path, [
                 ('ip-address', mgmt_ip_address),
@@ -105,7 +116,7 @@ class DomainDocker(Domain):
         return docker.is_active(device.device_name)
 
     def shutdown_supported(self):
-        return True
+        return self.SHUTDOWN_SUPPORTED
 
     def _action(self, action, *args):
         device, = args

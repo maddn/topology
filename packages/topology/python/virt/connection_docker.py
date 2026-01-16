@@ -68,8 +68,19 @@ class ConnectionDocker():
                 network.remove()
                 self.networks.remove(bridge_name)
 
-    def create(self, container_name, image_name,
-               mgmt_bridge, mgmt_ip_address, mac_address, environment, networks):
+    def create(self,
+               container_name,
+               image_name,
+               mac_address,
+               mgmt_bridge,
+               mgmt_ip_address,
+               networks,
+               environment,
+               capabilities,
+               command,
+               config_target,
+               devices,
+               privileged):
         self._log.info(f'[{self.name}] Creating container {container_name}')
         networking_config=({
             mgmt_bridge: self.conn.api.create_endpoint_config(
@@ -82,36 +93,26 @@ class ConnectionDocker():
             )
         self.conn.containers.create(
                 name=container_name,
-                cap_add=[
-                    'NET_ADMIN',
-                    'SYS_ADMIN',
-                    'IPC_LOCK',
-                    'SYS_NICE',
-                    'SYS_PTRACE',
-                    'SYS_RESOURCE'
-                ],
-                devices=[
-                    '/dev/fuse',
-                    '/dev/net/tun'
-                ],
-                security_opt=[
-                    'apparmor=unconfined'
-                ],
+                cap_add=capabilities,
+                command=command,
+                detach=True,
+                devices=devices,
                 environment=environment,
+                image=image_name,
+                mac_address=mac_address,
                 mounts=[
                     docker.types.Mount(
-                        target='/startup.cfg',
+                        target=config_target,
                         source=f'/var/lib/libvirt/images/{container_name}-day0.img',
                         type='bind'
                     )
-                ],
-                mac_address=mac_address,
+                ] if config_target else None,
                 network=mgmt_bridge,
                 networking_config=networking_config,
-                image=image_name,
+                privileged=privileged,
+                security_opt=[ 'apparmor=unconfined' ],
                 stdin_open=True,
-                tty=True,
-                detach=True)
+                tty=True)
         self.containers.append(container_name)
 
     def start(self, container_name):
