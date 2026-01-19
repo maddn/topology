@@ -47,7 +47,8 @@ class Domain(VirtBase):
     #                           ('id', None),
                             ('ip-address', None),
                             ('host-interface', None),
-                            ('mac-address', None)])
+                            ('mac-address', None),
+                            ('../destroy-behaviour', None)])
 
             if dev_def.ned_id is not None:
                 nso_device_delete(device.device_name)

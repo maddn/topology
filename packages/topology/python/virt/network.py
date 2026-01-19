@@ -210,8 +210,7 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
                 ('host-bridge', bridge_name),
                 ('mac-address', mac_address)])
 
-    def _update_network(self, hypervisor_name, network_id, mac_address,
-            isolated=False, delay=None):
+    def _update_network(self, hypervisor_name, network_id):
         libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
         network_name = generate_network_name(network_id)
 

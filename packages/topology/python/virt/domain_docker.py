@@ -67,7 +67,8 @@ class DomainDocker(Domain):
                         ('id', iface_id),
                         ('host-interface', self._generate_iface_dev_name(
                                            device.id, iface_id)),
-                        ('mac-address', mac_address)])
+                        ('mac-address', mac_address),
+                        ('../destroy-behaviour', 'immediate')])
 
         mac_address = self._resource_mgr.generate_mac_address(device.id, 0xff, True)
 
