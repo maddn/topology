@@ -25,9 +25,9 @@ class XRdDomain(DomainDocker):
 
     def _get_domain_env(self, device):
         ifaces = self.get_docker_ifaces(device)
-        xr_interfaces = ';'.join([ f'linux:{
-                self._generate_iface_dev_name(device.id, iface[0])
-                },xr_name=GigabitEthernet0/0/0/{iface[0]}'
+        xr_interfaces = ';'.join([ f'linux:'
+                f'{self._generate_iface_dev_name(device.id, iface[0])}'
+                'f,xr_name=GigabitEthernet0/0/0/{iface[0]}'
             for idx, iface in enumerate(ifaces) if iface[0] is not None ])
 
         return [

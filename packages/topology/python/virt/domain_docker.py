@@ -42,7 +42,7 @@ class DomainDocker(Domain):
             if bridge_name:
                 docker_ifaces.append(( iface_id, bridge_name ))
 
-        docker_ifaces.append(( None, self._resource_mgr.mgmt_bridge, None ))
+        docker_ifaces.append(( None, self._resource_mgr.mgmt_bridge ))
         return sorted(docker_ifaces, key=lambda x: x[1])
 
     def _define(self, device):

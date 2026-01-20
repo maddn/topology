@@ -17,10 +17,13 @@ ACTION_STATUS_MAP = {
 def write_node_data(path, leaf_value_pairs):
     with maapi.single_write_trans('admin', 'python') as trans:
         for leaf, value in leaf_value_pairs:
-            if value is None:
-                trans.safe_delete(f'{path}/{leaf}')
-            else:
-                trans.set_elem(value, f'{path}/{leaf}')
+            try:
+                if value is None:
+                    trans.safe_delete(f'{path}/{leaf}')
+                else:
+                    trans.set_elem(value, f'{path}/{leaf}')
+            except Exception:
+                pass
         trans.apply()
 
 def get_hypervisor_output_node(output, hypervisor_name):
