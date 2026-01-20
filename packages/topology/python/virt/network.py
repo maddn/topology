@@ -201,7 +201,7 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
 
         self._log.info(f'[{hypervisor_name}] {"Re-d" if uuid else "D"}'
                        f'efining network {network_name}')
-        self._log.info(network_xml_str)
+        self._log.debug(network_xml_str)
         libvirt.conn.networkDefineXML(network_xml_str)
         get_hypervisor_output_node(self._output,
                 hypervisor_name).networks.create(network_name)

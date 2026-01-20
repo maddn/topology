@@ -88,7 +88,7 @@ class Volume(VirtBase):
         return first_sector*bytes_per_sector
 
     def _add_iso_file(self, iso, file_string, file_name):
-        self._log.info(f'{file_name}:\n{file_string}')
+        self._log.debug(f'{file_name}:\n{file_string}')
         byte_str = file_string.encode()
         iso.add_fp(BytesIO(byte_str), len(byte_str), f'/{file_name}')
 
@@ -132,7 +132,7 @@ class Volume(VirtBase):
 
         self._log.info(
                 f'[{libvirt.name}] Creating day0 volume {volume_name}')
-        self._log.info(volume_xml_str)
+        self._log.debug(volume_xml_str)
         volume = pool.createXML(volume_xml_str)
 
         self._log.info(
@@ -158,11 +158,11 @@ class Volume(VirtBase):
             self._log.info(
                     f'[{libvirt.name}] '
                     f'Creating volume {volume_name} from {base_image_name}')
-            self._log.info(volume_xml_str)
+            self._log.debug(volume_xml_str)
             vol = pool.createXMLFrom(volume_xml_str, base_image)
         else:
             self._log.info(f'[{libvirt.name}] Creating volume {volume_name}')
-            self._log.info(volume_xml_str)
+            self._log.debug(volume_xml_str)
             vol = pool.createXML(volume_xml_str)
 
         if new_size is not None:

@@ -59,7 +59,7 @@ class VmxVolume(Volume):
         offset = self._create_raw_disk_image(tmp_disk_file, False)
 
         self._log.info('Writing day0 file to partition')
-        self._log.info(f'/config/juniper.conf:\n{day0_str}')
+        self._log.debug(f'/config/juniper.conf:\n{day0_str}')
         with fs.open_fs(f'fat://{tmp_disk_file}?'
                         f'offset={offset}') as flash_drive:
             with TarFS(flash_drive.openbin('/vmm-config.tgz', 'wb'),

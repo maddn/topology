@@ -37,7 +37,7 @@ class IOSvVolume(Volume):
         offset = self._create_raw_disk_image(tmp_disk_file)
 
         self._log.info('Writing day0 file to partition')
-        self._log.info(f'ios_config.txt:\n{day0_str}')
+        self._log.debug(f'ios_config.txt:\n{day0_str}')
         with fs.open_fs(f'fat://{tmp_disk_file}?'
                         f'offset={offset}') as flash_drive:
             flash_drive.writetext('/ios_config.txt', day0_str)

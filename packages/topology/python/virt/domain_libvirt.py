@@ -204,7 +204,7 @@ class DomainLibvirt(Domain):
                     device.control_plane_id)
 
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
-        self._log.info(domain_xml_str)
+        self._log.debug(domain_xml_str)
 
         libvirt.conn.defineXML(domain_xml_str)
 
