@@ -4,16 +4,11 @@ from io import BytesIO
 
 import base64
 import crypt
-import os
 import subprocess
 
 from passlib.hash import md5_crypt
 from fs.tarfs import TarFS
 
-import fs
-import pycdlib
-
-from virt.network import generate_ip_address
 from virt.topology_status import get_hypervisor_output_node
 from virt.virt_base import VirtBase
 
@@ -92,121 +87,10 @@ class Volume(VirtBase):
 
         return first_sector*bytes_per_sector
 
-    def _create_ios_day0_disk_image(self, file_name, variables):
-        day0_str = self._templates.apply_template(file_name, variables)
-        tmp_disk_file = \
-                f'tmp-{generate_day0_volume_name(variables["device-name"])}'
-
-        offset = self._create_raw_disk_image(tmp_disk_file)
-
-        self._log.info('Writing day0 file to partition')
-        self._log.info(f'ios_config.txt:\n{day0_str}')
-        with fs.open_fs(f'fat://{tmp_disk_file}?'
-                        f'offset={offset}') as flash_drive:
-            flash_drive.writetext('/ios_config.txt', day0_str)
-
-        with open(tmp_disk_file, 'rb') as binary_file:
-            disk_byte_str = binary_file.read()
-
-        self._log.info(f'Deleting temporary disk file {tmp_disk_file}')
-        os.remove(tmp_disk_file)
-
-        return disk_byte_str
-
-    def _create_junos_day0_disk_image(self, file_name, variables, vmx=True):
-        day0_str = self._templates.apply_template(file_name, variables)
-        tmp_disk_file = \
-                f'tmp-{generate_day0_volume_name(variables["device-name"])}'
-
-        offset = self._create_raw_disk_image(tmp_disk_file, not vmx)
-
-        self._log.info('Writing day0 file to partition')
-        self._log.info(f'/config/juniper.conf:\n{day0_str}')
-        with fs.open_fs(f'fat://{tmp_disk_file}?'
-                        f'offset={offset}') as flash_drive:
-            with TarFS(flash_drive.openbin('/vmm-config.tgz', 'wb'),
-                                write=True, compression='gz') as tarfile:
-                tarfile.makedir('/config')
-                tarfile.writetext('/config/juniper.conf', day0_str)
-                if vmx:
-                    tarfile.makedir('/boot')
-                    tarfile.writetext('/boot/loader.conf',
-                            self._templates.apply_template(
-                                'junos-vmx-loader.conf', {}))
-
-        with open(tmp_disk_file, 'rb') as binary_file:
-            disk_byte_str = binary_file.read()
-
-        self._log.info(f'Deleting temporary disk file {tmp_disk_file}')
-        os.remove(tmp_disk_file)
-
-        return disk_byte_str
-
     def _add_iso_file(self, iso, file_string, file_name):
         self._log.info(f'{file_name}:\n{file_string}')
         byte_str = file_string.encode()
         iso.add_fp(BytesIO(byte_str), len(byte_str), f'/{file_name}')
-
-    def _create_iosxr_day0_iso_image(self, file_name, variables):
-        day0_str = self._templates.apply_template(file_name, variables)
-        self._log.info('Writing day0 file to iso stream')
-
-        iso = pycdlib.PyCdlib()
-        iso.new(interchange_level=4, vol_ident='config-1')
-        self._add_iso_file(iso, day0_str, 'iosxr_config.txt')
-
-        iso_stream = BytesIO()
-        iso.write_fp(iso_stream)
-
-        iso.close()
-        return iso_stream.getvalue()
-
-    def _get_cloud_init_ethernets(self, device_id):
-        network_config = ''
-        for iface_id in range(self._network_mgr.get_num_device_ifaces()):
-            network = self._network_mgr.get_iface_network_id(device_id,
-                    iface_id) or self._network_mgr.get_iface_bridge_name(
-                    device_id, iface_id)
-
-            if network is None:
-                continue
-
-            ip_address_start = self._network_mgr.get_network(network)
-            if ip_address_start is None:
-                continue
-
-            ip_address = generate_ip_address(ip_address_start, device_id)
-            network_config += self._templates.apply_template(
-                'ethernet.yaml', {
-                    'iface-id': iface_id,
-                    'ip-address': ip_address,
-                    'mac-address': self._resource_mgr.\
-                            generate_mac_address(device_id, iface_id, True)
-                    })
-            self._network_mgr.write_iface_data(device_id, iface_id, [
-                ('ip-address', ip_address)])
-        return network_config
-
-    def _create_cloud_init_iso_image(self, device_id, file_name, variables):
-        meta_data = self._templates.apply_template('meta-data.yaml', variables)
-        network_config = self._templates.apply_template(
-                'network-config.yaml',variables)
-        network_config += self._get_cloud_init_ethernets(device_id)
-        user_data = self._templates.apply_template(file_name, variables)
-
-        self._log.info('Writing cloud-init files to iso stream')
-        iso = pycdlib.PyCdlib()
-        iso.new(interchange_level=4, vol_ident='cidata')
-
-        self._add_iso_file(iso, meta_data, 'meta-data')
-        self._add_iso_file(iso, network_config, 'network-config')
-        self._add_iso_file(iso, user_data, 'user-data')
-
-        iso_stream = BytesIO()
-        iso.write_fp(iso_stream)
-
-        iso.close()
-        return iso_stream.getvalue()
 
     @abstractmethod
     def _create_day0_image(self, file_name, variables, device_id):
