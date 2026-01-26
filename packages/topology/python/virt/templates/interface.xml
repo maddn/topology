@@ -1,7 +1,7 @@
 <interface type="${interface-type}">
   <mac address="${mac-address}"/>
-  <source address="127.0.0.1" port="${source}">
-    <local address="127.0.0.1" port="${dest}"/>
+  <source address="${udp-dest-address}" port="${udp-dest-port}">
+    <local address="${udp-source-address}" port="${udp-source-port}"/>
   </source>
   <source network="${network}"/>
   <source bridge="${bridge}"/>

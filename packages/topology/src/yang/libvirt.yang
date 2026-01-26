@@ -134,6 +134,10 @@ submodule libvirt {
           tailf:info
             "Default external bridge for links to devices on another host.";
         }
+        leaf udp-tunnel-ip-address {
+          type inet:ipv4-address;
+          default '0.0.0.0';
+        }
 
         container get {
           description

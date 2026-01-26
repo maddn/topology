@@ -13,6 +13,9 @@ class HypervisorManager():
         self._external_bridges = {
                 hypervisor.name: hypervisor.external_bridge
                 for hypervisor in hypervisors }
+        self._udp_tunnel_ip_addresses = {
+                hypervisor.name: hypervisor.udp_tunnel_ip_address
+                for hypervisor in hypervisors }
         self._hypervisors = {
                 int(device.id): device.hypervisor or topology.libvirt.hypervisor
                 for device in topology.devices.device}
@@ -43,3 +46,6 @@ class HypervisorManager():
 
     def get_device_hypervisor(self, device_id):
         return self._hypervisors[device_id]
+
+    def get_device_udp_tunnel_ip_address(self, device_id):
+        return self._udp_tunnel_ip_addresses[self._hypervisors[device_id]]

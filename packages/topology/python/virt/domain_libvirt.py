@@ -48,15 +48,21 @@ class DomainXmlBuilder():
             'bus': bus})
 
     def _get_iface_xml(self, network_id, dev_name, mac_address, model_type,
-            bridge_name='', source_udp='', dest_udp=''):
+                       bridge_name='', udp_networking=None):
+        (udp_source_address, udp_source_port, udp_dest_address, udp_dest_port
+         ) = udp_networking or ('', '', '', '')
         return self._templates.apply_xml_template('interface.xml', {
-            'interface-type': 'udp' if dest_udp else 'bridge' if bridge_name else 'network',
+            'interface-type': 'udp' if udp_networking \
+                    else 'bridge' if bridge_name else 'network',
             'mac-address': mac_address,
-            'network': generate_network_name(network_id) if network_id and not dest_udp else '',
-            'bridge': bridge_name if bridge_name and not dest_udp else '',
-            'source': source_udp if source_udp else '',
-            'dest': dest_udp if dest_udp else '',
-            'dev': dev_name if not dest_udp else '',
+            'network': generate_network_name(network_id) if \
+                    network_id and not udp_networking else '',
+            'bridge': bridge_name if bridge_name and not udp_networking else '',
+            'udp-source-address': udp_source_address,
+            'udp-source-port': udp_source_port,
+            'udp-dest-address': udp_dest_address,
+            'udp-dest-port': udp_dest_port,
+            'dev': dev_name if not udp_networking else '',
             'model-type': model_type})
 
     def create_base(self, vcpus, memory, template):
@@ -116,9 +122,6 @@ class DomainXmlBuilder():
                     device_id or self._device_id, iface_id)
             network_id = self._network_mgr.get_iface_network_id(
                     device_id or self._device_id, iface_id)
-            (source_udp, dest_udp) = self._network_mgr.get_network_udp_ports(
-                    device_id or self._device_id, iface_id)
-
 
             if (bridge_name or network_id or include_null_interfaces
                     or iface_id < (min_ifaces - 1)):
@@ -129,7 +132,8 @@ class DomainXmlBuilder():
                     network_id or not bridge_name and
                             generate_network_id(self._device_id, None),
                     iface_dev_name, mac_address, model_type, bridge_name,
-                    source_udp, dest_udp))
+                    self._network_mgr.get_network_udp_ports(
+                        device_id or self._device_id, iface_id)))
 
                 if network_id or bridge_name:
                     self._network_mgr.write_iface_data(

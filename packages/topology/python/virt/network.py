@@ -64,6 +64,10 @@ class NetworkManager():
         self._network_ifaces = {}
         self._bridge_ifaces = {}
         self._link_networks = {}
+        self._device_udp_tunnel_ip_addresses = {
+                device.id: hypervisor_mgr.get_device_udp_tunnel_ip_address(device.id)
+                for device in topology.devices.device}
+
         for link in topology.links.link:
             device_ids = (self._device_ids[link.a_end_device],
                           self._device_ids[link.z_end_device])
@@ -117,9 +121,14 @@ class NetworkManager():
         return (self._link_networks.get(device_ids, None), device_ids)
 
     def get_network_udp_ports(self, device_id, iface_id):
-        network_ifaces = self._network_ifaces.get((device_id, iface_id), (None, None, None))
-        return ((generate_udp_port(device_id,iface_id),
-                 generate_udp_port(*(network_ifaces[2]))) if network_ifaces[2] else (None, None))
+        network_ifaces = self._network_ifaces.get(
+                (device_id, iface_id), (None, None, None))
+        dest = network_ifaces[2]
+        return ((self._device_udp_tunnel_ip_addresses[device_id],
+                 generate_udp_port(device_id,iface_id),
+                 self._device_udp_tunnel_ip_addresses[dest[0]],
+                 generate_udp_port(*dest)
+                ) if dest else None)
 
     def get_network(self, network_id):
         return self._networks[network_id]
