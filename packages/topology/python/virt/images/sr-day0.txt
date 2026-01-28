@@ -1,0 +1,2 @@
+set / system aaa authentication user ${username} password ${password}
+set / system aaa authentication user ${username} superuser true

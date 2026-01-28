@@ -77,6 +77,32 @@
           </protocols>
         </configuration>
 
+        <network-instance xmlns="urn:nokia.com:srlinux:net-inst:network-instance">
+          <name>default</name>
+          <protocols>
+            <isis xmlns="urn:nokia.com:srlinux:isis:isis">
+              <instance>
+                <name>{string(/name)}</name>
+                <interface>
+                  <interface-name>ethernet-1/{string($interface_id)}.0</interface-name>
+                  <admin-state>enable</admin-state>
+                  <circuit-type>point-to-point</circuit-type>
+                  <ipv4-unicast>
+                    <admin-state>enable</admin-state>
+                  </ipv4-unicast>
+                  <ipv6-unicast>
+                    <admin-state>enable</admin-state>
+                  </ipv6-unicast>
+                  <level>
+                    <level-number>2</level-number>
+                  </level>
+                </interface>
+              </instance>
+            </isis>
+          </protocols>
+        </network-instance>
+
+
       </config>
     </device>
   <?endmacro?>
@@ -94,11 +120,12 @@
     <device>
       <name>{devices}</name>
       <?set NET_ADDRESS=49.0010.0100.{substring(string(10000 + number(deref(current())/../id)), 2)}.00?>
+      <?set NAME={../name}?>
       <config>
         <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <isis when="{../is-is}">
             <tag>
-              <name>{string(../name)}</name>
+              <name>{$NAME}</name>
               <net>
                 <id>{$NET_ADDRESS}</id>
               </net>
@@ -161,7 +188,7 @@
         <router xmlns="urn:ios">
           <isis-container when="{../is-is}">
             <isis>
-              <area-tag>{string(../name)}</area-tag>
+              <area-tag>{$NAME}</area-tag>
               <net>
                 <tag>{$NET_ADDRESS}</tag>
               </net>
@@ -239,10 +266,45 @@
           <?end?>
         </configuration>
 
+        <network-instance xmlns="urn:nokia.com:srlinux:net-inst:network-instance">
+          <name>default</name>
+          <router-id>{/loopback-interfaces/loopback[primary]/ipv4-subnet-start}.{deref(current())/../id}</router-id>
+          <protocols>
+            <isis xmlns="urn:nokia.com:srlinux:isis:isis">
+              <instance>
+                <name>{$NAME}</name>
+                <admin-state>enable</admin-state>
+                <net>{$NET_ADDRESS}</net>
+                <level-capability>L2</level-capability>
+                <?foreach {/loopback-interfaces/loopback}?>
+                  <?set LOOPBACK_NAME="lo{id}"?>
+                  <?if {id = 0}?>
+                    <?set LOOPBACK_NAME="system0"?>
+                  <?end?>
+                  <interface>
+                    <interface-name>{$LOOPBACK_NAME}.0</interface-name>
+                    <admin-state>enable</admin-state>
+                    <passive>true</passive>
+                    <ipv4-unicast>
+                      <admin-state>enable</admin-state>
+                    </ipv4-unicast>
+                    <ipv6-unicast>
+                      <admin-state>enable</admin-state>
+                    </ipv6-unicast>
+                    <level>
+                      <level-number>2</level-number>
+                    </level>
+                  </interface>
+                <?end?>
+              </instance>
+            </isis>
+          </protocols>
+        </network-instance>
+
         <!-- IOS Devices -->
         <router xmlns="urn:ios">
           <ospf when="{../ospf}">
-            <id>{string(../name)}</id>
+            <id>{$NAME}</id>
             <redistribute when="{../../base-config[topology=/../name]/static-routes/loopback-to-management/device=current()}">
               <static>
                 <metric-type>1</metric-type>

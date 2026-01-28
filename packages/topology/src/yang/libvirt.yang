@@ -292,6 +292,9 @@ submodule libvirt {
             enum XRd {
               tailf:info "Base image is Docker image";
             }
+            enum SR-Linux {
+              tailf:info "Base image is Docker image";
+            }
           }
           mandatory true;
           description
@@ -307,6 +310,7 @@ submodule libvirt {
           mandatory true;
         }
         leaf template {
+          when "../device-type!='XRd' and ../device-type !='SR-Linux'";
           type string;
           mandatory true;
           description
@@ -327,6 +331,7 @@ submodule libvirt {
           tailf:info "This file must exist in the storage-pool";
         }
         leaf base-image-type {
+          when "../device-type!='XRd' and ../device-type!='SR-Linux'";
           type enumeration {
             enum backing-store {
               tailf:info "Use for qcow2 images only";

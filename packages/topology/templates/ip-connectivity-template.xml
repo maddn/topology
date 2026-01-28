@@ -98,6 +98,29 @@
             </interfaces>
           </configuration>
 
+          <interface xmlns="urn:nokia.com:srlinux:chassis:interfaces" tags="merge">
+            <name>ethernet-1/{string($interface_id)}</name>
+            <admin-state>enable</admin-state>
+            <subinterface>
+              <index>0</index>
+              <admin-state>enable</admin-state>
+              <ipv4>
+                <admin-state>enable</admin-state>
+                <address>
+                  <ip-prefix>{$IPV4_ADDRESS}/24</ip-prefix>
+                  <primary/>
+                </address>
+              </ipv4>
+            </subinterface>
+          </interface>
+          <network-instance xmlns="urn:nokia.com:srlinux:net-inst:network-instance" tags="merge">
+            <name>default</name>
+            <admin-state>enable</admin-state>
+            <interface>
+              <name>ethernet-1/{$interface_id}.0</name>
+            </interface>
+          </network-instance>
+
         </config>
       </device>
     </devices>
@@ -177,6 +200,33 @@
                 </interface>
               </interfaces>
             </configuration>
+
+            <?set LOOPBACK_NAME="lo{id}"?>
+            <?if {id = 0}?>
+              <?set LOOPBACK_NAME="system0"?>
+            <?end?>
+            <interface xmlns="urn:nokia.com:srlinux:chassis:interfaces" tags="merge">
+              <name>{$LOOPBACK_NAME}</name>
+              <admin-state>enable</admin-state>
+              <subinterface>
+                <index>0</index>
+                <admin-state>enable</admin-state>
+                <ipv4>
+                  <admin-state>enable</admin-state>
+                  <address>
+                    <ip-prefix>{ipv4-subnet-start}.{$DEVICE_ID}/32</ip-prefix>
+                  </address>
+                </ipv4>
+              </subinterface>
+            </interface>
+            <network-instance
+                xmlns="urn:nokia.com:srlinux:net-inst:network-instance" tags="merge">
+              <name>default</name>
+              <admin-state>enable</admin-state>
+              <interface>
+                <name>{$LOOPBACK_NAME}.0</name>
+              </interface>
+            </network-instance>
           <?end?>
 
         </config>
@@ -262,6 +312,28 @@
                   </interface>
                 </interfaces>
               </configuration>
+              <interface xmlns="urn:nokia.com:srlinux:chassis:interfaces" tags="merge">
+                <name>ethernet-1/{string(interface/id)}</name>
+                <admin-state>enable</admin-state>
+                <subinterface>
+                  <index>0</index>
+                  <admin-state>enable</admin-state>
+                  <ipv4>
+                    <admin-state>enable</admin-state>
+                    <address>
+                      <ip-prefix>{$IPV4_ADDRESS}/24</ip-prefix>
+                      <primary/>
+                    </address>
+                  </ipv4>
+                </subinterface>
+              </interface>
+              <network-instance xmlns="urn:nokia.com:srlinux:net-inst:network-instance" tags="merge">
+                <name>default</name>
+                <admin-state>enable</admin-state>
+                <interface>
+                  <name>ethernet-1/{interface/id}</name>
+                </interface>
+              </network-instance>
             </config>
           </device>
         </devices>

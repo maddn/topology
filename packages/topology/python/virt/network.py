@@ -38,6 +38,9 @@ def generate_ip_address(ip_address_start, device_id):
     return str(IPv4Address(ip_address_start) + int(device_id)) if (
         ip_address_start is not None) else None
 
+def prefer_udp_networking(device_type):
+    return device_type not in ['XRd', 'Linux-SR']
+
 class NetworkManager():
     def __init__(self, topology, hypervisor_mgr, dev_defs):
         def _add_interface(key, path, network=None, bridge=None, dest=None):
@@ -92,8 +95,8 @@ class NetworkManager():
                            hypervisor_mgr.get_external_bridge(hypervisors[1]))
 
             libvirt_network = (network_id and
-                               device_types[link.a_end_device] != 'XRd' and
-                               device_types[link.z_end_device] != 'XRd')
+                    prefer_udp_networking(device_types[link.a_end_device]) and
+                    prefer_udp_networking(device_types[link.z_end_device]))
 
             _add_interface((device_ids[0], iface_ids[0]),
                     f'{link._path}/a-end-interface', network_id, bridges[0],

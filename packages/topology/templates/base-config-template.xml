@@ -68,6 +68,11 @@
             <host-name>{device-name}</host-name>
           </system>
         </configuration>
+        <system xmlns="urn:nokia.com:srlinux:general:system">
+          <name xmlns="urn:nokia.com:srlinux:chassis:system-name">
+            <host-name>{device-name}</host-name>
+          </name>
+        </system>
 
 
         <banner xmlns="http://tail-f.com/ned/cisco-ios-xr">
@@ -367,6 +372,16 @@
             </ntp>
           </system>
         </configuration>
+
+        <system xmlns="urn:nokia.com:srlinux:general:system">
+          <ntp xmlns="urn:nokia.com:srlinux:linux:ntp">
+            <admin-state>enable</admin-state>
+            <network-instance>default</network-instance>
+            <server>
+              <address>{/ntp-server}</address>
+            </server>
+          </ntp>
+        </system>
 
         <snmp-server when="{/snmp-server}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <ifindex>persist</ifindex>

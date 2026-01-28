@@ -101,6 +101,10 @@ class DomainDocker(Domain):
     def create_container(self, docker, device):
         docker.start(device.device_name)
 
+        docker.post_start_commands(
+                device.device_name,
+                self.POST_START_COMMANDS)
+
     def shutdown_container(self, docker, device):
         docker.stop(device.device_name)
 

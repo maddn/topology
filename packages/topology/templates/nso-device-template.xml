@@ -4,14 +4,18 @@
     <device tags="merge">
       <name>{device-name}</name>
       <address>{management-interface/ip-address}</address>
+      <port when="{re-match(/ned-id, '.*gnmi.*')='true'}">57400</port>
       <authgroup>{/authgroup}</authgroup>
       <device-type>
         <cli when="{derived-from(/ned-id, 'ned:cli-ned-id')}">
           <ned-id>{/ned-id}</ned-id>
         </cli>
-        <netconf when="{derived-from(/ned-id, 'ned:netconf-ned-id')}">
+        <netconf when="{derived-from(/ned-id, 'ned:netconf-ned-id') and not(derived-from(/ned-id, 'ned:generic-ned-id'))}">
           <ned-id>{/ned-id}</ned-id>
         </netconf>
+        <generic when="{derived-from(/ned-id, 'ned:generic-ned-id')}">
+          <ned-id>{/ned-id}</ned-id>
+        </generic>
       </device-type>
       <ssh-algorithms>
         <public-key when="{/device-type='XRv-9000'}">rsa-sha2-256</public-key>
@@ -22,12 +26,25 @@
         <admin-state>unlocked</admin-state>
       </state>
       <read-timeout>120</read-timeout>
-      <ned-settings when="{derived-from(/ned-id, 'cisco-iosxr-cli:cisco-iosxr-cli')}">
-        <cisco-iosxr xmlns="http://tail-f.com/ned/cisco-iosxr/meta">
+      <ned-settings>
+        <cisco-iosxr
+            xmlns="http://tail-f.com/ned/cisco-iosxr/meta"
+            when="{derived-from(/ned-id, 'cisco-iosxr-cli:cisco-iosxr-cli') and not(derived-from(/ned-id, 'ned:generic-ned-id'))}">
           <read>
             <admin-show-running-config>false</admin-show-running-config>
           </read>
         </cisco-iosxr>
+        <nokia-srlinux_gnmi
+            xmlns="http://tailf.com/ned/nokia-srlinux_gnmi/meta"
+            when="{derived-from(/ned-id, 'nokia-srlinux_gnmi-gen:nokia-srlinux_gnmi-gen')}">
+          <connection>
+            <tls>
+              <enable>true</enable>
+              <accept-any>true</accept-any>
+            </tls>
+          </connection>
+        </nokia-srlinux_gnmi>
+        <use-validate when="{derived-from(/ned-id, 'ned:netconf-ned-id')}">false</use-validate>
       </ned-settings>
     </device>
   </devices>

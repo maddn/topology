@@ -305,6 +305,17 @@ class ConnectionDocker():
             container = self.conn.containers.get(container_name)
             container.start()
 
+    def post_start_commands(self,
+                container_name, post_start_commands):
+        if container_name in self.containers:
+            self._log.info(f'[{self.name}] '
+                    f'Running post-start commands on container {container_name}')
+            container = self.conn.containers.get(container_name)
+            for command in post_start_commands:
+                self._log.debug(f"[{self.name}] "
+                        f"Running '{command}' on container {container_name}")
+                self._log.debug(container.exec_run(command))
+
     def stop(self, container_name):
         if container_name in self.containers and self.is_active(container_name):
             self._log.info(f'[{self.name}] Stopping container {container_name}')
