@@ -6,12 +6,13 @@ _ncs = __import__('_ncs')
 
 class ConnectionLibvirt():
     #pylint: disable=too-many-instance-attributes
-    def __init__(self, hypervisor):
+    def __init__(self, hypervisor, log):
         self.conn = None
         self.bridges = defaultdict(lambda: defaultdict(dict, interfaces=[]))
         self.networks = {}
         self.domains = {}
         self.volumes = {} # by pool
+        self._log = log
         self.name = hypervisor.name
 
         self._username = hypervisor.username
@@ -61,6 +62,7 @@ class ConnectionLibvirt():
         self.conn.close()
 
     def populate_cache(self):
+        self._log.info(f'[{self.name}] Populating libvirt connection cache')
         self.populate_domains()
         self.populate_volumes()
         self.populate_networks()
@@ -99,6 +101,7 @@ class ConnectionLibvirt():
                 iface_type = iface.get('type')
                 source = iface.find('source')
                 if source is not None and iface_type in ['network', 'bridge']:
+                    mac = iface.find('mac')
                     target = iface.find('target')
                     dev = target.get('dev') if target is not None else 'none'
                     source_dict = getattr(self, f'{iface_type}s')
@@ -109,4 +112,5 @@ class ConnectionLibvirt():
                             source_dict[name] = {'interfaces': []}
                     source_dict[name]['interfaces'].append({
                         'domain-name': domain.name(),
-                        'host-interface': dev})
+                        'host-interface': dev,
+                        'mac-address': mac.get('address')})

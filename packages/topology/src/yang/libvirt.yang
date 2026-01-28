@@ -37,6 +37,9 @@ submodule libvirt {
       leaf host-interface {
         type string;
       }
+      leaf mac-address {
+        type string;
+      }
     }
   }
 
@@ -199,6 +202,63 @@ submodule libvirt {
                     type uint32;
                     description "Storage currently used.";
                   }
+                }
+              }
+            }
+          }
+
+          action containers {
+            tailf:actionpoint libvirt-get-objects;
+            output {
+              list container {
+                leaf name {
+                  type string;
+                }
+                leaf status {
+                  type string;
+                }
+              }
+            }
+          }
+
+          action container-networks {
+            tailf:actionpoint libvirt-get-objects;
+            output {
+              list veth-pair {
+                list interface {
+                  leaf name {
+                    type string;
+                  }
+                  leaf container {
+                    type string;
+                  }
+                  leaf bridge {
+                    type string;
+                  }
+                }
+              }
+              list network {
+                leaf name {
+                  type string;
+                }
+                list container {
+                  leaf name {
+                    type string;
+                  }
+                }
+              }
+              list tap-interface {
+                leaf name {
+                  type string;
+                }
+                leaf mac-address {
+                  type string;
+                }
+                leaf bridge {
+                  type string;
+                }
+                leaf container {
+                  type string;
                 }
               }
             }
