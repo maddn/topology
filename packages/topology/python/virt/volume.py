@@ -184,29 +184,30 @@ class Volume(VirtBase):
 
         device_name = device.device_name
         libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
+        if libvirt:
+            if not dev_def.device_type in ['XRd', 'SR-Linux']:
+                self._create_volume(libvirt, generate_volume_name(device_name),
+                        dev_def.storage_pool, dev_def.base_image,
+                        dev_def.base_image_type == 'clone', dev_def.disk_size)
 
-        if not dev_def.device_type in ['XRd', 'SR-Linux']:
-            self._create_volume(libvirt, generate_volume_name(device_name),
-                    dev_def.storage_pool, dev_def.base_image,
-                    dev_def.base_image_type == 'clone', dev_def.disk_size)
-
-        if dev_def.day0_file is not None:
-            self._create_day0_volume(
-                    libvirt, int(device.id), device_name, dev_def)
+            if dev_def.day0_file is not None:
+                self._create_day0_volume(
+                        libvirt, int(device.id), device_name, dev_def)
 
     def undefine(self, device):
         dev_def = self._dev_defs[device.definition]
         device_name = device.device_name
         libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
-        if dev_def.storage_pool in libvirt.volumes:
-            pool = libvirt.conn.storagePoolLookupByName(dev_def.storage_pool)
-            self._delete_volume(
-                    libvirt, pool, generate_volume_name(device_name))
-
-            if dev_def.day0_file is not None:
-                day0_volume_name = generate_day0_volume_name(device_name)
+        if libvirt:
+            if dev_def.storage_pool in libvirt.volumes:
+                pool = libvirt.conn.storagePoolLookupByName(dev_def.storage_pool)
                 self._delete_volume(
-                        libvirt, pool, day0_volume_name, 'day0 volume')
+                        libvirt, pool, generate_volume_name(device_name))
+
+                if dev_def.day0_file is not None:
+                    day0_volume_name = generate_day0_volume_name(device_name)
+                    self._delete_volume(
+                            libvirt, pool, day0_volume_name, 'day0 volume')
 
     def _action(self, action, *args):
         pass # only define and undefine supported

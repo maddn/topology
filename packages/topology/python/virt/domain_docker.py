@@ -110,7 +110,7 @@ class DomainDocker(Domain):
 
     def is_active(self, device):
         docker = self._hypervisor_mgr.get_device_docker(device.id)
-        return docker.is_active(device.device_name)
+        return docker and docker.is_active(device.device_name)
 
     def shutdown_supported(self):
         return self.SHUTDOWN_SUPPORTED
@@ -119,7 +119,7 @@ class DomainDocker(Domain):
         device, = args
         container_name = device.device_name
         docker = self._hypervisor_mgr.get_device_docker(device.id)
-        if container_name in docker.containers:
+        if docker and container_name in docker.containers:
             action_name = f'{action}_container'
             if hasattr(self, action_name):
                 self._log.info(

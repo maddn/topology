@@ -55,7 +55,6 @@ submodule libvirt {
         }
         leaf host {
           type string;
-          mandatory true;
           tailf:info
             "Used with transport leaf to generate the libvirt connection URI.";
         }
@@ -374,6 +373,16 @@ submodule libvirt {
           }
           tailf:info
             "Device will be created and synced in NSO using this ned-id.";
+        }
+        leaf-list capabilities {
+          when "../ned-id";
+          tailf:non-strict-leafref {
+            path "/ncs:devices/ncs:ned-ids"
+               + "/ncs:ned-id[ncs:id = current()/../ned-id]/ncs:module/ncs:name";
+          }
+          type string;
+          tailf:info
+            "List of capabilities to add to southbound-locked devices.";
         }
         leaf console-timeout {
           type uint32;

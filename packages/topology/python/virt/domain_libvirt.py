@@ -1,12 +1,10 @@
 from abc import abstractmethod
 from libvirt import (VIR_DOMAIN_UNDEFINE_NVRAM)
-from ncs import maapi
 from virt.domain import Domain
 from virt.network import generate_network_id, generate_network_name
 from virt.template import xml_to_string
 from virt.topology_status import get_hypervisor_output_node, write_node_data
 from virt.volume import generate_volume_name, generate_day0_volume_name
-import ncs
 
 
 class DomainXmlBuilder():
@@ -155,7 +153,6 @@ class DomainLibvirt(Domain):
     def _load_templates(self):
         self._templates.load_template('templates', 'interface.xml')
         self._templates.load_template('templates', 'disk.xml')
-        self._templates.load_template('templates', 'host-interface.xml')
 
     def load_device_templates(self, devices):
         device_templates = set(self._dev_defs[device.definition].template
@@ -177,7 +174,9 @@ class DomainLibvirt(Domain):
     def _define(self, device):
         device_name = device.device_name
         libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
-        self._log.info(f'[{libvirt.name}] Defining domain {device_name}')
+        self._log.info(
+                f'[{libvirt.name if libvirt else "No Hypervisor - NSO only"}] '
+                f'Defining domain {device_name}')
 
         dev_def = self._dev_defs[device.definition]
         self._templates.load_template('images', f'{dev_def.template}.xml')
@@ -210,7 +209,8 @@ class DomainLibvirt(Domain):
         domain_xml_str = xml_to_string(xml_builder.domain_xml)
         self._log.debug(domain_xml_str)
 
-        libvirt.conn.defineXML(domain_xml_str)
+        if libvirt:
+            libvirt.conn.defineXML(domain_xml_str)
 
     def _undefine(self, device):
         return self._action('undefine', device)
@@ -218,7 +218,7 @@ class DomainLibvirt(Domain):
     def is_active(self, device):
         device_name = device.device_name
         libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
-        if device_name in libvirt.domains:
+        if libvirt and device_name in libvirt.domains:
             return libvirt.conn.lookupByName(device_name).isActive()
         return False
 
@@ -229,7 +229,7 @@ class DomainLibvirt(Domain):
         device, = args
         device_name = device.device_name
         libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
-        if device_name in libvirt.domains:
+        if libvirt and device_name in libvirt.domains:
             domain = libvirt.conn.lookupByName(device_name)
             if self._action_allowed(domain.isActive(), action):
                 self._log.info(f'[{libvirt.name}] '

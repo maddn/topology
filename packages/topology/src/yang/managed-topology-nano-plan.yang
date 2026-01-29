@@ -283,7 +283,9 @@ submodule managed-topology-nano-plan {
             "/topologies/topology[name=$TOPOLOGY]/devices/device" {
           ncs:when
             "/topologies/libvirt
-             /device-definition[name=current()/definition]/ned-id";
+             /device-definition[name=current()/definition]/ned-id and
+             /topologies/libvirt
+             /hypervisor[name=current()/hypervisor]/host";
           ncs:variable "DEVICE_NAME" {
             ncs:value-expr "device-name";
           }

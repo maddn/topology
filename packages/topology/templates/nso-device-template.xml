@@ -23,7 +23,8 @@
       </ssh-algorithms>
       <trace>pretty</trace>
       <state>
-        <admin-state>unlocked</admin-state>
+        <admin-state when="{not(deref(hypervisor)/../host)">southbound-locked</admin-state>
+        <admin-state when="{deref(hypervisor)/../host}">unlocked</admin-state>
       </state>
       <read-timeout>120</read-timeout>
       <ned-settings>

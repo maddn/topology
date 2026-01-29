@@ -175,6 +175,9 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
         network_name = generate_network_name(network_id)
         libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
 
+        if not libvirt:
+            return
+
         if network_name in libvirt.networks:
             if delay or interfaces:
                 network = libvirt.conn.networkLookupByName(network_name)
@@ -224,6 +227,10 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
 
     def _update_network(self, hypervisor_name, network_id):
         libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
+
+        if not libvirt:
+            return
+
         network_name = generate_network_name(network_id)
 
         if network_name in libvirt.networks:
@@ -241,7 +248,7 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
         if action in ['undefine', 'create', 'destroy']:
             network_name = generate_network_name(network_id)
             libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
-            if network_name in libvirt.networks:
+            if libvirt and network_name in libvirt.networks:
                 network = libvirt.conn.networkLookupByName(network_name)
                 if self._action_allowed(network.isActive(), action):
                     self._log.info(

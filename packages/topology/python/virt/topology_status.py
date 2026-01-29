@@ -102,6 +102,9 @@ class TopologyStatus():
         device_name = topology_device.device_name
         self.device_states[device_name] = topology_device.provisioning_status
         nso_device = root.devices.device[device_name]
+        if nso_device.state.admin_state == 'southbound-locked':
+            self.update_device_status(topology_device, 'ready')
+            return False
         self.log.info(f'Pinging {device_name}...')
         device_ping = nso_device.ping()
         self.log.info(device_ping.result)
