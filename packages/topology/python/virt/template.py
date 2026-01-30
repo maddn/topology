@@ -6,6 +6,7 @@ from xml.dom.minidom import parseString
 import os
 import re
 import string
+import json
 
 PYTHON_DIR = os.path.dirname(__file__)
 
@@ -46,6 +47,9 @@ class Templates():
 
     def apply_xml_template(self, template_name, variables):
         return fromstring(self.apply_template(template_name, variables))
+
+    def apply_json_template(self, template_name, variables):
+        return json.loads(self.apply_template(template_name, variables))
 
     def load_template(self, path, filename):
         if filename not in self.templates:

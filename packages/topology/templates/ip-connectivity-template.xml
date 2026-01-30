@@ -20,17 +20,17 @@
         <config>
 
           <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-            <GigabitEthernet tags="merge">
+            <GigabitEthernet>
               <id>0/0/0/{string($interface_id)}</id>
-              <description>{$DESCRIPTION}</description>
+              <description tags="merge">{$DESCRIPTION}</description>
               <?if {not(exclude-ip-connectivity)}?>
-                <ipv4>
+                <ipv4 tags="merge">
                   <address>
                     <ip>{$IPV4_ADDRESS}</ip>
                     <mask>255.255.255.0</mask>
                   </address>
                 </ipv4>
-                <ipv6 when="{/physical-interfaces/ipv6-subnet-start}">
+                <ipv6 tags="merge" when="{/physical-interfaces/ipv6-subnet-start}">
                   <address>
                     <prefix-list>
                       <prefix>{$IPV6_ADDRESS}/112</prefix>
@@ -40,6 +40,26 @@
               <?end?>
               <shutdown tags="delete"/>
             </GigabitEthernet>
+            <FourHundredGigE>
+              <id>0/0/0/{string($interface_id)}</id>
+              <description tags="merge">{$DESCRIPTION}</description>
+              <?if {not(exclude-ip-connectivity)}?>
+                <ipv4 tags="merge">
+                  <address>
+                    <ip>{$IPV4_ADDRESS}</ip>
+                    <mask>255.255.255.0</mask>
+                  </address>
+                </ipv4>
+                <ipv6 tags="merge" when="{/physical-interfaces/ipv6-subnet-start}">
+                  <address>
+                    <prefix-list>
+                      <prefix>{$IPV6_ADDRESS}/112</prefix>
+                    </prefix-list>
+                  </address>
+                </ipv6>
+              <?end?>
+              <shutdown tags="delete"/>
+            </FourHundredGigE>
           </interface>
 
           <interface xmlns="urn:ios">
@@ -282,10 +302,10 @@
             <name>{name}</name>
             <config>
               <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-                <GigabitEthernet tags="merge">
-                  <id>0/0/0/{string(../../interface-id)}</id>
-                  <description>Connection to {../../name} network</description>
-                  <ipv4>
+                <GigabitEthernet>
+                  <id>0/0/0/{string(interface/id)}</id>
+                  <description tags="merge">{$DESCRIPTION}</description>
+                  <ipv4 tags="merge">
                     <address>
                       <ip>{$IPV4_ADDRESS}</ip>
                       <mask>255.255.255.0</mask>
@@ -293,12 +313,23 @@
                   </ipv4>
                   <shutdown tags="delete"/>
                 </GigabitEthernet>
+                <FourHundredGigE>
+                  <id>0/0/0/{string(interface/id)}</id>
+                  <description tags="merge">{$DESCRIPTION}</description>
+                  <ipv4 tags="merge">
+                    <address>
+                      <ip>{$IPV4_ADDRESS}</ip>
+                      <mask>255.255.255.0</mask>
+                    </address>
+                  </ipv4>
+                  <shutdown tags="delete"/>
+                </FourHundredGigE>
               </interface>
               <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
                 <interfaces>
                   <interface tags="merge">
-                    <name>et-0/0/{string(../../interface-id)}</name>
-                    <description>Connection to {../../name} network</description>
+                    <name>et-0/0/{string(interface/id)}</name>
+                    <description>{$DESCRIPTION}</description>
                     <unit>
                       <name>0</name>
                       <family>

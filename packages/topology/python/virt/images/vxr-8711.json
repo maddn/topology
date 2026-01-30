@@ -1,0 +1,28 @@
+{
+    "simulation": {
+        "sim_dir": "/nobackup/${device-name}/pyvxr",
+        "sim_host": "${host}",
+        "sim_host_username": "${host-username}",
+        "sim_rel": "/opt/cisco/vxr2/latest",
+        "no_image_copy": true
+    },
+    "devices": {
+        "${device-name}": {
+            "console_ports": [160${id}, 161${id}],
+            "custom_mgmt_inf": true,
+            "cvac": "${cvac}",
+            "image": "/opt/cisco/images/8000/xr7/25.2.1/8711-32FH-M-x64-25.2.1.qcow2",
+            "linecard_types": ["8711-32FH-M"],
+            "platform": "spitfire_f-baked",
+            "vxr_sim_config": {
+                "shelf": {
+                    "ConfigS1NpsuiteVer": "1.191.4",
+                    "ConfigS1SdkVer": "25.2.4110.8"
+                }
+            },
+            "pre_cli": "run sysctl -w kernel.softlockup_panic=0\nrun sysctl -w kernel.watchdog_thresh=30"
+
+        }
+    }
+}
+

@@ -276,6 +276,9 @@ submodule libvirt {
             enum XRv-9000 {
               tailf:info "ISO image for day 0. Two extra management interfaces.";
             }
+            enum VXR-8000 {
+              tailf:info "ISO image for day 0. Two extra management interfaces.";
+            }
             enum vJunos-Evolved {
               tailf:info "USB image for day 0. Four extra management interfaces.";
             }
@@ -302,11 +305,9 @@ submodule libvirt {
         }
         leaf vcpus {
           type uint16;
-          mandatory true;
         }
         leaf memory {
           type uint16;
-          mandatory true;
         }
         leaf template {
           when "../device-type!='XRd' and ../device-type !='SR-Linux'";
@@ -327,10 +328,15 @@ submodule libvirt {
         leaf base-image {
           type string;
           mandatory true;
-          tailf:info "This file must exist in the storage-pool";
+          tailf:info
+            "Image name (Docker); full path (VXR); volume name (Libvirt)";
+          description
+            "For Libvirt, this file must exist in the storage-pool.
+             For VXR, this must be the full path to the image file.
+             For Docker, this must be the name of existing an loaded image.";
         }
         leaf base-image-type {
-          when "../device-type!='XRd' and ../device-type!='SR-Linux'";
+          when "../device-type!='XRd' and ../device-type!='SR-Linux' and ../device-type!='VXR-8000'";
           type enumeration {
             enum backing-store {
               tailf:info "Use for qcow2 images only";

@@ -1,5 +1,6 @@
 from virt.connection_docker import ConnectionDocker
 from virt.connection_libvirt import ConnectionLibvirt
+from virt.connection_vxr import ConnectionVxr
 
 
 class HypervisorManager():
@@ -9,6 +10,9 @@ class HypervisorManager():
                 for hypervisor in hypervisors if hypervisor.host}
         self._docker_connections = {
                 hypervisor.name: ConnectionDocker(hypervisor, log)
+                for hypervisor in hypervisors if hypervisor.host}
+        self._vxr_connections = {
+                hypervisor.name: ConnectionVxr(hypervisor, log)
                 for hypervisor in hypervisors if hypervisor.host}
         self._external_bridges = {
                 hypervisor.name: hypervisor.external_bridge
@@ -37,11 +41,18 @@ class HypervisorManager():
             docker_conn.populate_cache()
         return docker_conn
 
+    def get_vxr(self, hypervisor_name):
+        vxr_conn = self._vxr_connections[hypervisor_name]
+        return vxr_conn
+
     def get_device_libvirt(self, device_id):
         return self.get_libvirt(self._hypervisors[int(device_id)])
 
     def get_device_docker(self, device_id):
         return self.get_docker(self._hypervisors[int(device_id)])
+
+    def get_device_vxr(self, device_id):
+        return self.get_vxr(self._hypervisors[int(device_id)])
 
     def get_external_bridge(self, hypervisor_name):
         return self._external_bridges[hypervisor_name]
@@ -57,7 +68,8 @@ class HypervisorManager():
 
     def is_real(self, hypervisor_name):
         return (hypervisor_name in self._libvirt_connections or
-                hypervisor_name in self._docker_connections)
+                hypervisor_name in self._docker_connections or
+                hypervisor_name in self._vxr_connections)
 
     def has_real_hypervisor(self, device_id):
         return self.is_real(self.get_device_hypervisor(device_id))

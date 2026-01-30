@@ -5,17 +5,24 @@
     <device>
       <name>{$device}</name>
       <config>
+        <?set INTERFACE_TYPE="GigabitEthernet"?>
+        <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <FourHundredGigE tags="nocreate">
+            <id>0/0/0/{string($interface_id)}</id>
+            <?set INTERFACE_TYPE="FourHundredGigE"?>
+          </FourHundredGigE>
+        </interface>
 
         <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <ldp when="{/ldp}">
             <interface>
-              <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
+              <name>{$INTERFACE_TYPE}0/0/0/{string($interface_id)}</name>
             </interface>
           </ldp>
 
           <traffic-eng when="{/traffic-engineering}">
             <interface>
-              <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
+              <name>{$INTERFACE_TYPE}0/0/0/{string($interface_id)}</name>
               <admin-weight>{te-metric}</admin-weight>
               <attribute-names>
                 <name>{affinity}</name>
@@ -28,7 +35,7 @@
 
         <rsvp xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{/rsvp}">
           <interface>
-            <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
+            <name>{$INTERFACE_TYPE}0/0/0/{string($interface_id)}</name>
             <bandwidth/>
           </interface>
         </rsvp>

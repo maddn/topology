@@ -39,7 +39,7 @@ def generate_ip_address(ip_address_start, device_id):
         ip_address_start is not None) else None
 
 def prefer_udp_networking(device_type):
-    return device_type not in ['XRd', 'Linux-SR']
+    return device_type not in ['XRd', 'Linux-SR', 'VXR-8000']
 
 class NetworkManager():
     def __init__(self, topology, hypervisor_mgr, dev_defs):

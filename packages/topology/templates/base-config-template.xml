@@ -13,14 +13,22 @@
     <device tags="nocreate">
       <name>{$device_name}</name>
       <config>
+        <?set INTERFACE_TYPE="GigabitEthernet"?>
         <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
-          <GigabitEthernet tags="merge">
+          <GigabitEthernet>
             <id>0/0/0/{string($interface_id)}</id>
-            <bandwidth>{/interface-bandwidth}</bandwidth>
-            <lldp when="{lldp}"/>
-            <cdp when="{cdp}"/>
-            <load-interval>30</load-interval>
+            <bandwidth tags="merge">{/interface-bandwidth}</bandwidth>
+            <lldp tags="merge" when="{lldp}"/>
+            <cdp tags="merge" when="{cdp}"/>
+            <load-interval tags="merge">30</load-interval>
           </GigabitEthernet>
+          <FourHundredGigE>
+            <id>0/0/0/{string($interface_id)}</id>
+            <?set INTERFACE_TYPE="FourHundredGigE"?>
+            <bandwidth tags="merge">{/interface-bandwidth}</bandwidth>
+            <lldp tags="merge" when="{lldp}"/>
+            <load-interval tags="merge">30</load-interval>
+          </FourHundredGigE>
         </interface>
         <interface xmlns="urn:ios">
           <GigabitEthernet tags="merge">
@@ -36,7 +44,7 @@
         </interface>
         <performance-measurement xmlns="http://tail-f.com/ned/cisco-ios-xr" tags="merge" when="{$delay_metric}">
           <interface>
-            <name>GigabitEthernet0/0/0/{string($interface_id)}</name>
+            <name>{$INTERFACE_TYPE}0/0/0/{string($interface_id)}</name>
             <delay-measurement>
               <advertise-delay>{$delay_metric}</advertise-delay>
             </delay-measurement>
@@ -237,7 +245,10 @@
           </vty>
         </line>
 
-        <telnet when="{deref(definition)/../device-type != 'XRd'}" xmlns="http://tail-f.com/ned/cisco-ios-xr">
+        <telnet
+            when="{deref(definition)/../device-type != 'XRd' and
+                   deref(definition)/../device-type != 'VXR-8000'}"
+            xmlns="http://tail-f.com/ned/cisco-ios-xr">
           <vrf>
             <name>default</name>
             <telnet-server-list>
@@ -480,7 +491,9 @@
         <cdp xmlns="urn:ios">
           <run>{$CDP}</run>
         </cdp>
-        <cdp xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{$CDP='true'}"/>
+        <cdp xmlns="http://tail-f.com/ned/cisco-ios-xr"
+             when="{$CDP='true' and
+                    deref(definition)/../device-type != 'VXR-8000'}">
 
         <!-- Disable CDP on IOS GigabitEthernet interfaces by default -->
         <interface xmlns="urn:ios">

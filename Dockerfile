@@ -11,6 +11,7 @@ RUN apt-get update \
      default-jre-headless \
      dosfstools \
      fdisk \
+     file \
      iputils-ping \
      less \
      libexpat1 \
@@ -43,7 +44,7 @@ RUN apt-get update \
      pyyaml \
      setproctitle \
      telnetlib3 \
-  && apt-get -qy purge pkg-config python3-pip python3-dev \
+  && apt-get -qy purge pkg-config python3-dev \
   && apt-get -qy autoremove \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* /root/.cache \
@@ -65,6 +66,9 @@ RUN sh /tmp/nso --system-install --non-interactive && rm /tmp/nso
 SHELL ["/bin/sh", "-lc"]
 
 COPY /system /
+
+RUN pip3 install --break-system-packages /root/pyvxr-ovxr.tar.gz
+
 COPY /packages /build/packages
 WORKDIR /opt/ncs
 

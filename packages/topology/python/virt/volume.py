@@ -185,7 +185,7 @@ class Volume(VirtBase):
         device_name = device.device_name
         libvirt = self._hypervisor_mgr.get_device_libvirt(device.id)
         if libvirt:
-            if not dev_def.device_type in ['XRd', 'SR-Linux']:
+            if not dev_def.device_type in ['XRd', 'SR-Linux', 'VXR-8000']:
                 self._create_volume(libvirt, generate_volume_name(device_name),
                         dev_def.storage_pool, dev_def.base_image,
                         dev_def.base_image_type == 'clone', dev_def.disk_size)
