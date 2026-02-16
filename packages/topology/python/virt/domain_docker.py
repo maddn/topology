@@ -120,15 +120,19 @@ class DomainDocker(Domain):
         container_name = device.device_name
         docker = self._hypervisor_mgr.get_device_docker(device.id)
         if docker and container_name in docker.containers:
-            action_name = f'{action}_container'
-            if hasattr(self, action_name):
-                self._log.info(
-                        f'[{docker.name}] '
-                        f'Running {action} on container {container_name} ')
-                action_method = getattr(self, action_name)
-                action_method(docker, *args)
+            if self._action_allowed(self.is_active(device), action):
+                action_name = f'{action}_container'
+                if hasattr(self, action_name):
+                    self._log.info(
+                            f'[{docker.name}] '
+                            f'Running {action} on container {container_name} ')
+                    action_method = getattr(self, action_name)
+                    action_method(docker, *args)
 
-                get_hypervisor_output_node(
-                        self._output, docker.name).domains.create(container_name)
-                return True
+                    get_hypervisor_output_node(
+                            self._output, docker.name).domains.create(container_name)
+                    return True
+        if docker:
+            self._log.info(f'[{docker.name}] '
+                           f'Skipping {action} on container {container_name} ')
         return False

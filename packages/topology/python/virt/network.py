@@ -225,6 +225,9 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
                 ('host-bridge', bridge_name),
                 ('mac-address', mac_address)])
 
+        if network_name not in libvirt.networks:
+            libvirt.networks[network_name] = { 'bridge-name': bridge_name }
+
     def _update_network(self, hypervisor_name, network_id):
         libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
 
@@ -248,9 +251,11 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
         if action in ['undefine', 'create', 'destroy']:
             network_name = generate_network_name(network_id)
             libvirt = self._hypervisor_mgr.get_libvirt(hypervisor_name)
+            is_active = None
             if libvirt and network_name in libvirt.networks:
                 network = libvirt.conn.networkLookupByName(network_name)
-                if self._action_allowed(network.isActive(), action):
+                is_active = network.isActive()
+                if self._action_allowed(is_active, action):
                     self._log.info(
                             f'[{hypervisor_name}] '
                             f'Running {action} on network {network_name}')
@@ -262,6 +267,15 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
                         write_node_data(path, [
                             ('host-bridge', None),
                             ('mac-address', None)])
+                        del libvirt.networks[network_name]
+                    return
+
+            if libvirt:
+                self._log.info(f'[{hypervisor_name}] Skipping {action} on '
+                               f'{"ACTIVE" if is_active else
+                                  "INACTIVE" if is_active is False else
+                                  "NON-EXISTENT"} '
+                               f'network {network_name}. is_active={is_active}')
 
     def _get_hypervisors(self, device_ids):
         return set(self._hypervisor_mgr.get_device_hypervisor(device_id)

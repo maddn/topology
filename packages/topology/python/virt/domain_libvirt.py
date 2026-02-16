@@ -242,4 +242,7 @@ class DomainLibvirt(Domain):
                 get_hypervisor_output_node(
                         self._output, libvirt.name).domains.create(device_name)
                 return True
+        if libvirt:
+            self._log.info(f'[{libvirt.name}] '
+                           f'Skipping {action} on domain {device_name} ')
         return False
