@@ -1,7 +1,7 @@
 from ncs.dp import Action
 from ncs import maagic
-from virt.connection_libvirt import ConnectionLibvirt
-from virt.connection_docker import ConnectionDocker
+from virt.hypervisor_libvirt import ConnectionLibvirt
+from virt.hypervisor_docker import ConnectionDocker
 
 
 def create_list_item(name, yang_list):

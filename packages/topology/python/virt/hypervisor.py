@@ -1,6 +1,6 @@
-from virt.connection_docker import ConnectionDocker
-from virt.connection_libvirt import ConnectionLibvirt
-from virt.connection_vxr import ConnectionVxr
+from virt.hypervisor_docker import ConnectionDocker
+from virt.hypervisor_libvirt import ConnectionLibvirt
+from virt.hypervisor_vxr import ConnectionVxr
 
 
 class HypervisorManager():
