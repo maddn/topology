@@ -38,10 +38,17 @@
         </router>
 
         <interface xmlns="urn:ios">
-          <GigabitEthernet>
-            <name>0/{string($interface_id)}</name>
+          <?expand GetIosGigabitEthernetName interface_id=$interface_id?>
+          <GigabitEthernet tags="merge">
+            <name>{$INTERFACE_NAME}</name>
             <isis>
               <circuit-type>level-2-only</circuit-type>
+              <metric-level when="{igp-metric}">
+                <metric>
+                  <level>level-2</level>
+                  <default>{igp-metric}</default>
+                </metric>
+              </metric-level>
               <network>point-to-point</network>
             </isis>
             <ip>
@@ -214,6 +221,22 @@
             </isis>
           </isis-container>
         </router>
+
+        <interface xmlns="urn:ios" when="{../is-is}">
+          <Loopback foreach="{/loopback-interfaces/loopback}">
+            <name>{id}</name>
+            <isis>
+              <circuit-type>level-2-only</circuit-type>
+            </isis>
+            <ip>
+              <router>
+                <isis>
+                  <tag>{$NAME}</tag>
+                </isis>
+              </router>
+            </ip>
+          </Loopback>
+        </interface>
 
         <configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
           <interfaces>

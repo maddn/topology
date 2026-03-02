@@ -297,6 +297,9 @@ submodule libvirt {
             enum SR-Linux {
               tailf:info "Base image is Docker image";
             }
+            enum Catalyst-8000V {
+              tailf:info "ISO image for day 0.";
+            }
           }
           mandatory true;
           description

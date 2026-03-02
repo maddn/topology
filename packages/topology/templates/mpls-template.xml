@@ -33,6 +33,18 @@
           <oam when="{/oam}"/>
         </mpls>
 
+        <interface xmlns="urn:ios">
+          <?expand GetIosGigabitEthernetName interface_id=$interface_id?>
+          <GigabitEthernet when="{/traffic-engineering}" tags="merge">
+            <name>{$INTERFACE_NAME}</name>
+            <mpls>
+              <traffic-eng>
+                <administrative-weight>{te-metric}</administrative-weight>
+              </traffic-eng>
+            </mpls>
+          </GigabitEthernet>
+        </interface>
+
         <rsvp xmlns="http://tail-f.com/ned/cisco-ios-xr" when="{/rsvp}">
           <interface>
             <name>{$INTERFACE_TYPE}0/0/0/{string($interface_id)}</name>
@@ -127,6 +139,22 @@
               </address-family>
             </tag>
           </isis>
+        </router>
+
+        <router xmlns="urn:ios">
+          <isis-container>
+            <isis>
+              <area-tag>{$IGP_NAME}</area-tag>
+              <mpls>
+                <traffic-eng>
+                   <router-id>
+                     <Loopback>{$PRIMARY_LOOPBACK_ID}</Loopback>
+                   </router-id>
+                  <level-2/>
+                </traffic-eng>
+              </mpls>
+            </isis>
+          </isis-container>
         </router>
 
         <mpls xmlns="http://tail-f.com/ned/cisco-ios-xr">

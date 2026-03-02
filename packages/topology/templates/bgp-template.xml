@@ -352,6 +352,10 @@
     <device>
       <name>{networks/network/device}</name>
       <config>
+        <?set INTERFACE_NAME=''}?>
+        <interface xmlns="urn:ios">
+          <?expand GetIosGigabitEthernetName interface_id=current()/interface?>
+        </interface>
         <router xmlns="urn:ios">
           <bgp>
             <as-no>{$AS_NUMBER}</as-no>
@@ -363,7 +367,7 @@
                   <mask>255.255.255.255</mask>
                 </network>
                 <network when="{interface-type='GigabitEthernet'}">
-                  <number>{/devices/device[name=current()/device]/config/interface/GigabitEthernet[name=concat('0/', current()/interface-id)]/ip/address/primary/address}</number>
+                  <number>{/devices/device[name=current()/device]/config/interface/GigabitEthernet[name=$INTERFACE_NAME]/ip/address/primary/address}</number>
                   <mask>255.255.255.0</mask>
                 </network>
               </ipv4>
@@ -402,8 +406,9 @@
                 </vrf>
 
                 <interface xmlns="urn:ios">
+                  <?expand GetIosGigabitEthernetName interface_id=$IFACE_ID?>
                   <GigabitEthernet tags="merge">
-                    <name>0/{string($IFACE_ID)}.{string(../vlan-id)}</name>
+                    <name>{$INTERFACE_NAME}.{string(../vlan-id)}</name>
                     <encapsulation>
                       <dot1Q>
                         <vlan-id>{../vlan-id}</vlan-id>

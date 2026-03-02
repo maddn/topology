@@ -71,6 +71,8 @@
       <?set DEVICE_ID={deref(.)/../id}?>
       <device>
         <name>{current()}</name>
+        <?set PREFIX_SID={number(/prefix-sid-start) + number($DEVICE_ID)}?>
+        <?set PREFIX_SID_STRICT={number(/prefix-sid-strict-spf-start) + number($DEVICE_ID)}?>
         <config>
           <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
             <isis>
@@ -110,12 +112,12 @@
                     <ipv4>
                       <unicast>
                         <prefix-sid>
-                          <absolute>{number(/prefix-sid-start) + number($DEVICE_ID)}</absolute>
+                          <absolute>{$PREFIX_SID}</absolute>
                         </prefix-sid>
                         <prefix-sid-strict-spf when="{/prefix-sid-strict-spf-start}">
                           <prefix-sid>
                             <strict-spf>
-                              <absolute>{number(/prefix-sid-strict-spf-start) + number($DEVICE_ID)}</absolute>
+                              <absolute>{$PREFIX_SID_STRICT}</absolute>
                             </strict-spf>
                           </prefix-sid>
                         </prefix-sid-strict-spf>
@@ -160,6 +162,83 @@
               </tag>
             </isis>
           </router>
+
+          <router xmlns="urn:ios">
+            <isis-container>
+              <isis>
+                <area-tag>{$IGP_NAME}</area-tag>
+                <segment-routing>
+                  <mpls/>
+                  <prefix-sid-map>
+                    <advertise-local/>
+                  </prefix-sid-map>
+                </segment-routing>
+              </isis>
+            </isis-container>
+          </router>
+
+          <segment-routing xmlns="urn:ios">
+            <mpls>
+              <global-block>
+                <start>{/srgb/lower-bound}</start>
+                <end>{/srgb/upper-bound}</end>
+              </global-block>
+
+              <?set-root-node {/}?>
+              <?set LOOPBACK_IP_ADDRESS={/devices/device[name=$DEVICE]/config/interface/Loopback[name=$PRIMARY_LOOPBACK_ID]/ip/address/primary/address}?>
+              <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
+              <connected-prefix-sid-map>
+                <address-family>
+                  <ipv4>
+                    <address-list>
+                      <prefix>{$LOOPBACK_IP_ADDRESS}/32</prefix>
+                      <absolute>{$PREFIX_SID}</absolute>
+                      <range>1</range>
+                    </address-list>
+                  </ipv4>
+                  <ipv4-conf>
+                    <ipv4>
+                      <strict-spf>
+                        <address-list>
+                          <prefix>{$LOOPBACK_IP_ADDRESS}/32</prefix>
+                          <absolute>{$PREFIX_SID_STRICT}</absolute>
+                          <range>1</range>
+                        </address-list>
+                      </strict-spf>
+                      <?set FLEX_ALGO_INDEX=1?>
+                      <algorithm foreach="{/flex-algo}">
+                        <id>{id}</id>
+                        <address-list>
+                          <prefix>{$LOOPBACK_IP_ADDRESS}/32</prefix>
+                          <absolute>{number(/prefix-sid-start) + 1000 + number($FLEX_ALGO_INDEX) * 100 + number($DEVICE_ID)}</absolute>
+                          <range>1</range>
+                        </address-list>
+                        <?set FLEX_ALGO_INDEX={$FLEX_ALGO_INDEX+1}?>
+                      </algorithm>
+                    </ipv4>
+                  </ipv4-conf>
+                </address-family>
+              </connected-prefix-sid-map>
+            </mpls>
+
+            <srv6 when="{/srv6}">
+              <locators>
+                <?set LOCATOR_INDEX={0}?>
+                <locator>
+                  <name>MAIN</name>
+                  <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
+                  <format>usid-f3216</format>
+                </locator>
+                <locator foreach="{/flex-algo}">
+                  <name>{id}</name>
+                  <?set LOCATOR_INDEX={$LOCATOR_INDEX+1}?>
+                  <prefix>{/srv6/locator-prefix-start}:{$LOCATOR_INDEX}:{$DEVICE_ID}::/48</prefix>
+                  <format>usid-f3216</format>
+                </locator>
+              </locators>
+            </srv6>
+
+          </segment-routing>
 
           <segment-routing xmlns="http://tail-f.com/ned/cisco-ios-xr">
             <global-block>

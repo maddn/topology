@@ -10,6 +10,14 @@
     <?end?>
   <?endmacro?>
 
+  <?macro GetIosGigabitEthernetName interface_id?>
+    <?set INTERFACE_NAME={$interface_id}?>
+    <GigabitEthernet tags="nocreate">
+      <name>0/{string($interface_id)}</name>
+      <?set INTERFACE_NAME="0/{$interface_id}"?>
+    </GigabitEthernet>
+  <?endmacro?>
+
   <?macro GigabitEthernetAddresses device_name device_id interface_id connected_device_name connected_interface_id?>
     <?set IPV4_ADDRESS={concat(/physical-interfaces/ipv4-subnet-start, '.', $LOWER_DEVICE_ID, '.', $HIGHER_DEVICE_ID, '.', $device_id)}?>
     <?set IPV6_ADDRESS={/physical-interfaces/ipv6-subnet-start}::{$LOWER_DEVICE_ID}:{$HIGHER_DEVICE_ID}:{$device_id}?>
@@ -63,8 +71,9 @@
           </interface>
 
           <interface xmlns="urn:ios">
+            <?expand GetIosGigabitEthernetName interface_id=$interface_id?>
             <GigabitEthernet tags="merge">
-              <name>0/{string($interface_id)}</name>
+              <name>{$INTERFACE_NAME}</name>
               <description>{$DESCRIPTION}</description>
               <?if {not(exclude-ip-connectivity)}?>
                 <ip>
@@ -297,6 +306,7 @@
     <?foreach {../networks/network}?>
       <?foreach {devices/device}?>
         <?set IPV4_ADDRESS={concat(../../ipv4-subnet-start, '.', deref(name)/../id)}?>
+        <?set DESCRIPTION=Connection to {../../name} network?>
         <devices xmlns="http://tail-f.com/ns/ncs">
           <device tags="nocreate">
             <name>{name}</name>

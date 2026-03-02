@@ -31,8 +31,9 @@
           </FourHundredGigE>
         </interface>
         <interface xmlns="urn:ios">
+          <?expand GetIosGigabitEthernetName interface_id=$interface_id?>
           <GigabitEthernet tags="merge">
-            <name>0/{string($interface_id)}</name>
+            <name>{$INTERFACE_NAME}</name>
             <lldp when="{lldp}">
               <transmit>true</transmit>
               <receive>true</receive>
@@ -45,6 +46,14 @@
         <performance-measurement xmlns="http://tail-f.com/ned/cisco-ios-xr" tags="merge" when="{$delay_metric}">
           <interface>
             <name>{$INTERFACE_TYPE}0/0/0/{string($interface_id)}</name>
+            <delay-measurement>
+              <advertise-delay>{$delay_metric}</advertise-delay>
+            </delay-measurement>
+          </interface>
+        </performance-measurement>
+        <performance-measurement xmlns="urn:ios" tags="merge" when="{$delay_metric}">
+          <interface>
+            <name>GigabitEthernet{string($interface_id)}</name>
             <delay-measurement>
               <advertise-delay>{$delay_metric}</advertise-delay>
             </delay-measurement>
@@ -354,7 +363,7 @@
             </lookup-conf>
             <name>nso-topology</name>
           </domain>
-          <ssh>
+          <ssh when="{deref(definition)/../device-type = 'IOSv'}">
             <version>2</version>
           </ssh>
           <forward-protocol>
@@ -371,6 +380,14 @@
             <server-list>
               <name>{/ntp-server}</name>
             </server-list>
+          </server>
+        </ntp>
+
+        <ntp xmlns="urn:ios">
+          <server>
+            <peer-list>
+              <name>{/ntp-server}</name>
+            </peer-list>
           </server>
         </ntp>
 
@@ -418,7 +435,6 @@
               <name>snmp linkup</name>
             </traps-list>
           </traps>
-          <packetsize>4096</packetsize>
           <trap>
             <link>ietf</link>
           </trap>
@@ -478,6 +494,14 @@
           </trap-source>
         </snmp-server>
 
+        <snmp xmlns="urn:ios" when="{deref(definition)/../device-type = 'Catalyst-8000V'}">
+          <ifmib>
+            <ifindex>
+              <persist/>
+            </ifindex>
+          </ifmib>
+        </snmp>
+
         <?if {count(deref(/topology)/../links/link[a-end-device=$DEVICE]/lldp) +
               count(deref(/topology)/../links/link[z-end-device=$DEVICE]/lldp) > 0}?>
           <lldp xmlns="urn:ios">
@@ -493,10 +517,10 @@
         </cdp>
         <cdp xmlns="http://tail-f.com/ned/cisco-ios-xr"
              when="{$CDP='true' and
-                    deref(definition)/../device-type != 'VXR-8000'}">
+                    deref(definition)/../device-type != 'VXR-8000'}"/>
 
         <!-- Disable CDP on IOS GigabitEthernet interfaces by default -->
-        <interface xmlns="urn:ios">
+        <interface xmlns="urn:ios" when="{deref(definition)/../device-type = 'IOSv'}">
           <?set-root-node {/devices/device[name=current()/device-name]}?>
           <GigabitEthernet tags="merge" foreach="{/config/interface/GigabitEthernet}">
             <name>{name}</name>
@@ -528,7 +552,7 @@
         <!-- IOS Devices -->
         <ipv6 xmlns="urn:ios">
           <unicast-routing/>
-          <cef/>
+          <cef when="{deref(definition)/../device-type = 'IOSv'}"/>
         </ipv6>
         <multilink xmlns="urn:ios">
           <bundle-name>authenticated</bundle-name>
@@ -555,7 +579,7 @@
       <?foreach {devices/device}?>
         <?expand InterfaceBaseConfig
           device_name=.
-          interface_id=../../interface-id
+          interface_id=interface/id
         ?>
       <?end?>
     <?end?>
@@ -737,8 +761,9 @@
       <name>{customer-networks/interface/device}</name>
       <config>
         <interface xmlns="urn:ios">
+          <?expand GetIosGigabitEthernetName interface_id=interface?>
           <GigabitEthernet tags="merge">
-            <name>0/{interface}</name>
+            <name>{$INTERFACE_NAME}</name>
             <description>Customer network</description>
             <ip>
               <no-address>

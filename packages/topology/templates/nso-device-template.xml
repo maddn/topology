@@ -20,6 +20,7 @@
       <ssh-algorithms>
         <public-key when="{/device-type='XRv-9000'}">rsa-sha2-256</public-key>
         <public-key when="{/device-type='IOSv'}">ssh-rsa</public-key>
+        <public-key when="{/device-type='Catalyst-8000V'}">rsa-sha2-512</public-key>
       </ssh-algorithms>
       <trace>pretty</trace>
       <state>
