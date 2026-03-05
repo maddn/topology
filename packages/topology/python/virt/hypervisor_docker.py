@@ -1,23 +1,35 @@
-import docker
 import subprocess
+from collections import namedtuple
+import docker
 
-class ConnectionDocker():
+_ncs = __import__('_ncs')
+
+Credentials = namedtuple('Credentials', 'username password tls_certs')
+
+class HypervisorDocker():
     def __init__(self, hypervisor, log):
-        self.conn = None
-        self.name = hypervisor.name
-        self._url = f'ssh://{hypervisor.host}'
-        self._host = hypervisor.host
-        self._tls_certs = None
-        if hypervisor.tls.exists():
-            self._url = f'tcp://{hypervisor.host}:2376'
-            self._tls_certs = (
-                    hypervisor.tls.client_certificate,
-                    hypervisor.tls.client_key)
         self._log = log
+
+        self.name = hypervisor.name
+        self._host = hypervisor.host
+
+        self._credentials = Credentials(
+            username = hypervisor.username,
+            password = _ncs.decrypt(hypervisor.password) if (
+                    hypervisor.password is not None) else None,
+            tls_certs = (
+                    hypervisor.tls.client_certificate,
+                    hypervisor.tls.client_key
+                    ) if hypervisor.tls.exists() else None)
+
         self.containers = {}
         self.networks = {}
-        self.veths = []
-        self.taps = []
+
+        self.interfaces = namedtuple('Interfaces', 'veths taps')(
+            veths = [],
+            taps = [])
+
+        self.conn = None
 
     def __enter__(self):
         self.connect()
@@ -28,11 +40,17 @@ class ConnectionDocker():
             self.conn.close()
             self.conn = None
 
+    def get_url(self):
+        if self._credentials.tls_certs:
+            return f'tcp://{self._host}:2376'
+        return f'ssh://{self._host}'
+
     def connect(self):
         tls_config = docker.tls.TLSConfig(
-                client_cert=self._tls_certs) if self._tls_certs else False
+                client_cert=self._credentials.tls_certs) if (
+                        self._credentials.tls_certs) else False
         self.conn = docker.DockerClient(
-                base_url=self._url,
+                base_url=self.get_url(),
                 tls=tls_config,
                 use_ssh_client=not tls_config)
 
@@ -170,6 +188,7 @@ class ConnectionDocker():
         avoid collisions, but peer values are always the numeric peer index.
         """
         veths = {}
+        self.interfaces.taps.clear()
 
         for index, (device, iface, peer, bridge, mac) in ifaces.items():
             # Only process container interfaces (not host)
@@ -193,17 +212,19 @@ class ConnectionDocker():
                 }
             # Check if this is a TAP interface (no peer)
             elif peer is None:
-                self.taps.append({
+                self.interfaces.taps.append({
                     'container': device,
                     'name': iface,
                     'mac-address': mac,
                     'bridge': bridge
                 })
 
-        self.veths = list(veths.values())
+        self.interfaces.veths.clear()
+        self.interfaces.veths.extend(veths.values())
 
     def populate_networks(self):
         # Collect docker network membership
+        self.networks.clear()
         for network in self.conn.networks.list(greedy=True):
             self.networks[network.name] = {
                     'containers': [ { 'name': container.name }

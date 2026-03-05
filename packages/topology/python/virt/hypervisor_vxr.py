@@ -25,7 +25,7 @@ class VxrSimStarter(threading.Thread):
         start_console_logger(self._device_path)
 
 
-class ConnectionVxr():
+class HypervisorVxr():
     def __init__(self, hypervisor, log):
         self.name = hypervisor.name
         self._host = hypervisor.host

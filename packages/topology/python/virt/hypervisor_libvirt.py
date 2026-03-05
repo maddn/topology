@@ -4,7 +4,7 @@ import libvirt
 _ncs = __import__('_ncs')
 
 
-class ConnectionLibvirt():
+class HypervisorLibvirt():
     #pylint: disable=too-many-instance-attributes
     def __init__(self, hypervisor, log):
         self.conn = None

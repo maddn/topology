@@ -1,18 +1,18 @@
-from virt.hypervisor_docker import ConnectionDocker
-from virt.hypervisor_libvirt import ConnectionLibvirt
-from virt.hypervisor_vxr import ConnectionVxr
+from virt.hypervisor_docker import HypervisorDocker
+from virt.hypervisor_libvirt import HypervisorLibvirt
+from virt.hypervisor_vxr import HypervisorVxr
 
 
 class HypervisorManager():
     def __init__(self, hypervisors, topology, log):
         self._libvirt_connections = {
-                hypervisor.name: ConnectionLibvirt(hypervisor, log)
+                hypervisor.name: HypervisorLibvirt(hypervisor, log)
                 for hypervisor in hypervisors if hypervisor.host}
         self._docker_connections = {
-                hypervisor.name: ConnectionDocker(hypervisor, log)
+                hypervisor.name: HypervisorDocker(hypervisor, log)
                 for hypervisor in hypervisors if hypervisor.host}
         self._vxr_connections = {
-                hypervisor.name: ConnectionVxr(hypervisor, log)
+                hypervisor.name: HypervisorVxr(hypervisor, log)
                 for hypervisor in hypervisors if hypervisor.host}
         self._external_bridges = {
                 hypervisor.name: hypervisor.external_bridge

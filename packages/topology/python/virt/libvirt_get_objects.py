@@ -1,7 +1,7 @@
 from ncs.dp import Action
 from ncs import maagic
-from virt.hypervisor_libvirt import ConnectionLibvirt
-from virt.hypervisor_docker import ConnectionDocker
+from virt.hypervisor_libvirt import HypervisorLibvirt
+from virt.hypervisor_docker import HypervisorDocker
 
 
 def create_list_item(name, yang_list):
@@ -34,7 +34,7 @@ class LibvirtGetObjects(Action):
         hypervisor = maagic.get_node(trans, kp[1:])
         trans.maapi.install_crypto_keys()
 
-        with ConnectionDocker(hypervisor, self.log) as docker_conn:
+        with HypervisorDocker(hypervisor, self.log) as docker_conn:
             if name == 'containers':
                 docker_conn.populate_containers()
                 dict_dict_to_yang_list(docker_conn.containers, output.container)
@@ -46,18 +46,18 @@ class LibvirtGetObjects(Action):
                             network_name, output.network)
                     list_dict_to_yang_list(
                             network['containers'], network_node.container)
-                for veth in docker_conn.veths:
+                for veth in docker_conn.interfaces.veths:
                     network_node = create_list_item(
                             None, output.veth_pair)
                     list_dict_to_yang_list(
                             veth['interfaces'], network_node.interface)
-                for tap in docker_conn.taps:
+                for tap in docker_conn.interfaces.taps:
                     network_node = create_list_item(
                             tap['name'], output.tap_interface)
                     dict_to_yang_container(
                             tap, network_node)
 
-        with ConnectionLibvirt(hypervisor, self.log) as libvirt_conn:
+        with HypervisorLibvirt(hypervisor, self.log) as libvirt_conn:
             if name == 'domains':
                 libvirt_conn.populate_domains()
                 dict_dict_to_yang_list(libvirt_conn.domains, output.domain)
