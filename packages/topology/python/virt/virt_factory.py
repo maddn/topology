@@ -4,6 +4,7 @@ from ncs import maagic
 
 from virt.hypervisor import HypervisorManager
 from virt.network import NetworkManager, generate_ip_address
+from virt.domain import DomainManager
 
 
 class ResourceManager():
@@ -43,14 +44,16 @@ class VirtFactory():
     domain_networks_registry = {}
     topology_networks_registry = {}
 
-    def __init__(self, username, topology, dev_defs, log):
+    def __init__(self, username, topology, log):
         hypervisor_name = topology.libvirt.hypervisor
         hypervisors = maagic.cd(topology, '../libvirt/hypervisor')
         hypervisor = hypervisors[hypervisor_name]
 
         self._hypervisor_mgr = HypervisorManager(hypervisors, topology, log)
         self._resource_mgr = ResourceManager(hypervisor, username)
-        self._network_mgr = NetworkManager(topology, self._hypervisor_mgr, dev_defs)
+        self._domain_mgr = DomainManager(topology, VirtFactory.domain_registry)
+        self._network_mgr = NetworkManager(topology,
+                self._hypervisor_mgr, self._domain_mgr)
         self._dev_defs = maagic.cd(topology, '../libvirt/device-definition')
         self._log = log
 
@@ -59,14 +62,19 @@ class VirtFactory():
     def create(self, cls):
         return cls(
                 self._hypervisor_mgr,
+                self._domain_mgr,
                 self._resource_mgr,
                 self._network_mgr,
                 self._dev_defs,
                 self._log)
 
-    def get_device_type(self, device):
-        dev_def = self._dev_defs[device.definition]
-        return str(dev_def.device_type)
+    def get_device_type(self, device_id=None, device_name=None):
+        if device_name:
+            device_id = self._domain_mgr.get_device_id(device_name)
+        return self._domain_mgr.get_device_type(device_id)
+
+    def get_network_mgr(self):
+        return self._network_mgr
 
     @classmethod
     def register_domain(cls, name):

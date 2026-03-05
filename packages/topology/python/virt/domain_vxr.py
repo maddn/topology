@@ -67,11 +67,13 @@ class VxrJsonBuilder():
 
 class DomainVxr(Domain):
 
+    SHUTDOWN_SUPPORTED = False  #VXR does a synchronous stop
+    BRIDGE_NETWORKING = True
+
     IFACE_PREFIX = 'FourHundredGigE0/0/0'
     MGMT_IFACE = 'eth0'
 
     FIRST_IFACE_ID = 0
-    SHUTDOWN_SUPPORTED = False  #VXR does a synchronous stop
 
     def add_extra_mgmt_interfaces(self, xml_builder, device):
         pass

@@ -8,6 +8,8 @@ from virt.topology_status import write_node_data, get_hypervisor_output_node
 class DomainDocker(Domain):
 
     SHUTDOWN_SUPPORTED = True
+    IS_CONTAINERIZED = True
+
     CAPABILITIES = []
     COMMAND = None
     CONFIG_TARGET = None

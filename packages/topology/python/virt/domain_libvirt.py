@@ -143,6 +143,9 @@ class DomainXmlBuilder():
 
 class DomainLibvirt(Domain):
 
+    SHUTDOWN_SUPPORTED = True # Libvirt will attempt graceful shutdown
+    BRIDGE_NETWORKING = False # Use UDP libvirt networking
+
     DATA_IFACE_TYPE = 'virtio'
     MGMT_IFACE_TYPE = 'virtio'
     INCLUDE_NULL_IFACES = False

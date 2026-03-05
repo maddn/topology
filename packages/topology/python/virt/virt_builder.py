@@ -29,8 +29,6 @@ class VirtBuilder():
         self._extra_network = factory.create(ExtraNetwork)
         self._link_network = factory.create(LinkNetwork)
 
-        self._get_device_type = factory.get_device_type
-
         self._domain_builders = {}
         self._volume_builders = {}
         self._domain_networks_builders = {}
@@ -82,3 +80,6 @@ class VirtBuilder():
     def domain_supports_shutdown(self, device):
         return self._domain_builders[
                 self._get_device_type(device)].shutdown_supported()
+
+    def _get_device_type(self, device):
+        return self._factory.get_device_type(device_name=device.device_name)

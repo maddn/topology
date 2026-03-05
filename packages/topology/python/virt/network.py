@@ -38,11 +38,9 @@ def generate_ip_address(ip_address_start, device_id):
     return str(IPv4Address(ip_address_start) + int(device_id)) if (
         ip_address_start is not None) else None
 
-def prefer_udp_networking(device_type):
-    return device_type not in ['XRd', 'Linux-SR', 'VXR-8000']
 
 class NetworkManager():
-    def __init__(self, topology, hypervisor_mgr, dev_defs):
+    def __init__(self, topology, hypervisor_mgr, domain_mgr):
         def _add_interface(key, path, network=None, bridge=None, dest=None):
             if (bridge and key in self._bridge_ifaces
                     or key in self._network_ifaces):
@@ -56,13 +54,11 @@ class NetworkManager():
             else:
                 self._network_ifaces[key] = value
 
-        self._device_ids = {device.device_name:int(device.id)
-                            for device in topology.devices.device}
-        device_types = {device.device_name:dev_defs[device.definition].device_type
-                            for device in topology.devices.device}
         self._networks = {network.external_bridge or network.name:
                 f'{force_maagic_leaf_val2str(network, "ipv4-subnet-start")}.0'
                 for network in topology.networks.network}
+
+        self._domain_mgr = domain_mgr
 
         self._network_ifaces = {}
         self._bridge_ifaces = {}
@@ -72,8 +68,8 @@ class NetworkManager():
                 for device in topology.devices.device}
 
         for link in topology.links.link:
-            device_ids = (self._device_ids[link.a_end_device],
-                          self._device_ids[link.z_end_device])
+            device_ids = (self._domain_mgr.get_device_id(link.a_end_device),
+                          self._domain_mgr.get_device_id(link.z_end_device))
             hypervisors = (hypervisor_mgr.get_device_hypervisor(device_ids[0]),
                            hypervisor_mgr.get_device_hypervisor(device_ids[1]))
             iface_ids = (link.a_end_interface.id
@@ -95,8 +91,8 @@ class NetworkManager():
                            hypervisor_mgr.get_external_bridge(hypervisors[1]))
 
             libvirt_network = (network_id and
-                    prefer_udp_networking(device_types[link.a_end_device]) and
-                    prefer_udp_networking(device_types[link.z_end_device]))
+                    self._domain_mgr.need_bridge_networking(device_ids[0]) or
+                    self._domain_mgr.need_bridge_networking(device_ids[1]))
 
             _add_interface((device_ids[0], iface_ids[0]),
                     f'{link._path}/a-end-interface', network_id, bridges[0],
@@ -107,7 +103,7 @@ class NetworkManager():
 
         for network in topology.networks.network:
             for device in network.devices.device:
-                key = (self._device_ids[device.name],
+                key = (self._domain_mgr.get_device_id(device.name),
                         device.interface.id or network.interface_id)
                 _add_interface(key, f'{device._path}/interface',
                         network.name, network.external_bridge)
@@ -116,8 +112,8 @@ class NetworkManager():
             *self._network_ifaces, *self._bridge_ifaces)))
 
     def _get_link_device_ids(self, link):
-        return sort_link_device_ids((self._device_ids[link.a_end_device],
-                                     self._device_ids[link.z_end_device]))
+        return sort_link_device_ids((self._domain_mgr.get_device_id(link.a_end_device),
+                                     self._domain_mgr.get_device_id(link.z_end_device)))
 
     def get_link_network(self, link):
         device_ids = self._get_link_device_ids(link)
@@ -263,17 +259,18 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
                     network_action_method()
                     get_hypervisor_output_node(self._output,
                             hypervisor_name).networks.create(network_name)
-                    if action == 'undefine' and path:
-                        write_node_data(path, [
-                            ('host-bridge', None),
-                            ('mac-address', None)])
+                    if action == 'undefine':
+                        if path:
+                            write_node_data(path, [
+                                ('host-bridge', None),
+                                ('mac-address', None)])
                         del libvirt.networks[network_name]
                     return
 
             if libvirt:
                 self._log.info(f'[{hypervisor_name}] Skipping {action} on '
                                f'{"ACTIVE" if is_active else
-                                  "INACTIVE" if is_active is False else
+                                  "INACTIVE" if is_active == 0 else
                                   "NON-EXISTENT"} '
                                f'network {network_name}. is_active={is_active}')
 
@@ -285,8 +282,10 @@ class Network(VirtBase): #pylint: disable=too-few-public-methods
 class LinkNetwork(Network):
     def _get_link_hypervisors(self, link):
         return (
-            self._hypervisor_mgr.get_device_name_hypervisor(link.a_end_device),
-            self._hypervisor_mgr.get_device_name_hypervisor(link.z_end_device)
+            self._hypervisor_mgr.get_device_hypervisor(
+                    self._domain_mgr.get_device_id(link.a_end_device)),
+            self._hypervisor_mgr.get_device_hypervisor(
+                    self._domain_mgr.get_device_id(link.z_end_device))
         )
 
     def _define(self, hypervisor_name, link):

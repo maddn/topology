@@ -23,8 +23,6 @@ class HypervisorManager():
         self._hypervisors = {
                 int(device.id): device.hypervisor or topology.libvirt.hypervisor
                 for device in topology.devices.device}
-        self._device_names = { device.device_name: device.id
-                               for device in topology.devices.device }
         self._log = log
 
     def get_libvirt(self, hypervisor_name):
@@ -62,9 +60,6 @@ class HypervisorManager():
 
     def get_device_udp_tunnel_ip_address(self, device_id):
         return self._udp_tunnel_ip_addresses[self._hypervisors[device_id]]
-
-    def get_device_name_hypervisor(self, device_name):
-        return self.get_device_hypervisor(self._device_names[device_name])
 
     def is_real(self, hypervisor_name):
         return (hypervisor_name in self._libvirt_connections or

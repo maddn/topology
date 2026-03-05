@@ -17,8 +17,56 @@ def nso_device_delete(device_name):
         trans.safe_delete(f'/devices/device{{{device_name}}}')
         trans.apply()
 
+class DomainManager():
+    def __init__(self, topology, domain_registry):
+        dev_defs = maagic.cd(topology, '../libvirt/device-definition')
+
+        self._device_ids_by_name = {}
+        self._device_names = {}
+        self._device_paths = {}
+        self._device_types = {}
+        self._domain_is_container = {}
+        self._domain_needs_bridge_networking = {}
+
+        for device in topology.devices.device:
+            device_id = int(device.id)
+            self._device_ids_by_name[device.device_name] = device_id
+            self._device_names[device_id] = device.device_name
+            self._device_paths[device_id] = device._path
+
+            device_type = str(dev_defs[device.definition].device_type)
+            domain_class = domain_registry.get(device_type)
+
+            self._device_types[device_id] = device_type
+            self._domain_is_container[device_id] = (
+                    domain_class and domain_class.IS_CONTAINERIZED)
+            self._domain_needs_bridge_networking[device_id] = (
+                    domain_class and domain_class.BRIDGE_NETWORKING)
+
+    def get_device_id(self, device_name):
+        return self._device_ids_by_name.get(device_name, None)
+
+    def get_device_name(self, device_id):
+        return self._device_names.get(device_id, None)
+
+    def get_device_path(self, device_id):
+        return self._device_paths.get(device_id, None)
+
+    def get_device_type(self, device_id):
+        return self._device_types.get(device_id, None)
+
+    def is_container(self, device_id):
+        return self._domain_is_container.get(device_id, False)
+
+    def need_bridge_networking(self, device_id):
+        return self._domain_needs_bridge_networking.get(device_id, False)
+
 
 class Domain(VirtBase):
+    SHUTDOWN_SUPPORTED = False
+    IS_CONTAINERIZED = False
+    BRIDGE_NETWORKING = False
+
     def define(self, device):
         dev_def = self._dev_defs[device.definition]
         hypervisor = self._hypervisor_mgr.get_device_hypervisor(device.id)
