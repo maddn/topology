@@ -3,7 +3,7 @@ from ipaddress import IPv4Interface
 from ncs import maagic
 
 from virt.hypervisor import HypervisorManager
-from virt.connection import NetworkManager, generate_ip_address
+from virt.connection import ConnectionManager, generate_ip_address
 from virt.domain import DomainManager
 
 
@@ -53,7 +53,7 @@ class VirtFactory():
         self._hypervisor_mgr = HypervisorManager(hypervisors, topology, log)
         self._resource_mgr = ResourceManager(hypervisor, username)
         self._domain_mgr = DomainManager(topology, VirtFactory.domain_registry)
-        self._network_mgr = NetworkManager(topology,
+        self._connection_mgr = ConnectionManager(topology,
                 self._hypervisor_mgr, self._domain_mgr, self._resource_mgr)
         self._dev_defs = maagic.cd(topology, '../libvirt/device-definition')
         self._log = log
@@ -65,7 +65,7 @@ class VirtFactory():
                 self._hypervisor_mgr,
                 self._domain_mgr,
                 self._resource_mgr,
-                self._network_mgr,
+                self._connection_mgr,
                 self._dev_defs,
                 self._log)
 
@@ -74,8 +74,8 @@ class VirtFactory():
             device_id = self._domain_mgr.get_device_id(device_name)
         return self._domain_mgr.get_device_type(device_id)
 
-    def get_network_mgr(self):
-        return self._network_mgr
+    def get_connection_mgr(self):
+        return self._connection_mgr
 
     @classmethod
     def register_domain(cls, name):

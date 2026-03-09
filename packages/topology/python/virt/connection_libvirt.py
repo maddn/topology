@@ -58,14 +58,14 @@ class ConnectionLibvirt(Connection):
             return False
 
         (network_id, devices) = \
-                self._network_mgr.get_interface_managed_network_info(
+                self._connection_mgr.get_interface_managed_network_info(
                         device_id, iface_id)
-        path = self._network_mgr.get_iface_path(device_id, iface_id)
+        path = self._connection_mgr.get_iface_path(device_id, iface_id)
 
         if not network_id:
             return False
 
-        link_dest = self._network_mgr.get_iface_link_dest(device_id, iface_id)
+        link_dest = self._connection_mgr.get_iface_link_dest(device_id, iface_id)
 
         if self.network_action_allowed(action, devices):
             if link_dest:
@@ -75,7 +75,7 @@ class ConnectionLibvirt(Connection):
             else:
                 self._topology_networks.network(
                         action, output, network_id,
-                        self._network_mgr.get_network_index(network_id))
+                        self._connection_mgr.get_network_index(network_id))
             return True
 
         return False

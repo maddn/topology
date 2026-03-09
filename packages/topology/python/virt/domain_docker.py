@@ -32,8 +32,8 @@ class DomainDocker(Domain):
         device_id = int(device.id)
         docker_ifaces = []
         for iface_id in range(first_iface,
-                self._network_mgr.get_num_device_ifaces()):
-            path = self._network_mgr.get_iface_path(device_id, iface_id)
+                self._connection_mgr.get_num_device_ifaces()):
+            path = self._connection_mgr.get_iface_path(device_id, iface_id)
 
             if path:
                 docker_ifaces.append(iface_id)
@@ -58,7 +58,7 @@ class DomainDocker(Domain):
             if iface_id is not None:
                 mac_address = self._resource_mgr.generate_mac_address(
                         device.id, iface_id, True)
-                self._network_mgr.write_iface_data( device.id, iface_id, [
+                self._connection_mgr.write_iface_data( device.id, iface_id, [
                         ('id', iface_id),
                         ('host-interface', self._generate_iface_dev_name(
                                            device.id, iface_id)),

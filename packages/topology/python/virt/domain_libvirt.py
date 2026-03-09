@@ -10,10 +10,10 @@ from monitor.console_activity import start_console_logger, stop_console_logger
 
 class DomainXmlBuilder():
     def __init__(self, device_id, device_name,
-            resource_mgr, network_mgr, templates):
+            resource_mgr, connection_mgr, templates):
         self._templates = templates
         self._resource_mgr = resource_mgr
-        self._network_mgr = network_mgr
+        self._connection_mgr = connection_mgr
         self._device_name = device_name
         self._device_id = int(device_id)
         self._domain_xml_devices = None
@@ -119,19 +119,19 @@ class DomainXmlBuilder():
     def add_data_ifaces(self, include_null_interfaces, model_type,
             min_ifaces = 0, first_iface = 0, device_id = None):
         for iface_id in range(first_iface,
-                self._network_mgr.get_num_device_ifaces()):
-            bridge_name = self._network_mgr.get_iface_bridge_name(
+                self._connection_mgr.get_num_device_ifaces()):
+            bridge_name = self._connection_mgr.get_iface_bridge_name(
                     device_id or self._device_id, iface_id)
-            network_id = self._network_mgr.get_iface_network_id(
+            network_id = self._connection_mgr.get_iface_network_id(
                     device_id or self._device_id, iface_id)
-            link_dest = self._network_mgr.get_iface_link_dest(
+            link_dest = self._connection_mgr.get_iface_link_dest(
                     device_id or self._device_id, iface_id)
 
             if (bridge_name or network_id or link_dest or
                     include_null_interfaces or iface_id < (min_ifaces - 1)):
                 iface_dev_name = self._generate_iface_dev_name(iface_id)
                 mac_address = self._generate_mac_address(iface_id)
-                udp_ports = self._network_mgr.get_network_udp_ports(
+                udp_ports = self._connection_mgr.get_network_udp_ports(
                         device_id or self._device_id, iface_id)
 
                 self._domain_xml_devices.append(self._get_iface_xml(
@@ -141,7 +141,7 @@ class DomainXmlBuilder():
                     udp_ports))
 
                 if network_id or bridge_name or link_dest and not udp_ports:
-                    self._network_mgr.write_iface_data(
+                    self._connection_mgr.write_iface_data(
                         device_id or self._device_id, iface_id, [
                                 ('id', iface_id),
                                 ('host-interface', iface_dev_name),
@@ -190,7 +190,7 @@ class DomainLibvirt(Domain):
         dev_def = self._dev_defs[device.definition]
         self._templates.load_template('images', f'{dev_def.template}.xml')
         xml_builder = DomainXmlBuilder(int(device.id), device_name,
-                self._resource_mgr, self._network_mgr, self._templates)
+                self._resource_mgr, self._connection_mgr, self._templates)
 
         xml_builder.create_base(dev_def.vcpus, dev_def.memory, dev_def.template)
         xml_builder.add_disk(dev_def.storage_pool, dev_def.base_image

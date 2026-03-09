@@ -46,11 +46,11 @@ class Topology():
         invoked on the other end of the link (when this function was executed
         for that device) but this device would not have been ready at that time.
         """
-        network_mgr = self._virt_builder.get_network_mgr()
-        for iface_id in range(network_mgr.get_num_device_ifaces()):
+        connection_mgr = self._virt_builder.get_connection_mgr()
+        for iface_id in range(connection_mgr.get_num_device_ifaces()):
             self._virt_builder.connection(
                     action, output, device.id, iface_id, when, False)
-            link_dest = network_mgr.get_iface_link_dest(device.id, iface_id)
+            link_dest = connection_mgr.get_iface_link_dest(device.id, iface_id)
             if link_dest:
                 (other_device_id, other_iface_id) = link_dest
                 self._virt_builder.connection(

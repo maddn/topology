@@ -91,5 +91,5 @@ class VirtBuilder():
     def _get_device_type(self, device):
         return self._factory.get_device_type(device_name=device.device_name)
 
-    def get_network_mgr(self):
-        return self._factory.get_network_mgr()
+    def get_connection_mgr(self):
+        return self._factory.get_connection_mgr()

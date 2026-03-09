@@ -86,7 +86,7 @@ class ConnectionDocker(Connection):
             return False
 
         (other_device_id, other_iface_id) = \
-                self._network_mgr.get_interface_direct_link_info(
+                self._connection_mgr.get_interface_direct_link_info(
                         device_id, iface_id)
 
         #Check if this interface is a direct link
@@ -101,7 +101,7 @@ class ConnectionDocker(Connection):
             # plumbed together.
             return False
 
-        bridge = self._network_mgr.get_interface_any_bridge_info(
+        bridge = self._connection_mgr.get_interface_any_bridge_info(
             device_id, iface_id)
 
         if bridge:
@@ -126,7 +126,7 @@ class ConnectionDocker(Connection):
             return False
 
         (other_device_id, other_iface_id) = \
-                self._network_mgr.get_interface_direct_link_info(
+                self._connection_mgr.get_interface_direct_link_info(
                         device_id, iface_id)
 
         if other_device_id:
@@ -151,10 +151,10 @@ class ConnectionDocker(Connection):
         """
         plumber = self._get_plumber(device_id)
 
-        this_end = self._network_mgr.get_interface_host_info(
+        this_end = self._connection_mgr.get_interface_host_info(
                     device_id, iface_id)
 
-        other_end = self._network_mgr.get_interface_host_info(
+        other_end = self._connection_mgr.get_interface_host_info(
                     other_device_id, other_iface_id)
 
         plumber.log_info(
@@ -204,7 +204,7 @@ class ConnectionDocker(Connection):
         Plumb a shared network interface (multi-device bridge).
         """
 
-        endpoint = self._network_mgr.get_interface_host_info(
+        endpoint = self._connection_mgr.get_interface_host_info(
                 device_id, iface_id)
 
         plumber = self._get_plumber(device_id)
@@ -227,10 +227,10 @@ class ConnectionDocker(Connection):
         """
 
         iface_key = (device_id, iface_id)
-        this_end = self._network_mgr.get_interface_host_info(
+        this_end = self._connection_mgr.get_interface_host_info(
                     device_id, iface_id)
 
-        other_end = self._network_mgr.get_interface_host_info(
+        other_end = self._connection_mgr.get_interface_host_info(
                     other_device_id, other_iface_id)
 
         plumber = self._get_plumber(device_id)

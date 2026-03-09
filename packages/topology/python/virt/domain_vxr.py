@@ -6,10 +6,10 @@ from virt.volume import generate_day0_volume_name
 
 class VxrJsonBuilder():
     def __init__(self, device_id, device_name,
-            resource_mgr=None, network_mgr=None, templates=None):
+            resource_mgr=None, connection_mgr=None, templates=None):
         self._templates = templates
         self._resource_mgr = resource_mgr
-        self._network_mgr = network_mgr
+        self._connection_mgr = connection_mgr
         self._device_name = device_name
         self._device_id = int(device_id)
         self.vxr_json = {}
@@ -31,10 +31,10 @@ class VxrJsonBuilder():
 
     def add_data_ifaces(self, iface_prefix, first_iface = 0, device_id = None):
         for iface_id in range(first_iface,
-                self._network_mgr.get_num_device_ifaces()):
-            bridge_name = self._network_mgr.get_iface_bridge_name(
+                self._connection_mgr.get_num_device_ifaces()):
+            bridge_name = self._connection_mgr.get_iface_bridge_name(
                     device_id or self._device_id, iface_id)
-            network_id = self._network_mgr.get_iface_network_id(
+            network_id = self._connection_mgr.get_iface_network_id(
                     device_id or self._device_id, iface_id)
 
             if network_id:
@@ -47,7 +47,7 @@ class VxrJsonBuilder():
                 bridge['connection_type'] = 'hub'
 
             if network_id or bridge_name:
-                self._network_mgr.write_iface_data(
+                self._connection_mgr.write_iface_data(
                     device_id or self._device_id, iface_id, [
                             ('id', iface_id)])
 
@@ -102,7 +102,7 @@ class DomainVxr(Domain):
                 int(device.id),
                 device.device_name,
                 self._resource_mgr,
-                self._network_mgr,
+                self._connection_mgr,
                 self._templates)
 
         json_builder.create_base(
@@ -120,7 +120,7 @@ class DomainVxr(Domain):
         vxr.start(device.device_name, json_builder.vxr_json, device._path)
 
         for (iface_id, host_tap) in vxr.get_interfaces(device.device_name):
-            self._network_mgr.write_iface_data(int(device.id), int(iface_id), [
+            self._connection_mgr.write_iface_data(int(device.id), int(iface_id), [
                     ('id', iface_id),
                     ('host-interface', host_tap)])
 

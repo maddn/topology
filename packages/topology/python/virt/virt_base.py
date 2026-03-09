@@ -4,12 +4,12 @@ from virt.template import Templates
 
 
 class VirtBase(ABC):
-    def __init__(self, hypervisor_mgr, domain_mgr, resource_mgr, network_mgr,
+    def __init__(self, hypervisor_mgr, domain_mgr, resource_mgr, connection_mgr,
                  dev_defs, log):
         self._hypervisor_mgr = hypervisor_mgr
         self._domain_mgr = domain_mgr
         self._resource_mgr = resource_mgr
-        self._network_mgr = network_mgr
+        self._connection_mgr = connection_mgr
         self._dev_defs = dev_defs
         self._log = log
 

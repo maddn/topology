@@ -47,13 +47,14 @@ def get_host_iface_name(path):
         interface = maagic.get_node(trans, path)
         return interface.host_interface
 
-class NetworkManager():
+
+class ConnectionManager():
     """
-        This class is repsonsible for assigning and tracking topology
+        This class is responsible for assigning and tracking topology
         connectivity. That is, what each device interface is connected
         to and, if applicable, the lifecycle of the connected network.
 
-        There are two types of data connection possible in the toplogy
+        There are two types of data connection possible in the topology
         definition:
 
         - Link: A point-to-point connection between two device interfaces.
@@ -64,7 +65,7 @@ class NetworkManager():
         To implement these, a device interface can be connected to:
             - A libvirt managed network (links or networks)
             - An external existing bridge (links or networks)
-            - Another interace (links only):
+            - Another interface (links only):
                 - Libvirt UDP networking
                 - veth pair
                 - Tap interface in container namespace
@@ -274,7 +275,7 @@ class NetworkManager():
     def get_interface_any_bridge_info(self, device_id, iface_id):
         """
         Check if this interface is connected to any bridge (managed through
-        a libivrt network or unmanaged)
+        a libvirt network or unmanaged)
 
         Returns str with the name of the bridge
 

@@ -21,15 +21,15 @@ class LinuxVolume(Volume):
 
     def _get_cloud_init_ethernets(self, device_id):
         network_config = ''
-        for iface_id in range(self._network_mgr.get_num_device_ifaces()):
-            network = self._network_mgr.get_iface_network_id(device_id,
-                    iface_id) or self._network_mgr.get_iface_bridge_name(
+        for iface_id in range(self._connection_mgr.get_num_device_ifaces()):
+            network = self._connection_mgr.get_iface_network_id(device_id,
+                    iface_id) or self._connection_mgr.get_iface_bridge_name(
                     device_id, iface_id)
 
             if network is None:
                 continue
 
-            ip_address_start = self._network_mgr.get_network(network)
+            ip_address_start = self._connection_mgr.get_network(network)
             if ip_address_start is None:
                 continue
 
@@ -41,7 +41,7 @@ class LinuxVolume(Volume):
                     'mac-address': self._resource_mgr.\
                             generate_mac_address(device_id, iface_id, True)
                     })
-            self._network_mgr.write_iface_data(device_id, iface_id, [
+            self._connection_mgr.write_iface_data(device_id, iface_id, [
                 ('ip-address', ip_address)])
         return network_config
 

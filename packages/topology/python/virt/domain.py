@@ -90,8 +90,8 @@ class Domain(VirtBase):
                     ('mac-address', None),
                     ('host-interface', None)])
 
-            for iface_id in range(self._network_mgr.get_num_device_ifaces()):
-                self._network_mgr.write_iface_data(
+            for iface_id in range(self._connection_mgr.get_num_device_ifaces()):
+                self._connection_mgr.write_iface_data(
                     device.id, iface_id, [
 #                           ('id', None),
                             ('ip-address', None),
