@@ -1,6 +1,8 @@
 import subprocess
 from collections import namedtuple
+
 import docker
+from virt.ssh import SshExecutor
 
 _ncs = __import__('_ncs')
 
@@ -30,6 +32,7 @@ class HypervisorDocker():
             taps = [])
 
         self.conn = None
+        self._ssh_executor = None
 
     def __enter__(self):
         self.connect()
@@ -53,6 +56,19 @@ class HypervisorDocker():
                 base_url=self.get_url(),
                 tls=tls_config,
                 use_ssh_client=not tls_config)
+
+    def get_ssh_executor(self):
+        if self._ssh_executor is None:
+            # Create executor
+            self._ssh_executor = SshExecutor(
+                name=self.name,
+                log=self._log,
+                host=self._host,
+                username=self._credentials.username,
+                password=self._credentials.password
+            )
+
+        return self._ssh_executor
 
     def populate_cache(self):
         self._log.info(f'[{self.name}] Populating docker connection cache')
@@ -336,6 +352,15 @@ class HypervisorDocker():
                 self._log.debug(f"[{self.name}] "
                         f"Running '{command}' on container {container_name}")
                 self._log.debug(container.exec_run(command))
+
+    def exec(self, container_name, command):
+        if container_name in self.containers:
+            if self.is_active(container_name):
+                container = self.conn.containers.get(container_name)
+                self._log.debug(f"[{self.name}] "
+                        f"Running '{command}' on container {container_name}")
+                return container.exec_run(command)
+        return (None, None)
 
     def stop(self, container_name):
         if container_name in self.containers and self.is_active(container_name):

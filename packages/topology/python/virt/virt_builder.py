@@ -1,6 +1,13 @@
 from virt.domain_libvirt import DomainLibvirt
 from virt.volume import Volume
-from virt.network import DomainNetworks, LinkNetwork, ExtraNetwork
+from virt.network import DomainNetworks
+from virt.connection_libvirt import ConnectionLibvirt
+
+
+class ConcreteConnection(ConnectionLibvirt):
+
+    def connection(self, *args):
+        super().connection(*args)
 
 
 class ConcreteDomainNetworks(DomainNetworks):
@@ -26,11 +33,9 @@ class ConcreteVolume(Volume):
 
 class VirtBuilder():
     def __init__(self, factory):
-        self._extra_network = factory.create(ExtraNetwork)
-        self._link_network = factory.create(LinkNetwork)
-
         self._domain_builders = {}
         self._volume_builders = {}
+        self._connection_builders = {}
         self._domain_networks_builders = {}
 
         self._factory = factory
@@ -43,12 +48,21 @@ class VirtBuilder():
                         device_type, ConcreteDomain))
         return self._domain_builders[device_type](action, output, device)
 
+    def connection(self, action, output, device_id, iface_id, when, link_dest=False):
+        device_type = self._factory.get_device_type(device_id)
+        if device_type not in self._connection_builders:
+            self._connection_builders[device_type] = self._factory.create(
+                    self._factory.connection_registry.get(
+                            device_type, ConcreteConnection))
+        return self._connection_builders[device_type](
+                action, output, device_id, iface_id, when, link_dest)
+
     def domain_networks(self, action, output, device):
         device_type = self._get_device_type(device)
         if device_type not in self._domain_networks_builders:
-            self._domain_networks_builders[device_type] = \
+            self._domain_networks_builders[device_type] = self._factory.create(
                     self._factory.domain_networks_registry.get(
-                            device_type, ConcreteDomainNetworks)(self._factory)
+                            device_type, ConcreteDomainNetworks))
         return self._domain_networks_builders[device_type](action, output, device)
 
     def topology_networks(self, action, output, devices):
@@ -57,7 +71,7 @@ class VirtBuilder():
             device_ids = [ device.id for device in devices
                            if self._get_device_type(device) == device_type ]
             if device_ids:
-                topology_networks_class(self._factory)(action, output, device_ids)
+                self._factory.create(topology_networks_class)(action, output)
 
     def volume(self, action, output, device):
         device_type = self._get_device_type(device)
@@ -66,12 +80,6 @@ class VirtBuilder():
                     self._factory.volume_registry.get(
                             device_type, ConcreteVolume))
         return self._volume_builders[device_type](action, output, device)
-
-    def link_network(self, *args):
-        return self._link_network(*args)
-
-    def extra_network(self, *args):
-        return self._extra_network(*args)
 
     def is_domain_active(self, device):
         return self._domain_builders[
@@ -83,3 +91,6 @@ class VirtBuilder():
 
     def _get_device_type(self, device):
         return self._factory.get_device_type(device_name=device.device_name)
+
+    def get_network_mgr(self):
+        return self._factory.get_network_mgr()

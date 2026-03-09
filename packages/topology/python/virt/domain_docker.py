@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from virt.domain import Domain
-from virt.network import generate_bridge_name, generate_iface_dev_name
+from virt.network import generate_iface_dev_name
 from virt.topology_status import write_node_data, get_hypervisor_output_node
 
 
@@ -33,19 +33,12 @@ class DomainDocker(Domain):
         docker_ifaces = []
         for iface_id in range(first_iface,
                 self._network_mgr.get_num_device_ifaces()):
-            bridge_name = self._network_mgr.get_iface_bridge_name(
-                    device_id or device_id, iface_id)
-            network_id = self._network_mgr.get_iface_network_id(
-                    device_id or device_id, iface_id)
+            path = self._network_mgr.get_iface_path(device_id, iface_id)
 
-            if network_id:
-                bridge_name = generate_bridge_name(network_id)
+            if path:
+                docker_ifaces.append(iface_id)
 
-            if bridge_name:
-                docker_ifaces.append(( iface_id, bridge_name ))
-
-        docker_ifaces.append(( None, self._resource_mgr.mgmt_bridge ))
-        return sorted(docker_ifaces, key=lambda x: x[1])
+        return docker_ifaces
 
     def _define(self, device):
         device_name = device.device_name
@@ -61,7 +54,7 @@ class DomainDocker(Domain):
         mgmt_ip_address = self._resource_mgr.generate_mgmt_ip_address(device.id)
 
         ifaces = self.get_docker_ifaces(device)
-        for (iface_id, _) in ifaces:
+        for iface_id in ifaces:
             if iface_id is not None:
                 mac_address = self._resource_mgr.generate_mac_address(
                         device.id, iface_id, True)
@@ -69,8 +62,7 @@ class DomainDocker(Domain):
                         ('id', iface_id),
                         ('host-interface', self._generate_iface_dev_name(
                                            device.id, iface_id)),
-                        ('mac-address', mac_address),
-                        ('../destroy-behaviour', 'immediate')])
+                        ('mac-address', mac_address)])
 
         mac_address = self._resource_mgr.generate_mac_address(device.id, 0xff, True)
 

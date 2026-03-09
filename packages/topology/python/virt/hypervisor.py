@@ -55,6 +55,9 @@ class HypervisorManager():
     def get_external_bridge(self, hypervisor_name):
         return self._external_bridges[hypervisor_name]
 
+    def get_hypervisors(self):
+        return self._external_bridges.keys()
+
     def get_device_hypervisor(self, device_id):
         return self._hypervisors.get(device_id, None)
 

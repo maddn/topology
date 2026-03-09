@@ -32,60 +32,30 @@ class Topology():
         self._log = log
 
         self._virt_builder = VirtBuilder(
-                VirtFactory(username, topology, self._dev_defs, log))
+                VirtFactory(username, topology, log))
 
-    def get_device_status(self, device_name):
-        for device in self._topology.devices.device:
-            if device.device_name == device_name:
-                return str(device.provisioning_status)
-        return 'undefined'
+    def process_device_connections(self, action, output, device, when):
+        """
+        Iterate over each device interface and invoke the interface action.
+        This will perform the appropriate stitching for the type of device.
 
-    def get_other_end_device_status(self, link, device_name):
-        if device_name == link.a_end_device:
-            other_device_name = link.z_end_device
-        else:
-            other_device_name = link.a_end_device
-        return self.get_device_status(other_device_name)
-
-    def node_network_action(self, action, device_name, output):
-        allow_states = {
-                'undefine': ('undefined', ),
-                'define':   ('undefined', ),
-                'destroy':  ('undefined', 'defined', 'unmanaged'),
-                'create':   ('undefined', 'defined', 'unmanaged'),
-                'update':   ('started', 'ready', 'sync-error')
-                }
-
-        for link in self._topology.links.link:
-            if device_name in (link.a_end_device, link.z_end_device):
-                if action in allow_states:
-                    if not(action in ('create', 'destroy') and
-                           link.destroy_behaviour == 'immediate'):
-                        if self.get_other_end_device_status(
-                                link, device_name) not in allow_states[action]:
-                            continue
-
-                self._virt_builder.link_network(action, output, link)
-
-        for (idx, network) in enumerate(self._topology.networks.network):
-            if device_name in (device.name for device in network.devices.device):
-                if action in allow_states:
-                    if any(self.get_device_status(device.name)
-                           not in allow_states[action]
-                           for device in network.devices.device
-                           if device.name != device_name):
-                        continue
-
-                interfaces = [{
-                    'device': device.name,
-                    'interface': device.interface.host_interface
-                } for device in network.devices.device]
-
-                self._virt_builder.extra_network(action, output, None,
-                        network.name, network._path, (0xef, 0xff-idx),
-                        network.external_bridge,
-                        interfaces if action == 'update' else [])
-
+        For link interfaces, it may be that the device on the other end of the
+        link is responsible for plumbing the connection (i.e. when this end
+        is a VM and the other end is container), so the action is also invoked
+        now on the other end of the link. The action may have previously been
+        invoked on the other end of the link (when this function was executed
+        for that device) but this device would not have been ready at that time.
+        """
+        network_mgr = self._virt_builder.get_network_mgr()
+        for iface_id in range(network_mgr.get_num_device_ifaces()):
+            self._virt_builder.connection(
+                    action, output, device.id, iface_id, when, False)
+            link_dest = network_mgr.get_iface_link_dest(device.id, iface_id)
+            if link_dest:
+                (other_device_id, other_iface_id) = link_dest
+                self._virt_builder.connection(
+                        action, output,
+                        other_device_id, other_iface_id, when, True)
 
     def action(self, action, device_name=None):
         output = self._output.libvirt_action.create()
@@ -102,23 +72,20 @@ class Topology():
             dev_def = self._dev_defs[device.definition]
 
             self._virt_builder.domain_networks(action, output, device)
+            self.process_device_connections(action, output, device, 'pre-domain')
 
             if action == 'define':
                 self._virt_builder.volume(action, output, device)
 
-            self.node_network_action(
-                    'destroy' if action == 'shutdown' else action,
-                    device.device_name, output)
             self._virt_builder.domain(action, output, device)
 
             if action != 'define':
                 self._virt_builder.volume(action, output, device)
 
+            self.process_device_connections(action, output, device, 'post-domain')
+
             update_device_status_after_action(device,
                     action, dev_def.ned_id is None)
-
-            if action == 'create':
-                self.node_network_action('update', device.device_name, output)
 
     def wait_for_shutdown(self, device_name=None):
         self._log.info('Waiting for shutdown to complete...')
@@ -210,5 +177,5 @@ class LibvirtNetworkAction(Action):
         action_output.action = action
 
         virt_topology = Topology(topology, self.log, output, uinfo.username)
-        virt_topology.get_virt_builder().link_network(
-                action, action_output, link)
+        #virt_topology.get_virt_builder().link_network(
+        #        action, action_output, link)

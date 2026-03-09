@@ -67,6 +67,11 @@ def unschedule_topology_ping(topology_name):
         trans.safe_delete(f'/scheduler/task{{ping-topology-{topology_name}}}')
         trans.apply()
 
+def get_device_status(device_path):
+    with maapi.single_read_trans('admin', 'python', db=OPERATIONAL) as trans:
+        device = maagic.get_node(trans, device_path)
+        return device.provisioning_status
+
 
 class TopologyStatus():
     def __init__(self, log):

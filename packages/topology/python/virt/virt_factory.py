@@ -41,6 +41,7 @@ class ResourceManager():
 class VirtFactory():
     domain_registry = {}
     volume_registry = {}
+    connection_registry = {}
     domain_networks_registry = {}
     topology_networks_registry = {}
 
@@ -53,7 +54,7 @@ class VirtFactory():
         self._resource_mgr = ResourceManager(hypervisor, username)
         self._domain_mgr = DomainManager(topology, VirtFactory.domain_registry)
         self._network_mgr = NetworkManager(topology,
-                self._hypervisor_mgr, self._domain_mgr)
+                self._hypervisor_mgr, self._domain_mgr, self._resource_mgr)
         self._dev_defs = maagic.cd(topology, '../libvirt/device-definition')
         self._log = log
 
@@ -88,6 +89,13 @@ class VirtFactory():
         def inner_wrapper(wrapped_class):
             if name not in VirtFactory.volume_registry:
                 VirtFactory.volume_registry[name] = wrapped_class
+        return inner_wrapper
+
+    @classmethod
+    def register_connection(cls, name):
+        def inner_wrapper(wrapped_class):
+            if name not in VirtFactory.connection_registry:
+                VirtFactory.connection_registry[name] = wrapped_class
         return inner_wrapper
 
     @classmethod

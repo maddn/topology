@@ -5,6 +5,7 @@ from virt.network import generate_network_id, generate_network_name
 from virt.template import xml_to_string
 from virt.topology_status import get_hypervisor_output_node, write_node_data
 from virt.volume import generate_volume_name, generate_day0_volume_name
+from monitor.console_activity import start_console_logger, stop_console_logger
 
 
 class DomainXmlBuilder():
@@ -50,8 +51,11 @@ class DomainXmlBuilder():
         (udp_source_address, udp_source_port, udp_dest_address, udp_dest_port
          ) = udp_networking or ('', '', '', '')
         return self._templates.apply_xml_template('interface.xml', {
-            'interface-type': 'udp' if udp_networking \
-                    else 'bridge' if bridge_name else 'network',
+            'interface-type': \
+                    'udp' if udp_networking else \
+                    'bridge' if bridge_name else \
+                    'network' if network_id else \
+                    'ethernet',
             'mac-address': mac_address,
             'network': generate_network_name(network_id) if \
                     network_id and not udp_networking else '',
@@ -120,20 +124,23 @@ class DomainXmlBuilder():
                     device_id or self._device_id, iface_id)
             network_id = self._network_mgr.get_iface_network_id(
                     device_id or self._device_id, iface_id)
+            link_dest = self._network_mgr.get_iface_link_dest(
+                    device_id or self._device_id, iface_id)
 
-            if (bridge_name or network_id or include_null_interfaces
-                    or iface_id < (min_ifaces - 1)):
+            if (bridge_name or network_id or link_dest or
+                    include_null_interfaces or iface_id < (min_ifaces - 1)):
                 iface_dev_name = self._generate_iface_dev_name(iface_id)
                 mac_address = self._generate_mac_address(iface_id)
+                udp_ports = self._network_mgr.get_network_udp_ports(
+                        device_id or self._device_id, iface_id)
 
                 self._domain_xml_devices.append(self._get_iface_xml(
-                    network_id or not bridge_name and
+                    network_id or not bridge_name and not link_dest and
                             generate_network_id(self._device_id, None),
                     iface_dev_name, mac_address, model_type, bridge_name,
-                    self._network_mgr.get_network_udp_ports(
-                        device_id or self._device_id, iface_id)))
+                    udp_ports))
 
-                if network_id or bridge_name:
+                if network_id or bridge_name or link_dest and not udp_ports:
                     self._network_mgr.write_iface_data(
                         device_id or self._device_id, iface_id, [
                                 ('id', iface_id),
@@ -151,7 +158,6 @@ class DomainLibvirt(Domain):
     INCLUDE_NULL_IFACES = False
     MIN_DATA_IFACES = 0
     FIRST_IFACE_ID = 0
-    SHUTDOWN_SUPPORTED = True
 
     def _load_templates(self):
         self._templates.load_template('templates', 'interface.xml')

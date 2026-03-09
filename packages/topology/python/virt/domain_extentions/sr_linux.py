@@ -2,7 +2,11 @@
 
 from virt.virt_factory import VirtFactory
 from virt.domain_docker import DomainDocker
+from virt.connection_docker import ConnectionDocker
 
+@VirtFactory.register_connection('SR-Linux')
+class SrLinuxConnection(ConnectionDocker):
+    pass
 
 @VirtFactory.register_domain('SR-Linux')
 class SrLinuxDomain(DomainDocker):
