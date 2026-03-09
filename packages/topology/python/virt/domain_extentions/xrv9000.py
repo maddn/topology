@@ -7,7 +7,7 @@ import pycdlib
 from virt.virt_factory import VirtFactory
 from virt.volume import Volume
 from virt.domain_libvirt import DomainLibvirt
-from virt.network import TopologyNetworks
+from virt.connection_libvirt import TopologyNetworks
 
 _ncs = __import__('_ncs')
 

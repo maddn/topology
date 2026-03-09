@@ -8,7 +8,7 @@ import fs
 from virt.virt_factory import VirtFactory
 from virt.volume import Volume, generate_day0_volume_name
 from virt.domain_libvirt import DomainLibvirt
-from virt.network import DomainNetworks
+from virt.connection_libvirt import DomainNetworks
 
 _ncs = __import__('_ncs')
 

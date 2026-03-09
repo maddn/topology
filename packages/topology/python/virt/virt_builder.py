@@ -1,7 +1,6 @@
 from virt.domain_libvirt import DomainLibvirt
 from virt.volume import Volume
-from virt.network import DomainNetworks
-from virt.connection_libvirt import ConnectionLibvirt
+from virt.connection_libvirt import ConnectionLibvirt, DomainNetworks
 
 
 class ConcreteConnection(ConnectionLibvirt):
