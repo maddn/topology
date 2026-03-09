@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from virt.domain import Domain
-from virt.network import generate_iface_dev_name
+from virt.connection import generate_iface_dev_name
 from virt.topology_status import write_node_data, get_hypervisor_output_node
 
 

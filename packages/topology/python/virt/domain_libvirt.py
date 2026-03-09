@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from libvirt import (VIR_DOMAIN_UNDEFINE_NVRAM)
 from virt.domain import Domain
-from virt.network import generate_network_id, generate_network_name
+from virt.connection import generate_network_id, generate_network_name
 from virt.template import xml_to_string
 from virt.topology_status import get_hypervisor_output_node, write_node_data
 from virt.volume import generate_volume_name, generate_day0_volume_name
@@ -250,6 +250,12 @@ class DomainLibvirt(Domain):
                     domain_action_method()
                 get_hypervisor_output_node(
                         self._output, libvirt.name).domains.create(device_name)
+                if action == 'create':
+                    start_console_logger(device._path)
+                    # Plumb VM interfaces after domain is started
+                    #self._plumb_data_interfaces(device)
+                elif action == 'destroy':
+                    stop_console_logger(device._path)
                 return True
         if libvirt:
             self._log.info(f'[{libvirt.name}] '

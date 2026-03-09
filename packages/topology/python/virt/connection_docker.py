@@ -1,5 +1,5 @@
 from virt.ssh import CommandExecutionError
-from virt.network import Connection, InterfaceEndpoint
+from virt.connection import Connection
 from virt.topology_status import get_device_status
 
 

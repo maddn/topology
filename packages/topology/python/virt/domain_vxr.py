@@ -1,5 +1,5 @@
 from virt.domain import Domain
-from virt.network import generate_bridge_name
+from virt.connection import generate_bridge_name
 from virt.topology_status import write_node_data, get_hypervisor_output_node
 from virt.volume import generate_day0_volume_name
 

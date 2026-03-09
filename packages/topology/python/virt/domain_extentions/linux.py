@@ -5,7 +5,7 @@ from io import BytesIO
 import pycdlib
 
 from virt.virt_factory import VirtFactory
-from virt.network import generate_ip_address
+from virt.connection import generate_ip_address
 from virt.volume import Volume
 
 _ncs = __import__('_ncs')

@@ -3,7 +3,7 @@ from abc import abstractmethod
 from libvirt import (VIR_NETWORK_UPDATE_COMMAND_MODIFY,
                      VIR_NETWORK_SECTION_PORTGROUP)
 
-from virt.network import Connection, \
+from virt.connection import Connection, \
         generate_network_id, generate_network_name, generate_bridge_name
 from virt.topology_status import \
         get_device_status, write_node_data, get_hypervisor_output_node

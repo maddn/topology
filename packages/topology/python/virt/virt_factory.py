@@ -3,7 +3,7 @@ from ipaddress import IPv4Interface
 from ncs import maagic
 
 from virt.hypervisor import HypervisorManager
-from virt.network import NetworkManager, generate_ip_address
+from virt.connection import NetworkManager, generate_ip_address
 from virt.domain import DomainManager
 
 
