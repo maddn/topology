@@ -19,11 +19,8 @@ VJUNOS_EXTRA_MGMT_NETWORKS = ['pfe', 'rpio', 'rpio', 'pfe']
 class VJunosEvolvedDomainNetworks(DomainNetworks):
 
     def extra_mgmt_networks(self, action, output, device):
-        for (idx, network_name) in enumerate(
-                set(VJUNOS_EXTRA_MGMT_NETWORKS)):
-            self._extra_network(action, output,
-                    [ device.id ], f'{network_name}-{device.id}',
-                    None, (0xfd, 0xff-idx))
+        for (idx, network_name) in enumerate(set(VJUNOS_EXTRA_MGMT_NETWORKS)):
+            self.mgmt_network(action, output, device.id, network_name, idx)
 
 
 @VirtFactory.register_domain('vJunos-Evolved')

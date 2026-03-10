@@ -20,10 +20,8 @@ class VmxDomainNetworks(DomainNetworks):
 
     def extra_mgmt_networks(self, action, output, device):
         if not device.control_plane_id:
-            for network_name in VMX_EXTRA_MGMT_NETWORKS:
-                self._extra_network(action, output, [ device.id ],
-                        f'{network_name}-{device.id}',
-                        None, (0xfc, device.id))
+            for (idx, network_name) in enumerate(VMX_EXTRA_MGMT_NETWORKS):
+                self.mgmt_network(action, output, device.id, network_name, idx)
 
 
 @VirtFactory.register_domain('vMX')

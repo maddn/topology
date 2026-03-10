@@ -81,7 +81,7 @@ class ConnectionLibvirt(Connection):
         return False
 
 
-class Network(VirtBase): #pylint: disable=too-few-public-methods
+class LibvirtNetwork(VirtBase): #pylint: disable=too-few-public-methods
     def _load_templates(self):
         self._templates.load_template('templates', 'network.xml')
 
@@ -194,14 +194,13 @@ class DomainNetworks(VirtBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self._network = Network(*args)
+        self._network = LibvirtNetwork(*args)
 
     @abstractmethod
     def extra_mgmt_networks(self, action, output, device):
         pass
 
-    def mgmt_network(
-            self, action, output, device_id, network_id, mgmt_index):
+    def mgmt_network(self, action, output, device_id, network_id, mgmt_index):
         network_id = f'{network_id}-{device_id}'
         mac_address = self._resource_mgr.generate_mac_address(
             device_id, self.MGMT_OCTET - mgmt_index)
@@ -222,14 +221,6 @@ class DomainNetworks(VirtBase):
         self._network(
                 action, output, hypervisor, network_id, path, mac_address,
                 isolated)
-
-    def _extra_network(self, action, output, device_ids, network_id,
-                       path, mac_octets):
-        for device_id in device_ids:
-            hypervisor = self._hypervisor_mgr.get_device_hypervisor(device_id)
-            self._network(
-                    action, output, hypervisor, network_id, path,
-                    self._resource_mgr.generate_mac_address(*mac_octets))
 
     def _action(self, action, *args):
         device,  = args
@@ -256,7 +247,7 @@ class TopologyNetworks(VirtBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self._network = Network(*args)
+        self._network = LibvirtNetwork(*args)
 
     @abstractmethod
     def extra_mgmt_networks(self, action, output, device_ids):
@@ -272,17 +263,9 @@ class TopologyNetworks(VirtBase):
                         0xff - network_index
                     ))
 
-    def _extra_network(self, action, output, device_ids, network_id,
-                       path, mac_octets):
-        for hypervisor_index, hypervisor in enumerate(
-                self._hypervisor_mgr.get_hypervisors()):
-            self._network(
-                    action, output, hypervisor, network_id, None,
-                    self._resource_mgr.generate_mac_address(
-                        mac_octets[0] - hypervisor_index, mac_octets[1]))
-
     def _action(self, action, *args):
         self.extra_mgmt_networks(action, self._output, None)
+
 
 class UserTopologyNetworks(TopologyNetworks):
     MAC_OCTET_BASE = 0xaf

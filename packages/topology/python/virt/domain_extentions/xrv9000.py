@@ -19,8 +19,7 @@ class XRv9000TopologyNetworks(TopologyNetworks):
 
     def extra_mgmt_networks(self, action, output, device_ids):
         for (idx, network_id) in enumerate(XRV9K_EXTRA_MGMT_NETWORKS):
-            self._extra_network(action, output,
-                device_ids, network_id, None, (0xff, 0xff-idx))
+            self.network(action, output, network_id, idx)
 
 
 @VirtFactory.register_domain('XRv-9000')
