@@ -5,6 +5,7 @@
   </source>
   <source network="${network}"/>
   <source bridge="${bridge}"/>
+  <source dev="${source-dev}" mode="bridge"/>
   <target dev="${dev}"/>
   <model type="${model-type}"/>
 </interface>

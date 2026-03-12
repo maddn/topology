@@ -5,6 +5,7 @@ from libvirt import (VIR_NETWORK_UPDATE_COMMAND_MODIFY,
 
 from virt.connection import Connection, \
         generate_network_id, generate_network_name, generate_bridge_name
+from virt.connection_docker import InterfacePlumber
 from virt.topology_status import \
         get_device_status, write_node_data, get_hypervisor_output_node
 from virt.virt_base import VirtBase
@@ -16,8 +17,20 @@ _ncs = __import__('_ncs')
 class ConnectionLibvirt(Connection):
     def __init__(self, *args):
         super().__init__(*args)
+        self._plumbers = {}  # {hypervisor_name: InterfacePlumber}
         self._topology_networks = UserTopologyNetworks(*args)
         self._link_networks = LinkNetworks(*args)
+
+    def _get_plumber(self, device_id):
+        hypervisor_name = self._hypervisor_mgr.get_device_hypervisor(device_id)
+        if hypervisor_name not in self._plumbers:
+            self._plumbers[hypervisor_name] = InterfacePlumber(
+                    hypervisor_name,
+                    self._hypervisor_mgr.get_libvirt(
+                        hypervisor_name).get_ssh_executor(), self._log
+            )
+
+        return self._plumbers[hypervisor_name]
 
     def network_action_allowed(self, action, device_ids):
         """
@@ -56,6 +69,23 @@ class ConnectionLibvirt(Connection):
 
         if action in ('define', 'create') and when == 'post-domain':
             return False
+
+        if action == 'create':
+            geneve = self._connection_mgr.get_interface_geneve_info(
+                device_id, iface_id)
+            if geneve:
+                plumber = self._get_plumber(device_id)
+                plumber.create_geneve_on_host(
+                    geneve.interface_name,
+                    geneve.vni,
+                    geneve.remote_ip_address)
+
+        if action == 'destroy':
+            geneve = self._connection_mgr.get_interface_geneve_info(
+                device_id, iface_id)
+            if geneve:
+                plumber = self._get_plumber(device_id)
+                plumber.destroy_geneve_on_host(geneve.interface_name)
 
         (network_id, devices) = \
                 self._connection_mgr.get_interface_managed_network_info(

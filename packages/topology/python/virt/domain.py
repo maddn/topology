@@ -25,6 +25,7 @@ class DomainManager():
         self._device_names = {}
         self._device_paths = {}
         self._device_types = {}
+        self._device_control_plane_ids = {}
         self._domain_is_container = {}
         self._domain_needs_bridge_networking = {}
 
@@ -33,6 +34,7 @@ class DomainManager():
             self._device_ids_by_name[device.device_name] = device_id
             self._device_names[device_id] = device.device_name
             self._device_paths[device_id] = device._path
+            self._device_control_plane_ids[device_id] = device.control_plane_id
 
             device_type = str(dev_defs[device.definition].device_type)
             domain_class = domain_registry.get(device_type)
@@ -51,6 +53,12 @@ class DomainManager():
 
     def get_device_path(self, device_id):
         return self._device_paths.get(device_id, None)
+
+    def get_control_plane_id(self, device_id):
+        return self._device_control_plane_ids.get(device_id, None)
+
+    def resolve_control_plane_id(self, device_id):
+        return self.get_control_plane_id(device_id) or device_id
 
     def get_device_type(self, device_id):
         return self._device_types.get(device_id, None)
@@ -131,3 +139,6 @@ class Domain(VirtBase):
     @abstractmethod
     def shutdown_supported(self):
         pass
+
+    def _has_data_plane(self, device):
+        return True

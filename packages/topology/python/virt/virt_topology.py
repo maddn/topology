@@ -47,6 +47,8 @@ class Topology():
         for that device) but this device would not have been ready at that time.
         """
         connection_mgr = self._virt_builder.get_connection_mgr()
+        if not self._virt_builder.domain_has_dataplane(device):
+            return
         for iface_id in range(connection_mgr.get_num_device_ifaces()):
             self._virt_builder.connection(
                     action, output, device.id, iface_id, when, False)

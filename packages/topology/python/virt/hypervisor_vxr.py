@@ -8,6 +8,7 @@ from time import sleep
 from pyvxr.vxr import Vxr
 from pyvxr.errors import PyvxrError
 
+from virt.hypervisor_base import Hypervisor
 from monitor.console_activity import start_console_logger, stop_console_logger
 
 
@@ -25,13 +26,7 @@ class VxrSimStarter(threading.Thread):
         start_console_logger(self._device_path)
 
 
-class HypervisorVxr():
-    def __init__(self, hypervisor, log):
-        self.name = hypervisor.name
-        self._host = hypervisor.host
-        self._username = hypervisor.username
-        self._log = log
-
+class HypervisorVxr(Hypervisor):
     def output_dir(self, sim_name):
         return f'vxr/{sim_name}'
 

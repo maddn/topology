@@ -72,7 +72,7 @@ class ConnectionDocker(Connection):
 
         This is the only scenario that requires the is_link_dest flag.
         In all other scenarios either:
-            - Plumbing is via a bridge and there is no need to wait.
+            - Plumbing is via a bridge or overlay and there is no need to wait.
               The interface is always plumbed
             - Both ends are containers so this function would be invoked
               anyway when the other end is started (in this case the function
@@ -91,7 +91,7 @@ class ConnectionDocker(Connection):
 
         #Check if this interface is a direct link
         if other_device_id:
-            return self._plumb_link_interface(
+            return self._plumb_direct_link_interface(
                 device_id, iface_id,
                 other_device_id, other_iface_id, is_link_dest)
 
@@ -100,6 +100,11 @@ class ConnectionDocker(Connection):
             # is_link_dest is True for direct links where both interfaces are
             # plumbed together.
             return False
+
+        geneve = self._connection_mgr.get_iface_geneve_vni(device_id, iface_id)
+
+        if geneve:
+            return self._plumb_overlay_interface(device_id, iface_id)
 
         bridge = self._connection_mgr.get_interface_any_bridge_info(
             device_id, iface_id)
@@ -131,20 +136,26 @@ class ConnectionDocker(Connection):
 
         if other_device_id:
             #Direct link interface
-            return self._unplumb_link_interface(
+            return self._unplumb_direct_link_interface(
                 device_id, iface_id,
                 other_device_id, other_iface_id, is_link_dest)
+
+        geneve = self._connection_mgr.get_iface_geneve_vni(device_id, iface_id)
+
+        if geneve and not is_link_dest:
+            return self._unplumb_overlay_interface(device_id, iface_id)
 
         #Can leave bridge interfaces to be automatically removed when container
         #is shut down
         return False
 
 
-    def _plumb_link_interface(
+    def _plumb_direct_link_interface(
             self, device_id, iface_id,
             other_device_id, other_iface_id, is_link_dest):
         """
-        Plumb a point-to-point link interface.
+        Plumb a direct point-to-point link interface where both ends need to
+        be up before they can be connected (veth pair or tap-to-container)
 
         Returns:
             True if plumbing was done, False if waiting for other end
@@ -177,7 +188,6 @@ class ConnectionDocker(Connection):
                 f'Waiting for other device to be active: {check_device_name}')
             return False
 
-
         if other_end.is_container:
             # Direct veth pair
             if plumber.create_container_to_container_link(
@@ -198,6 +208,23 @@ class ConnectionDocker(Connection):
         return False
 
 
+    def _plumb_overlay_interface(self, device_id, iface_id):
+        """
+        Plumb a point-to-point geneve overlay interface.
+        """
+        plumber = self._get_plumber(device_id)
+
+        this_end = self._connection_mgr.get_interface_host_info(
+                    device_id, iface_id)
+        geneve = self._connection_mgr.get_interface_geneve_info(
+                device_id, iface_id)
+
+        return plumber.create_cross_host_container_link(
+                this_end.device_name, this_end.interface_name,
+                geneve.interface_name,
+                geneve.remote_ip_address, geneve.vni)
+
+
     def _plumb_bridge_interface(
             self, device_id, iface_id, bridge_name):
         """
@@ -216,7 +243,7 @@ class ConnectionDocker(Connection):
             bridge_name
         )
 
-    def _unplumb_link_interface(
+    def _unplumb_direct_link_interface(
             self, device_id, iface_id,
             other_device_id, other_iface_id, is_link_dest):
         """
@@ -256,6 +283,18 @@ class ConnectionDocker(Connection):
             this_end.interface_name,
             other_end.interface_name    # TAP interface
         )
+
+
+    def _unplumb_overlay_interface(self, device_id, iface_id):
+        plumber = self._get_plumber(device_id)
+        geneve = self._connection_mgr.get_interface_geneve_info(
+                device_id, iface_id)
+
+        return plumber.destroy_geneve_on_host(geneve.interface_name)
+
+
+# MTU for GENEVE overlay so encapsulated frames are big enough to carry ISIS.
+GENEVE_MTU = 1500
 
 
 class InterfacePlumber:
@@ -359,6 +398,67 @@ class InterfacePlumber:
             f'{device_name} [namespace: {pid}]')
 
         return True
+
+    def create_cross_host_container_link(
+            self, device_name, container_iface_name,
+            geneve_iface_name, remote_ip_address, vni):
+        """
+        Create GENEVE on the host and connect the container via macvtap on the
+        GENEVE interface (cross-host link).
+        """
+        self.log_info(
+            f'Checking overlay tunnel interface: '
+            f'{device_name}:{container_iface_name} <--> '
+            f'{geneve_iface_name} [host] / vni {vni}')
+
+        if self._interface_exists_in_container(
+                device_name, container_iface_name):
+            self.log_info(
+                f'--> Interface {container_iface_name} already in container')
+            return False
+
+        self.create_geneve_on_host(geneve_iface_name, vni, remote_ip_address)
+
+        pid = self._get_container_pid_must_exist(device_name)
+        self._ensure_netns_link(pid)
+
+        commands = [
+            f'ip link add link {geneve_iface_name} '
+                        f'name {container_iface_name} type macvtap mode bridge',
+            f'ip link set {container_iface_name} netns {pid}',
+            f'ip netns exec {pid} ip link set {container_iface_name} up' ]
+
+        self.execute(commands,
+                f'--> Connecting container {device_name}:{container_iface_name} '
+                f'to tunnel {geneve_iface_name} via macvtap')
+
+        return True
+
+    def create_geneve_on_host(self, iface_name, vni, remote_ip_address):
+        self.log_info(
+                f'Checking geneve interface {iface_name} on host')
+
+        if self._interface_exists_on_host(iface_name):
+            return
+
+        commands = [
+            f'ip link add {iface_name} '
+                        f'type geneve id {vni} remote {remote_ip_address}',
+            f'ip link set {iface_name} mtu {GENEVE_MTU}',
+            f'ip link set {iface_name} up' ]
+
+        self.execute(commands,
+                f'--> Creating geneve interface {iface_name} [vni:{vni}] on host')
+
+    def destroy_geneve_on_host(self, iface_name):
+        self.log_info(f'Checking geneve interface {iface_name}')
+
+        if not self._interface_exists_on_host(iface_name):
+            return
+
+        self.execute(
+                [f'ip link delete {iface_name}'],
+                f'--> Deleting geneve interface {iface_name}')
 
     def create_container_to_bridge_link(
             self, device_name, iface_name, bridge_name):

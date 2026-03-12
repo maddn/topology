@@ -140,6 +140,13 @@ submodule libvirt {
           type inet:ipv4-address;
           default '0.0.0.0';
         }
+        leaf geneve-tunnel-ip-address {
+          type inet:ipv4-address;
+          default '0.0.0.0';
+          description
+            "Source IP for GENEVE overlay tunnels. When set (non-zero), used
+             for cross-hypervisor container links that do not specify an external bridge.";
+        }
 
         container get {
           description

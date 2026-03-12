@@ -1,7 +1,9 @@
 from abc import abstractmethod
 from libvirt import (VIR_DOMAIN_UNDEFINE_NVRAM)
 from virt.domain import Domain
-from virt.connection import generate_network_id, generate_network_name
+from virt.connection import (
+    generate_geneve_iface_name, generate_network_id, generate_network_name,
+)
 from virt.template import xml_to_string
 from virt.topology_status import get_hypervisor_output_node, write_node_data
 from virt.volume import generate_volume_name, generate_day0_volume_name
@@ -47,7 +49,7 @@ class DomainXmlBuilder():
             'bus': bus})
 
     def _get_iface_xml(self, network_id, dev_name, mac_address, model_type,
-                       bridge_name='', udp_networking=None):
+                       bridge_name='', udp_networking=None, source_dev=None):
         (udp_source_address, udp_source_port, udp_dest_address, udp_dest_port
          ) = udp_networking or ('', '', '', '')
         return self._templates.apply_xml_template('interface.xml', {
@@ -55,6 +57,7 @@ class DomainXmlBuilder():
                     'udp' if udp_networking else \
                     'bridge' if bridge_name else \
                     'network' if network_id else \
+                    'direct' if source_dev else \
                     'ethernet',
             'mac-address': mac_address,
             'network': generate_network_name(network_id) if \
@@ -64,6 +67,7 @@ class DomainXmlBuilder():
             'udp-source-port': udp_source_port,
             'udp-dest-address': udp_dest_address,
             'udp-dest-port': udp_dest_port,
+            'source-dev': source_dev if source_dev else '',
             'dev': dev_name if not udp_networking else '',
             'model-type': model_type})
 
@@ -126,10 +130,14 @@ class DomainXmlBuilder():
                     device_id or self._device_id, iface_id)
             link_dest = self._connection_mgr.get_iface_link_dest(
                     device_id or self._device_id, iface_id)
+            geneve = self._connection_mgr.get_iface_geneve_vni(
+                device_id or self._device_id, iface_id) is not None
 
             if (bridge_name or network_id or link_dest or
                     include_null_interfaces or iface_id < (min_ifaces - 1)):
                 iface_dev_name = self._generate_iface_dev_name(iface_id)
+                source_dev = generate_geneve_iface_name(
+                        self._device_id, iface_id) if geneve else None
                 mac_address = self._generate_mac_address(iface_id)
                 udp_ports = self._connection_mgr.get_network_udp_ports(
                         device_id or self._device_id, iface_id)
@@ -138,14 +146,15 @@ class DomainXmlBuilder():
                     network_id or not bridge_name and not link_dest and
                             generate_network_id(self._device_id, None),
                     iface_dev_name, mac_address, model_type, bridge_name,
-                    udp_ports))
+                    udp_ports, source_dev))
 
-                if network_id or bridge_name or link_dest and not udp_ports:
-                    self._connection_mgr.write_iface_data(
-                        device_id or self._device_id, iface_id, [
-                                ('id', iface_id),
-                                ('host-interface', iface_dev_name),
-                                ('mac-address', mac_address)])
+                if udp_ports:
+                    iface_dev_name = None
+                self._connection_mgr.write_iface_data(
+                    device_id or self._device_id, iface_id, [
+                            ('id', iface_id),
+                            ('host-interface', iface_dev_name),
+                            ('mac-address', mac_address)])
 
 
 class DomainLibvirt(Domain):
@@ -176,9 +185,6 @@ class DomainLibvirt(Domain):
     @abstractmethod
     def add_day0_device(self, xml_builder, storage_pool):
         xml_builder.add_day0_disk(storage_pool)
-
-    def _has_data_plane(self, device):
-        return True
 
     def _define(self, device):
         device_name = device.device_name

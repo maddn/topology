@@ -1,21 +1,20 @@
 from collections import defaultdict
 from xml.etree.ElementTree import fromstring
 import libvirt
-_ncs = __import__('_ncs')
+
+from virt.hypervisor_base import Hypervisor
 
 
-class HypervisorLibvirt():
+class HypervisorLibvirt(Hypervisor):
     #pylint: disable=too-many-instance-attributes
     def __init__(self, hypervisor, log):
+        super().__init__(hypervisor, log)
         self.conn = None
         self.bridges = defaultdict(lambda: defaultdict(dict, interfaces=[]))
         self.networks = {}
         self.domains = {}
-        self.volumes = {} # by pool
-        self._log = log
-        self.name = hypervisor.name
+        self.volumes = {}  # by pool
 
-        self._username = hypervisor.username
         username_str = f'{self._username}@' if self._username else ''
 
         parameters_str = ''
@@ -25,9 +24,7 @@ class HypervisorLibvirt():
             parameters_str = '?no_verify=1'
 
         self._url = (f'qemu+{hypervisor.transport}://'
-                     f'{username_str}{hypervisor.host}/system{parameters_str}')
-        self._password = _ncs.decrypt(hypervisor.password) if (
-                hypervisor.password is not None) else None
+                     f'{username_str}{self._host}/system{parameters_str}')
 
     def __enter__(self):
         self.connect()

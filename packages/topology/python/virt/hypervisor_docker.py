@@ -2,28 +2,15 @@ import subprocess
 from collections import namedtuple
 
 import docker
-from virt.ssh import SshExecutor
+
+from virt.hypervisor_base import Hypervisor
 
 _ncs = __import__('_ncs')
 
-Credentials = namedtuple('Credentials', 'username password tls_certs')
 
-class HypervisorDocker():
+class HypervisorDocker(Hypervisor):
     def __init__(self, hypervisor, log):
-        self._log = log
-
-        self.name = hypervisor.name
-        self._host = hypervisor.host
-
-        self._credentials = Credentials(
-            username = hypervisor.username,
-            password = _ncs.decrypt(hypervisor.password) if (
-                    hypervisor.password is not None) else None,
-            tls_certs = (
-                    hypervisor.tls.client_certificate,
-                    hypervisor.tls.client_key
-                    ) if hypervisor.tls.exists() else None)
-
+        super().__init__(hypervisor, log)
         self.containers = {}
         self.networks = {}
 
@@ -32,7 +19,12 @@ class HypervisorDocker():
             taps = [])
 
         self.conn = None
-        self._ssh_executor = None
+
+        self._tls_certs=(
+                (hypervisor.tls.client_certificate, hypervisor.tls.client_key)
+                if hypervisor.tls.exists() else None)
+        self._url = f'tcp://{self._host}:2376' if (
+                self._tls_certs) else 'ssh://{self._host}'
 
     def __enter__(self):
         self.connect()
@@ -43,32 +35,14 @@ class HypervisorDocker():
             self.conn.close()
             self.conn = None
 
-    def get_url(self):
-        if self._credentials.tls_certs:
-            return f'tcp://{self._host}:2376'
-        return f'ssh://{self._host}'
-
     def connect(self):
         tls_config = docker.tls.TLSConfig(
-                client_cert=self._credentials.tls_certs) if (
-                        self._credentials.tls_certs) else False
+                client_cert=self._tls_certs) if (
+                        self._tls_certs) else False
         self.conn = docker.DockerClient(
-                base_url=self.get_url(),
+                base_url=self._url,
                 tls=tls_config,
                 use_ssh_client=not tls_config)
-
-    def get_ssh_executor(self):
-        if self._ssh_executor is None:
-            # Create executor
-            self._ssh_executor = SshExecutor(
-                name=self.name,
-                log=self._log,
-                host=self._host,
-                username=self._credentials.username,
-                password=self._credentials.password
-            )
-
-        return self._ssh_executor
 
     def populate_cache(self):
         self._log.info(f'[{self.name}] Populating docker connection cache')

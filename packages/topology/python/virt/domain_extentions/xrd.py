@@ -13,14 +13,14 @@ class XrdConnection(ConnectionDocker):
         device_name = self._domain_mgr.get_device_name(device_id)
         return docker.exec(device_name, command)
 
-    def _plumb_link_interface(
+    def _plumb_direct_link_interface(
             self, device_id, iface_id, other_device_id, other_iface_id, is_link_dest):
 
         (exit_code, output) = self._exec(device_id,
                 f'ip netns exec vrf-default ip link show Gi0_0_0_{iface_id}')
         is_existing_interface = exit_code == 0
 
-        if super()._plumb_link_interface(
+        if super()._plumb_direct_link_interface(
                 device_id, iface_id,
                 other_device_id, other_iface_id, is_link_dest):
 

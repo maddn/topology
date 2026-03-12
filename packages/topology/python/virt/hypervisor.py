@@ -20,6 +20,9 @@ class HypervisorManager():
         self._udp_tunnel_ip_addresses = {
                 hypervisor.name: hypervisor.udp_tunnel_ip_address
                 for hypervisor in hypervisors }
+        self._geneve_tunnel_ip_addresses = {
+                hypervisor.name: hypervisor.geneve_tunnel_ip_address
+                for hypervisor in hypervisors }
         self._hypervisors = {
                 int(device.id): device.hypervisor or topology.libvirt.hypervisor
                 for device in topology.devices.device}
@@ -63,6 +66,9 @@ class HypervisorManager():
 
     def get_device_udp_tunnel_ip_address(self, device_id):
         return self._udp_tunnel_ip_addresses[self._hypervisors[device_id]]
+
+    def get_device_geneve_tunnel_ip_address(self, device_id):
+        return self._geneve_tunnel_ip_addresses[self._hypervisors[device_id]]
 
     def is_real(self, hypervisor_name):
         return (hypervisor_name in self._libvirt_connections or

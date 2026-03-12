@@ -39,13 +39,21 @@ class VirtBuilder():
 
         self._factory = factory
 
+    def get_domain_builder(self, device):
+        device_type = self._get_device_type(device)
+        if device_type not in self._domain_builders:
+            self._domain_builders[device_type] = self._factory.create(
+                    self._factory.domain_registry.get(
+                        device_type, ConcreteDomain))
+        return self._domain_builders[device_type]
+
     def domain(self, action, output, device):
         device_type = self._get_device_type(device)
         if device_type not in self._domain_builders:
             self._domain_builders[device_type] = self._factory.create(
                     self._factory.domain_registry.get(
                         device_type, ConcreteDomain))
-        return self._domain_builders[device_type](action, output, device)
+        return self.get_domain_builder(device)(action, output, device)
 
     def connection(self, action, output, device_id, iface_id, when, link_dest=False):
         device_type = self._factory.get_device_type(device_id)
@@ -81,12 +89,13 @@ class VirtBuilder():
         return self._volume_builders[device_type](action, output, device)
 
     def is_domain_active(self, device):
-        return self._domain_builders[
-                self._get_device_type(device)].is_active(device)
+        return self.get_domain_builder(device).is_active(device)
 
     def domain_supports_shutdown(self, device):
-        return self._domain_builders[
-                self._get_device_type(device)].shutdown_supported()
+        return self.get_domain_builder(device).shutdown_supported()
+
+    def domain_has_dataplane(self, device):
+        return self.get_domain_builder(device)._has_data_plane(device)
 
     def _get_device_type(self, device):
         return self._factory.get_device_type(device_name=device.device_name)

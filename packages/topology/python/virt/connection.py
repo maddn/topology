@@ -16,6 +16,14 @@ class InterfaceEndpoint:
     interface_name: str
     is_container: bool
 
+
+@dataclass
+class GeneveInfo:
+    remote_ip_address: str
+    vni: int
+    interface_name: str
+
+
 def generate_network_id(device_id, other_id):
     return f'{device_id}-{other_id or "null"}'
 
@@ -28,11 +36,18 @@ def generate_bridge_name(network_id):
 def generate_iface_dev_name(device_id, other_id):
     return f'veth-{device_id}-{other_id}'
 
+def generate_geneve_iface_name(device_id, iface_id):
+    return f'gtun-{device_id}-{iface_id}'
+
 def generate_link_network_id(device_ids):
     return generate_network_id(*sorted(device_ids))
 
 def generate_udp_port(device_id, iface_id):
     return f'1{device_id:02d}{iface_id:02d}'
+
+def generate_geneve_vni(device_ids):
+    device_id_1, device_id_2 = sorted(device_ids)
+    return (device_id_1 * 1000 + device_id_2) % 16777216
 
 def force_maagic_leaf_val2str(node, leaf_name):
     value = maagic.get_trans(node).get_elem(f'{node._path}/{leaf_name}')
@@ -66,9 +81,10 @@ class ConnectionManager():
             - A libvirt managed network (links or networks)
             - An external existing bridge (links or networks)
             - Another interface (links only):
-                - Libvirt UDP networking
-                - veth pair
-                - Tap interface in container namespace
+                - Libvirt UDP networking (VM-VM)
+                - GENEVE overlay networking (container-* cross hypervisor)
+                - veth pair (container-container same host)
+                - Tap interface in container namespace (container-VM same host)
 
         If an interface connects to an external existing bridge, the
         bridge is unmanaged. This means there is no need to track what
@@ -101,7 +117,8 @@ class ConnectionManager():
     """
 
     def __init__(self, topology, hypervisor_mgr, domain_mgr, resource_mgr):
-        def _add_interface(key, path, network, bridge, dest=None, udp=False):
+        def _add_interface(key, path, network, bridge,
+                           dest=None, udp=False, geneve=False):
             if key in self._connected_ifaces:
                 raise Exception(
                         'A device interface can only be used in 1 link or ' +
@@ -122,6 +139,11 @@ class ConnectionManager():
                         hypervisor_mgr.get_device_udp_tunnel_ip_address(dest[0]),
                         generate_udp_port(*dest))
 
+            if geneve and dest:
+                self._geneve_ifaces[key] = (
+                    hypervisor_mgr.get_device_geneve_tunnel_ip_address(dest[0]),
+                    generate_geneve_vni((key[0], dest[0])))
+
             self._connected_ifaces[key] = path
 
         self._network_index = {network.name:idx
@@ -138,6 +160,7 @@ class ConnectionManager():
         self._bridge_ifaces = {}
         self._link_ifaces = {}
         self._udp_ifaces = {}
+        self._geneve_ifaces = {}
         self._connected_ifaces = {}
 
         for link in topology.links.link:
@@ -153,28 +176,46 @@ class ConnectionManager():
                             else device_ids[0])
 
             bridges = (None, None)
-            if hypervisors[0] != hypervisors[1]:
+            cross_host = hypervisors[0] != hypervisors[1]
+
+            # First get requested bridges from the topology definition for
+            # cross-host connectivity. Never fallback to default hypervisor
+            # bridges if no link-specific bridges are given at all (in this
+            # case UDP or GENEVE will be used)
+            if (cross_host and
+                    (link.external_connection.a_end_bridge is not None or
+                     link.external_connection.z_end_bridge is not None)):
                 bridges = (link.external_connection.a_end_bridge or
                            hypervisor_mgr.get_external_bridge(hypervisors[0]),
                            link.external_connection.z_end_bridge or
                            hypervisor_mgr.get_external_bridge(hypervisors[1]))
 
+            # Next check if the domain specifically requires bridges networking.
+            # If so allocate a network_id so a libvirt managed network will
+            # be used (and automatically create a managed bridge).
             network_id = generate_link_network_id(device_ids) if (
                     not all(bridges) and (
                     self._domain_mgr.need_bridge_networking(device_ids[0]) or
                     self._domain_mgr.need_bridge_networking(device_ids[1])
                     )) else None
 
-            udp_networking = (not network_id and
+            # If bridges are not required at all, and both ends are Libvirt
+            # VMs, use Libvirt UDP overlay.
+            use_udp = (not network_id and not all(bridges) and
                     not self._domain_mgr.is_container(device_ids[0]) and
                     not self._domain_mgr.is_container(device_ids[1]))
 
+            # If UDP can't be used for cross-host connectivity (at least one
+            # end is a container) use GENEVE overlay.
+            use_geneve = (not network_id and not use_udp and
+                cross_host and not all(bridges))
+
             _add_interface((device_ids[0], iface_ids[0]),
                     f'{link._path}/a-end-interface', network_id, bridges[0],
-                    (device_ids[1], iface_ids[1]), udp_networking)
+                    (device_ids[1], iface_ids[1]), use_udp, use_geneve)
             _add_interface((device_ids[1], iface_ids[1]),
                     f'{link._path}/z-end-interface', network_id, bridges[1],
-                    (device_ids[0], iface_ids[0]), udp_networking)
+                    (device_ids[0], iface_ids[0]), use_udp, use_geneve)
 
         for network in topology.networks.network:
             for device in network.devices.device:
@@ -190,16 +231,24 @@ class ConnectionManager():
         return self._networks[network_id]
 
     def get_iface_network_id(self, device_id, iface_id):
+        device_id = self._domain_mgr.resolve_control_plane_id(device_id)
         return self._network_ifaces.get((int(device_id), iface_id), None)
 
     def get_iface_link_dest(self, device_id, iface_id):
+        device_id = self._domain_mgr.resolve_control_plane_id(device_id)
         return self._link_ifaces.get((int(device_id), iface_id), None)
 
     def get_iface_bridge_name(self, device_id, iface_id):
+        device_id = self._domain_mgr.resolve_control_plane_id(device_id)
         return self._bridge_ifaces.get((int(device_id), iface_id), None)
 
     def get_iface_path(self, device_id, iface_id):
+        device_id = self._domain_mgr.resolve_control_plane_id(device_id)
         return self._connected_ifaces.get((int(device_id), iface_id), None)
+
+    def get_iface_geneve_vni(self, device_id, iface_id):
+        device_id = self._domain_mgr.resolve_control_plane_id(device_id)
+        return self._geneve_ifaces.get((int(device_id), iface_id), None)
 
     def get_network_index(self, network_id):
         return self._network_index[network_id]
@@ -210,10 +259,27 @@ class ConnectionManager():
             write_node_data(path, data)
 
     def get_network_udp_ports(self, device_id, iface_id):
-        return self._udp_ifaces.get((device_id, iface_id), None)
+        device_id = self._domain_mgr.resolve_control_plane_id(device_id)
+        return self._udp_ifaces.get((int(device_id), iface_id), None)
 
     def get_num_device_ifaces(self):
         return self._max_iface_id + 1
+
+    def get_interface_geneve_info(self, device_id, iface_id):
+        """
+        If this interface uses a GENEVE overlay link, return a GeneveInfo.
+        Otherwise None.
+        """
+        geneve = self.get_iface_geneve_vni(device_id, iface_id)
+        if geneve is None:
+            return None
+
+        (remote_ip_address, vni) = geneve
+        iface_name = generate_geneve_iface_name(device_id, iface_id)
+        return GeneveInfo(
+            remote_ip_address=remote_ip_address,
+            vni=vni,
+            interface_name=iface_name)
 
     def get_interface_host_info(self, device_id, iface_id):
         """
@@ -245,16 +311,17 @@ class ConnectionManager():
         if not network_id:
             return (None, None)
 
+        key_dev = self._domain_mgr.resolve_control_plane_id(device_id)
         devices = [device
                 for (device, _), network in self._network_ifaces.items()
-                if network == network_id and device != device_id]
+                if network == network_id and device != key_dev]
 
         return (network_id, devices)
 
     def get_interface_direct_link_info(self, device_id, iface_id):
         """
         If this interface is a direct link interface (not using a libvirt
-        network or unmanaged bridge), return the other end of the link
+        network, unmanaged bridge or overlay), return the other end of the link
 
         Returns a tuple of (other_device_id, other_iface_id):
         - other_device_id: the device on the other end
@@ -266,8 +333,9 @@ class ConnectionManager():
         network_id = self.get_iface_network_id(device_id, iface_id)
         bridge_name = self.get_iface_bridge_name(device_id, iface_id)
         link_dest = self.get_iface_link_dest(device_id, iface_id)
+        geneve = self.get_iface_geneve_vni(device_id, iface_id)
 
-        if not network_id and not bridge_name and link_dest:
+        if not network_id and not bridge_name and link_dest and not geneve:
             return link_dest
 
         return (None, None)
