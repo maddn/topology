@@ -3,7 +3,7 @@ import { createContext, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 
 import { getIconSize, getDimensions, getZoomedContainer } from './topologySlice';
-import { useOpenTopologyName } from './hooks';
+import { useOpenTopologyName } from 'features/menu/modules/Topology';
 import { useQueryQuery, createItemsSelector } from 'api/query';
 
 
@@ -50,20 +50,20 @@ const calculateLayout = (
   let afterZoomed = false;
   let x = -iconWidthPc / 2;
   return basicLayout.reduce((accumulator,
-    { name, zoomed, title, connectionColour, width }, index) => {
-    const containerZoomed = zoomedContainerName === name;
-    if (containerZoomed) {
+    { name, title, connectionColour, width }, index) => {
+    const zoomed = zoomedContainerName === name;
+    if (zoomed) {
       afterZoomed = true;
     }
     width = Number(width);
     const pc = zoomedContainerName ? {
-      left: containerZoomed ? iconWidthPc / 2 : afterZoomed ? 100 : 0,
-      right: containerZoomed ? 100 - iconWidthPc / 2 : afterZoomed ? 100 : 0,
+      left: zoomed ? iconWidthPc / 2 : afterZoomed ? 100 : 0,
+      right: zoomed ? 100 - iconWidthPc / 2 : afterZoomed ? 100 : 0,
       top: iconHeightPc / 2,
       bottom: 100 - iconHeightPc,
-      width: containerZoomed ? 100 - iconWidthPc : 0,
+      width: zoomed ? 100 - iconWidthPc : 0,
       height: 100 - iconHeightPc * 1.5,
-      backgroundWidth: containerZoomed && !zoomed ? 100 : 0
+      backgroundWidth: zoomed ? 100 : 0
     } : {
       left: x += iconWidthPc,
       right: x += width - iconWidthPc,

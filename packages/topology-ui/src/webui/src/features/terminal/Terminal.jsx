@@ -13,8 +13,10 @@ const BACKSPACE = 8;
 const NL = 10;
 const CR = 13;
 
-function TelnetClient({ ip, port, keypath, active, history: initialHistory }) {
-  console.debug('TelnetClient Render');
+function Terminal({
+  ip, port, username, password, keypath, active, history: initialHistory
+}) {
+  console.debug('Terminal Render');
 
   const wrapperRef = useRef(null);
 
@@ -171,11 +173,11 @@ function TelnetClient({ ip, port, keypath, active, history: initialHistory }) {
       tabIndex="0"
     >
       <pre
-        className="terminal__telnet"
+        className="terminal__text"
       >{history.map(line =>
         `${line}\n`)}{lineBuffer}_{cursorBuffer.current}</pre>
     </div>
   );
 }
 
-export default TelnetClient;
+export default Terminal;

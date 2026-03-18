@@ -79,8 +79,7 @@ class NewItem extends PureComponent {
           ref={this.formRef}
         >
           <InlineBtn
-            type={IconTypes.BTN_DELETE}
-            classSuffix="cancel"
+            icon={IconTypes.BTN_DELETE}
             tooltip="Cancel"
             onClick={close}
           />
@@ -93,8 +92,8 @@ class NewItem extends PureComponent {
             value={value}
           />
           <InlineBtn
-            type={IconTypes.BTN_CONFIRM}
-            classSuffix={value === '' ? 'disabled' : 'confirm'}
+            icon={IconTypes.BTN_CONFIRM}
+            disabled={value === ''}
             tooltip="Create"
           />
         </form>

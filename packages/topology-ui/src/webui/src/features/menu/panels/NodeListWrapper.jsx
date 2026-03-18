@@ -1,5 +1,6 @@
 import React from 'react';
-import { useState, useCallback, useRef, Fragment } from 'react';
+import { useState, useCallback, useRef,
+         Fragment, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
 
 import LoadingOverlay from '../../common/LoadingOverlay';
@@ -11,9 +12,10 @@ import { bodyOverlayToggled } from '../../nso/nsoSlice';
 import { isFetching } from 'api/query';
 
 
-function NodeListWrapper({
-  title, label, keypath, level, disableCreate, fetching, newItemDefaults, children
-}) {
+const NodeListWrapper = forwardRef(function NodeListWrapper({
+  title, label, keypath, level, fetching, disableCreate, newItemDefaults,
+  children
+}, ref) {
   console.debug('NodeListWrapper Render');
 
   const [ newItemOpen, setNewItemOpen ] = useState(false);
@@ -48,7 +50,7 @@ function NodeListWrapper({
             <Fragment>
               <InlineBtn
                 ref={btnRef}
-                type={BTN_ADD}
+                icon={BTN_ADD}
                 classSuffix="create"
                 tooltip={`Add New ${label}`}
                 onClick={openNewItem}
@@ -66,16 +68,16 @@ function NodeListWrapper({
         </div>
       }
       <div
-        className="sidebar__body"
+        className="accordion__group"
         style={{minHeight: `${minHeight}px`,
         transition: `min-height ${minHeight === 0 ? 1000 : 0}ms`
       }}
       >
-        {children}
         <LoadingOverlay items={fetching} ref={measuredRef}/>
+        {children}
       </div>
     </Fragment>
   );
-}
+});
 
 export default NodeListWrapper;

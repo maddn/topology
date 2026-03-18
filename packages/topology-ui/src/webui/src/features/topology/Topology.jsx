@@ -30,30 +30,29 @@ const TopologyBody = React.memo(function TopologyBody () {
 
   const resize = () => {
     console.debug('Topology Resize');
-    const { offsetWidth, offsetHeight } = ref.current;
-    dispatch(dimensionsChanged({ width: offsetWidth, height: offsetHeight }));
+    const { offsetWidth: width, offsetHeight: height } = ref.current;
+    const { left, top } = ref.current.getBoundingClientRect();
+    dispatch(dimensionsChanged({ width, height, left, top }));
   };
 
   return (
     <LayoutContextProvider>
-      <div className="topology__body">
+      <div className="topology">
         <div className="header">
           <span className="header__title-text">Select a topology...</span>
         </div>
-        <div className="topology__layer topology__layer--background">
+        <div className="component__layer">
           {layouts.data?.map(({ name }) =>
             <Container key={name} name={name} />
           )}
         </div>
-        <div className="topology__layer topology__layer--foreground">
-          <div className="topology__header"/>
+        <div className="component__layer topology__body-placeholder">
           <div className="topology__body" ref={ref}>
             <ReactResizeDetector handleWidth handleHeight
               onResize={resize}
               refreshMode="debounce"
               refreshRate={500}
             />
-            <div className="topology__layer">
               {devices.data && connections.data?.map(
                 ({ keypath, aEndDevice, zEndDevice,
                    igpMetric, teMetric, delayMetric }) =>
@@ -72,7 +71,6 @@ const TopologyBody = React.memo(function TopologyBody () {
               )}
               <DragLayerCanvas canvasRef={canvasRef} />
               <CustomDragLayer canvasRef={canvasRef} />
-            </div>
           </div>
         </div>
       </div>

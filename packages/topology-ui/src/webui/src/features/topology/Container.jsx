@@ -33,42 +33,42 @@ function Container({ name }) {
       style={{ width: `${width}%` }}
     >
       <div
-        className={classNames('container__layer', {
+        className={classNames('component__layer', {
           'container__background': (index % 2 === 0),
-          'container__background--alt': (index % 2 !== 0),
-          'container__background--not-first': (index !== 0 && width > 0)
+          'container__background-alt': (index % 2 !== 0),
+          'container__background-not-first': (index !== 0 && width > 0)
         })}
       >
         <div className="header">
             <span className="header__title-text">{title}</span>
             <InlineBtn
-              type={IconTypes.BTN_SHOW_UNDERLAY}
-              classSuffix={underlayVisible ? 'hidden' : 'underlay'}
+              icon={IconTypes.BTN_SHOW_UNDERLAY}
+              hidden={underlayVisible}
               tooltip={'Show underlay devices'}
               onClick={() => dispatch(underlayToggled(name))}
             />
             <InlineBtn
-              type={IconTypes.BTN_HIDE_UNDERLAY}
-              classSuffix={underlayVisible ? 'underlay' : 'hidden'}
+              icon={IconTypes.BTN_HIDE_UNDERLAY}
+              hidden={!underlayVisible}
               tooltip={'Hide underlay devices'}
               onClick={() => dispatch(underlayToggled(name))}
             />
             <InlineBtn
-              type={IconTypes.BTN_ZOOM_IN}
-              classSuffix={zoomedContainer ? 'hidden' : 'zoom'}
+              icon={IconTypes.BTN_ZOOM_IN}
+              hidden={zoomedContainer}
               tooltip={'Zoom in'}
               onClick={() => dispatch(containerZoomToggled(name))}
             />
             <InlineBtn
-              type={IconTypes.BTN_ZOOM_OUT}
-              classSuffix={zoomedContainer ? 'zoom' : 'hidden'}
+              icon={IconTypes.BTN_ZOOM_OUT}
+              hidden={!zoomedContainer}
               tooltip={'Zoom out'}
               onClick={() => dispatch(containerZoomToggled(name))}
             />
           </div>
       </div>
       <div className={classNames(
-        'container__layer', 'container__overlay', {
+        'component__layer', 'container__overlay', {
         'container__overlay--inactive':
           draggedItem?.icon && draggedItem.container !== name
       })}/>

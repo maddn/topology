@@ -7,30 +7,33 @@ import { BTN_CONFIRM } from 'constants/Icons';
 import Btn from './BtnWithTooltip';
 
 const InlineBtn = forwardRef(
-  function InlineBtn({ type, classSuffix, tooltip, onClick, label, align }, ref)
+  function InlineBtn({ icon, tooltip, onClick, label, align, style, hidden, disabled }, ref)
 {
   return (
     <Tippy placement="bottom" content={tooltip}>
       <button
         className={classNames(
-          'btn__inline', {
-            'btn__round': !label,
-            'btn__inline--with-label': label,
-            [ `btn--${classSuffix}` ]: classSuffix,
-            [ `btn__inline--${align}-align` ]: align
+          `btn__${style || (icon ? 'tertiary' : 'secondary')}`,
+          {
+            'btn__round': icon && !label,
+            'btn__round-with-label': icon && label,
+            'btn__right-align': align === 'right',
+            'btn--hidden': hidden,
+            'btn--disabled': disabled
           }
         )}
         ref={ref}
         onClick={onClick}
-        type={type === BTN_CONFIRM ? 'submit' : 'button'}
-      >{label ?
-        <Fragment>{type &&
-          <div className="btn__round" >
-            <Btn type={type} />
-          </div>}
-          <span className="btn__text">{label}</span>
-        </Fragment> :
-        <Btn type={type} />}
+        type={icon === BTN_CONFIRM ? 'submit' : 'button'}
+      >
+        <Fragment>{icon && (!label
+          ? <Btn type={icon} />
+          : <span className="btn__round" >
+              <Btn type={icon} />
+            </span>
+          )} {label &&
+          <span className="btn__label">{label}</span>}
+        </Fragment>
       </button>
     </Tippy>
   );

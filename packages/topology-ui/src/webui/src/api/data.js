@@ -5,14 +5,13 @@ export const dataApi = jsonRpcApi.injectEndpoints({
   endpoints: (build) => ({
 
     getValue: build.query({
-      query: (keypath) => ({
+      query: ({ keypath }) => ({
         method: 'get_value',
-        transType: 'read',
         params: {
           path: keypath
         }
       }),
-      providesTags: [ 'data' ],
+      providesTags: (_, __, { tag }) => tag ? [ 'data', tag ] : [ 'data' ],
       transformResponse: (response) => response?.result?.value
     }),
 
@@ -25,12 +24,13 @@ export const dataApi = jsonRpcApi.injectEndpoints({
           value: value
         }
       }),
+      invalidatesTags: [ 'changes' ],
       async onQueryStarted(
         { keypath, actionPath, leaf, value }, { dispatch, queryFulfilled }
-      ){
+      ) {
         if (!actionPath) {
           await queryFulfilled;
-          dispatch(updateQueryData(keypath, leaf, value));
+          dispatch(updateQueryData(keypath, leaf, value, undefined, dispatch));
         }
       }
     }),
@@ -38,11 +38,11 @@ export const dataApi = jsonRpcApi.injectEndpoints({
     create: build.mutation({
       query: ({ name, keypath, ...rest }) => ({
         method: 'create',
-        transType: 'read_write',
         params: {
           path: name ? `${keypath}{${name}}` : keypath
         }
       }),
+      invalidatesTags: [ 'changes' ],
       async onQueryStarted(
         { name, keypath, ...rest }, { dispatch, queryFulfilled }
       ){
@@ -54,12 +54,11 @@ export const dataApi = jsonRpcApi.injectEndpoints({
     deletePath: build.mutation({
       query: ({ keypath }) => ({
         method: 'delete',
-        transType: 'read_write',
         params: {
           path: keypath
         }
       }),
-      invalidatesTags: (_, __, { tag }) => tag ? [ tag ] : [],
+      invalidatesTags: [ 'changes' ],
       async onQueryStarted({ keypath, queryKey }, { dispatch, queryFulfilled }) {
         await queryFulfilled;
         dispatch(updateQueryData(keypath, undefined, undefined, queryKey));
@@ -69,7 +68,6 @@ export const dataApi = jsonRpcApi.injectEndpoints({
     action: build.mutation({
       query: ({ transType, path, params }) => ({
         method: 'action',
-        transType,
         params: { path, params }
       }),
       transformResponse: (response) => {
@@ -79,7 +77,7 @@ export const dataApi = jsonRpcApi.injectEndpoints({
               accumulator[name] = value;
               return accumulator;
             }, {}
-          )
+          );
         } else {
           return response?.result;
         }

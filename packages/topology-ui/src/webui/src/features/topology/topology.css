@@ -1,26 +1,13 @@
-.centre-pane {
-  height: 100%;
-  max-width: 1200px;
-  position: sticky;
-  top: 0px;
-  width: 48%;
-}
-
-.topology {
-  background: var(--background);
+.topology__viewer {
+  background: var(--component-background);
   display: flex;
-  flex: 1 0 auto;
   flex-direction: column;
   height: 100%;
   position: relative;
   width: 100%;
 }
 
-.topology--edit-mode {
-  z-index: 5;
-}
-
-.topology__layer {
+.component__layer {
   height: 100%;
   left: 0px;
   position: absolute;
@@ -30,30 +17,21 @@
   width: 100%;
 }
 
-.topology__layer--background {
-  display: flex;
-}
-
-.topology__layer--foreground {
-  display: flex;
-  flex-direction: column;
-  pointer-events: none;
-}
-
-.topology__header {
-  height: 0;
-  padding: 1.5rem 0;
+.topology {
+  height: 100%;
   position: relative;
-  width: 100%;
+}
+
+.topology__body-placeholder {
+  box-sizing: border-box;
+  flex-direction: column;
+  padding-top: 3rem;
+  pointer-events: none;
 }
 
 .topology__body {
   height: 100%;
   pointer-events: auto;
-  position: relative;
-}
-
-.topology__footer {
   position: relative;
 }
 
@@ -67,29 +45,23 @@
 /* Container */
 
 .container {
+  display: inline-block;
+  height: 100%;
   overflow: hidden;
   position: relative;
   transition: width 500ms;
 }
 
-.container__layer {
-  height: 100%;
-  left: 0px;
-  position: absolute;
-  top: 0px;
-  width: 100%;
-}
-
 .container__background {
-  background: var(--background-alt);
+  background: var(--component-background);
 }
 
-.container__background--alt {
-  background: var(--background);
+.container__background-alt {
+  background: var(--component-background-alt);
 }
 
-.container__background--not-first {
-  border-left: 1px solid var(--border);
+.container__background-not-first {
+  border-left: 3px solid var(--divider);
   box-sizing: border-box;
 }
 
@@ -105,17 +77,13 @@
   background: rgba(255, 255, 255, 0.7);
 }
 
-.container__overlay--active-not-first {
-  border-left: 1px solid rgba(255, 255, 255, 0.7);
-}
-
 .container__overlay--dragging {
   pointer-events: auto;
 }
 
 .container__overlay--hovered {
   background: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 0 0 5px var(--primary) inset;
+  box-shadow: 0 0 0 5px var(--theme-alt) inset;
 }
 
 
@@ -132,7 +100,7 @@
 }
 
 .topology__connection--selected {
-  background: var(--secondary);
+  background: var(--theme-alt);
   z-index: 4;
 }
 
@@ -160,12 +128,12 @@
 .topology__metric,
 .topology__metric-value {
   display: inline;
-  border: 1px solid var(--primary);
+  border: 1px solid var(--theme-base);
   padding: 0px 2px;
 }
 
 .topology__metric {
-  background: var(--primary);
+  background: var(--theme-base);
   border-radius: 5px 0px 0px 5px;
   margin: 0px 0px 0px 2px;
 }
@@ -189,7 +157,7 @@
 
 .icon__outline {
   background: PaleTurquoise;
-  border: solid var(--secondary) 0.125rem;
+  border: solid var(--theme-alt) 0.125rem;
   box-sizing: border-box;
   cursor: pointer;
   opacity: 0;
@@ -286,13 +254,13 @@
 }
 
 .topology__round-btn.btn--active {
-  background: var(--secondary);
+  background: var(--theme-alt);
   pointer-events: auto;
   cursor: pointer;
 }
 
 .topology__round-btn.btn--delete {
-  background: var(--danger);
+  background: var(--theme-danger);
 }
 
 .topology__round-btn-svg-container {
@@ -335,7 +303,15 @@
 
 .slider > input[type=range]::-moz-range-track {
   animate: 0.2s;
-  background: var(--disabled);
+  background: var(--divider);
+  border-radius: 0.25em;
+  cursor: pointer;
+  height: 0.5em;
+}
+
+.slider > input[type=range]::-moz-range-progress {
+  animate: 0.2s;
+  background: var(--theme-base);
   border-radius: 0.25em;
   cursor: pointer;
   height: 0.5em;
@@ -373,7 +349,7 @@
 
 .slider > input[type=range]::-moz-range-thumb {
   background: White;
-  border: 1px solid var(--disabled);
+  border: 1px solid var(--theme-base);
   border-radius: 1.75em;
   cursor: pointer;
   height: 1.75em;
@@ -415,8 +391,12 @@
   right: 0;
   bottom: 0;
   border-radius: 2em;
-  background-color: var(--disabled);
+  background-color: var(--theme-grey-icon);
   transition: .4s;
+}
+
+.toggle__switch:hover {
+  background-color: var(--theme-grey);
 }
 
 .toggle__switch:before {
@@ -432,7 +412,11 @@
 }
 
 input:checked + .toggle__switch {
-  background-color: var(--primary);
+  background-color: var(--theme-base-icon);
+}
+
+input:checked + .toggle__switch:hover {
+  background-color: var(--theme-base);
 }
 
 input:checked + .toggle__switch:before {

@@ -1,21 +1,21 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 
-import TelnetClient from './TelnetClient';
+import Terminal from './Terminal';
 
 import { useDevice } from '../topology/Icon';
 import { useGetValueQuery } from 'api/data';
 import { useActionMutation } from '/api/data';
 
 
-function Terminal({ device, active }) {
+function DeviceTerminal({ device, active }) {
   console.debug('Terminal Render');
   const [ consoleLoggerStopped, setConsoleLoggerStopped ] = useState('');
   const output = `Stopping console logger... ${consoleLoggerStopped}\r\n`;
 
   const { keypath, hypervisor, id } = useDevice(device) || {};
-  const { data: ip } = useGetValueQuery(
-    `/topology:topologies/libvirt/hypervisor{${hypervisor}}/host`);
+  const { data: ip } = useGetValueQuery({ keypath:
+    `/topology:topologies/libvirt/hypervisor{${hypervisor}}/host` });
 
   const [ action ] = useActionMutation();
   const stopConsoleLogger = async() => {
@@ -32,7 +32,7 @@ function Terminal({ device, active }) {
 
   return (
     (ip && consoleLoggerStopped != '') ?
-      <TelnetClient
+      <Terminal
         ip={ip}
         port={`160${`0${id}`.slice(-2)}`}
         keypath={keypath}
@@ -40,9 +40,9 @@ function Terminal({ device, active }) {
         history={output}
       /> : active ?
       <div className="terminal">
-        <pre className="terminal__telnet">{output}</pre>
+        <pre className="terminal__text">{output}</pre>
       </div> : null
   );
 }
 
-export default Terminal;
+export default DeviceTerminal;

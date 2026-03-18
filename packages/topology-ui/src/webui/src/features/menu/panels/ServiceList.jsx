@@ -1,9 +1,9 @@
 import React from 'react';
 
 import NodeListWrapper from './NodeListWrapper';
-import Accordion from '../../common/Accordion';
+import Accordion from 'features/common/Accordion';
 
-import { useOpenTopologyName } from '../../topology/hooks';
+import { useOpenTopologyName } from '../modules/Topology';
 import { useIsManagedTopology,
          path as managedTopologyPath } from '../modules/ManagedTopology';
 

@@ -3,11 +3,10 @@ import { useSelector } from 'react-redux';
 
 import DragLayerDrawer from './DragLayerDrawer';
 
-import { useDevicesQuery, useDevice } from './Icon';
+import { useDevicesQuery, useDevice, useIconPositionCalculator } from './Icon';
 import { useConnectedDevices } from './Connection';
 
 import { getDraggedItem, getHoveredIcon } from './topologySlice';
-import { useIconPositionCalculator } from './hooks';
 
 
 function CustomDragLayer({ canvasRef }) {

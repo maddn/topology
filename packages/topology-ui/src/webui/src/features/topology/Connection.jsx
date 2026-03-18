@@ -16,7 +16,8 @@ import ConnectionInfo from './ConnectionInfo';
 import { getDraggedItem, getSelectedConnection, getEditMode,
          getLinkMetricsVisible, connectionSelected } from './topologySlice';
 
-import { useIconPosition, useIsExpanded, useOpenTopologyName } from './hooks';
+import { useIconPosition, useIsExpanded } from './Icon';
+import { useOpenTopologyName } from 'features/menu/modules/Topology';
 
 import { LayoutContext } from './LayoutContext';
 import { useDevice } from './Icon';

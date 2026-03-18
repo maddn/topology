@@ -1,4 +1,3 @@
-import './menu.css';
 import React from 'react';
 
 import Sidebar from '../common/Sidebar';

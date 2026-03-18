@@ -2,20 +2,20 @@ import React from 'react';
 import { PureComponent, Fragment } from 'react';
 import { connect } from 'react-redux';
 import classNames from 'classnames';
-import * as IconTypes from '../../constants/Icons';
+import * as IconTypes from 'constants/Icons';
 
 import hljs from 'highlight.js';
 
 import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
-import Accordion from '../common/Accordion';
-import InlineBtn from '../common/buttons/InlineBtn';
+import Accordion from 'features/common/Accordion';
+import InlineBtn from 'features/common/buttons/InlineBtn';
 
 import { getOpenTerminals, terminalToggled,
-         getConsoleViewerHidden } from '../topology/topologySlice';
-import { handleError } from '../nso/nsoSlice';
-import { action } from '../../api/data';
+         getConsoleViewerHidden } from 'features/topology/topologySlice';
+import { handleError } from 'features/nso/nsoSlice';
+import { action } from 'api/data';
 import { stopThenGoToUrl } from 'api/comet';
-import { libvirtAction } from '../topology/hooks';
+import { libvirtAction } from 'features/menu/modules/Topology';
 
 
 const mapDispatchToProps = {
@@ -257,7 +257,8 @@ class Config extends PureComponent {
     const { format, isFetching } = this.state;
     return (
       <InlineBtn
-        classSuffix={isFetching ? 'disabled' : (format === selectFormat && 'active')}
+        disabled={isFetching}
+        style={format === selectFormat && 'primary'}
         label={label}
         tooltip={tooltip}
         onClick={() => { this.getConfig(selectFormat || format); }}
@@ -279,24 +280,25 @@ class Config extends PureComponent {
         variableHeight={true}
         header={<Fragment>
           <InlineBtn
-            type={IconTypes.BTN_CONSOLE}
-            classSuffix={consoleState == 'Disconnected' ? 'console' : 'hidden'}
+            icon={IconTypes.BTN_CONSOLE}
+            hidden={consoleState !== 'Disconnected'}
             tooltip={'Connect to device console'}
             onClick={this.terminalToggled}
           />
           <InlineBtn
-            type={IconTypes.BTN_CONSOLE_CONNECTED}
-            classSuffix={consoleState == 'Connected' ? 'console-connected' : 'hidden'}
+            icon={IconTypes.BTN_CONSOLE_CONNECTED}
+            hidden={consoleState !== 'Connected'}
             tooltip={'Switch to device console'}
             onClick={this.terminalToggled}
           />
           <InlineBtn
-            type={IconTypes.BTN_CONSOLE_DISCONNECT}
-            classSuffix={consoleState == 'Active' ? 'console-disconnect' : 'hidden'}
+            icon={IconTypes.BTN_CONSOLE_DISCONNECT}
+            style="danger"
+            hidden={consoleState !== 'Active'}
             tooltip={'Disconnect from device console'}
             onClick={this.terminalToggled}
           />
-          <span className="config-viewer__title-text">{device}{
+          <span className="header__title-text">{device}{
             !managed && ' (unmanaged)'}</span>
           {isFetching && <div className="loading__dots">
             <span className="loading__dot"/>
@@ -304,49 +306,44 @@ class Config extends PureComponent {
             <span className="loading__dot"/>
           </div>}
           <InlineBtn
-            type={IconTypes.BTN_GOTO}
-            classSuffix="goto"
+            icon={IconTypes.BTN_GOTO}
             tooltip={'View device in Configuration Editor'}
             onClick={(event) => this.goToDevice(event)}
           />
           <InlineBtn
-            type={IconTypes.BTN_DEFINE}
-            classSuffix="define"
+            icon={IconTypes.BTN_DEFINE}
             tooltip={'Define domain on KVM'}
             onClick={(event) => this.libvirtAction(event, 'define')}
           />
           <InlineBtn
-            type={IconTypes.BTN_START}
-            classSuffix="start"
+            icon={IconTypes.BTN_START}
             tooltip={'Start domain on KVM'}
             onClick={(event) => this.libvirtAction(event, 'start')}
           />
           <InlineBtn
-            type={IconTypes.BTN_STOP}
-            classSuffix="stop"
+            icon={IconTypes.BTN_STOP}
             tooltip={'Stop domain on KVM'}
             onClick={(event) => this.libvirtAction(event, 'stop')}
           />
           <InlineBtn
-            type={IconTypes.BTN_UNDEFINE}
-            classSuffix="undefine"
+            icon={IconTypes.BTN_UNDEFINE}
             tooltip={'Undefine domain on KVM'}
             onClick={(event) => this.libvirtAction(event, 'undefine')}
           />
           <InlineBtn
-            type={IconTypes.BTN_RESTART}
-            classSuffix="restart"
+            icon={IconTypes.BTN_RESTART}
             tooltip={'Reboot domain on KVM'}
             onClick={(event) => this.libvirtAction(event, 'reboot')}
           />
           <InlineBtn
-            type={IconTypes.BTN_RESET}
+            icon={IconTypes.BTN_RESET}
+            style="danger"
             classSuffix="hard-reset"
             tooltip={'Hard reset domain on KVM (undefine and restart)'}
             onClick={(event) => this.libvirtAction(event, 'hard-reset')}
           />
         </Fragment>}>
-        {managed && <div className="config-viewer__panel">
+        {managed && <Fragment>
           <div className="config-viewer__btn-row">
             {this.btn('cli', 'cli', 'Format configuration as Cisco-style CLI')}
             {this.btn('cb', 'curly-braces',
@@ -355,7 +352,8 @@ class Config extends PureComponent {
             {this.btn('xml', 'xml', 'Format configuration as XML')}
             {this.btn('yaml', 'yaml', 'Format configuration as YAML')}
             <InlineBtn
-              classSuffix={isFetching ? 'disabled' : (serviceMetaData && 'active')}
+              disabled={isFetching}
+              style={serviceMetaData && 'primary'}
               label="svc-meta"
               tooltip={`${serviceMetaData ? 'Exclude' :
                 'Include'} service meta-data annotations`}
@@ -383,7 +381,7 @@ class Config extends PureComponent {
             className="loading__overlay"
             style={{ opacity: isFetching | 0 }}
           />
-        </div>}
+        </Fragment>}
       </Accordion>
     );
   }

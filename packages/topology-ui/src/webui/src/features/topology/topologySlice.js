@@ -35,6 +35,8 @@ const topologySlice = createSlice({
     dimensionsChanged: (state, action) => {
       state.dimensions.width = action.payload.width;
       state.dimensions.height = action.payload.height;
+      state.dimensions.left = action.payload.left;
+      state.dimensions.top = action.payload.top;
     },
 
     itemDragged: (state, action) => {
@@ -106,6 +108,11 @@ const topologySlice = createSlice({
 
     hideConsoleViewer: (state) => {
       state.consoleViewerHidden = true;
+    },
+
+    highlightedIconsUpdated: (state, { payload }) => {
+      const { highlightedIcons } = payload;
+      state.highlightedIcons = highlightedIcons;
     }
   },
 
@@ -123,5 +130,6 @@ export const {
   connectionSelected, iconSelected, iconExpandToggled,
   underlayToggled, containerZoomToggled,
   editModeToggled, configViewerToggled, linkMetricsToggled,
-  iconSizeChanged, terminalToggled, hideConsoleViewer } = actions;
+  iconSizeChanged, terminalToggled, hideConsoleViewer,
+  highlightedIconsUpdated } = actions;
 export default reducer;

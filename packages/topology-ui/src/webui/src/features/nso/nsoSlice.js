@@ -29,6 +29,11 @@ const nsoSlice = createSlice({
     errorRaised: (state, { payload }) => {
       state.error = payload;
     }
+  },
+  extraReducers: (builder) => {
+    builder.addCase('topology/editModeToggled', (state, { payload }) => {
+      state.bodyOverlayVisible = payload;
+    });
   }
 });
 

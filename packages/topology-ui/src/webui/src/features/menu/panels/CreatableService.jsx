@@ -2,8 +2,8 @@ import React from 'react';
 import { Fragment, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
-import Accordion from '../../common/Accordion';
-import InlineBtn from '../../common/buttons/InlineBtn';
+import Accordion from 'features/common/Accordion';
+import InlineBtn from 'features/common/buttons/InlineBtn';
 
 import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 import * as IconTypes from 'constants/Icons';
@@ -36,8 +36,7 @@ function CreatableService({ label, keypath }) {
       <Fragment>
         <span className="header__title-text">{label}</span>
         <InlineBtn
-          type={IconTypes.BTN_ADD}
-          classSuffix="add"
+          icon={IconTypes.BTN_ADD}
           tooltip={`Create ${label}`}
           onClick={createNode}
         />

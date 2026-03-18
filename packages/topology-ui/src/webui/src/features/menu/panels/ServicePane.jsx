@@ -1,35 +1,48 @@
 import React from 'react';
-import { memo, useCallback } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { COMMIT_MANAGER_URL } from 'constants/Layout';
 import * as IconTypes from 'constants/Icons';
 
 import NodePane from './NodePane';
-import InlineBtn from '../../common/buttons/InlineBtn';
+import InlineBtn from 'features/common/buttons/InlineBtn';
 
 import { getOpenService, serviceToggled } from '../menuSlice';
+import { highlightedIconsUpdated } from 'features/topology/topologySlice';
 
 import { stopThenGoToUrl } from 'api/comet';
 import { useActionMutation, useGetValueQuery } from 'api/data';
 
 
-const ServicePane = memo(function ServicePane(
+function ServicePane(
   { keypath, serviceKeypath, children, topology, title, label, ...rest })
 {
   console.debug('ServicePane Render');
 
-  const { data } = useGetValueQuery(`${serviceKeypath.endsWith('/..') ?
-      serviceKeypath.substring(0,
-        serviceKeypath.lastIndexOf('/', serviceKeypath.length - 4)) :
-      serviceKeypath}/modified/devices`);
+  const queryPath = serviceKeypath.endsWith('/..')
+      ? serviceKeypath.substring(0,
+        serviceKeypath.lastIndexOf('/', serviceKeypath.length - 4))
+      : serviceKeypath;
+
+  const { data } = useGetValueQuery({
+    keypath: `${queryPath}/modified/devices`,
+    tag: 'device-list'
+  });
 
   const isOpen = useSelector((state) => getOpenService(state) === serviceKeypath);
   const fade = useSelector((state) => !!getOpenService(state));
 
+  const highlightedIcons = useMemo(() => isOpen ? data : [], [ isOpen, data ]);
+
   const dispatch = useDispatch();
   const toggled = useCallback((keypath) => dispatch(serviceToggled({
-    keypath: serviceKeypath, highlightedIcons: isOpen ? [] : data })));
+    keypath: serviceKeypath, highlightedIcons: [] })
+  ));
+
+  useEffect(() => isOpen && dispatch(
+    highlightedIconsUpdated({ highlightedIcons })
+  ), [ highlightedIcons ]);
 
   const [ action ] = useActionMutation();
   const redeploy = useCallback(async (event) => {
@@ -52,7 +65,7 @@ const ServicePane = memo(function ServicePane(
       nodeToggled={toggled}
       extraButtons={
         <InlineBtn
-          type={IconTypes.BTN_REDEPLOY}
+          icon={IconTypes.BTN_REDEPLOY}
           classSuffix="redeploy"
           tooltip={`Redeploy (Touch) ${label}`}
           onClick={redeploy}
@@ -63,6 +76,6 @@ const ServicePane = memo(function ServicePane(
       {children}
     </NodePane>
   );
-});
+}
 
 export default ServicePane;

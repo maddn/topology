@@ -35,7 +35,7 @@ export const BTN_CONSOLE_DISCONNECT = 'btn-console-disconnect';
 export const BTN_HIDE_CONSOLE_VIEWER = 'btn-hide-console-viewer';
 
 // Other
-export const LABEL_FONT = '0.875em CiscoSansLight';
+export const LABEL_FONT = '0.875em Inter';
 
 // Icon name type map
 export const ICON_NAME_TO_TYPE = {

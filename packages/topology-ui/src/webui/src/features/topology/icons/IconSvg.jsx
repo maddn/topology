@@ -1,6 +1,6 @@
 import React from 'react';
-import * as Colours from '../../../constants/Colours';
-import * as Icons from '../../../constants/Icons';
+import * as Colours from 'constants/Colours';
+import * as Icons from 'constants/Icons';
 
 import Firewall from './Firewall';
 import Router from './Router';

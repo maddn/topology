@@ -6,10 +6,10 @@ import classNames from 'classnames';
 
 import * as IconTypes from 'constants/Icons';
 import { getOpenTerminals, getConsoleViewerHidden, hideConsoleViewer,
-         terminalToggled } from '../topology/topologySlice';
+         terminalToggled } from 'features/topology/topologySlice';
 
-import InlineBtn from '../common/buttons/InlineBtn';
-import Terminal from './Terminal';
+import InlineBtn from 'features/common/buttons/InlineBtn';
+import DeviceTerminal from './DeviceTerminal';
 
 
 function TerminalViewer() {
@@ -25,15 +25,15 @@ function TerminalViewer() {
   return (
     <div className={classNames(
       'terminal__viewer',
-      'terminal__viewer-layer', {
+      'component__layer', {
       'terminal__viewer--hidden': consoleViewerHidden || numOpen == 0
     })}>
-      <div className="terminal__viewer-layer terminal__viewer-background"/>
-      <div className="terminal__viewer-layer terminal__viewer-body">
+      <div className="component__layer terminal__viewer-background"/>
+      <div className="component__layer terminal__viewer-body">
         <div className="header">
           <InlineBtn
-            type={IconTypes.BTN_CONSOLE_DISCONNECT}
-            classSuffix="console-disconnect"
+            icon={IconTypes.BTN_CONSOLE_DISCONNECT}
+            style="danger"
             tooltip={`Disconnect from ${openTerminal} console`}
             onClick={() => dispatch(terminalToggled(openTerminal))}
           />
@@ -44,13 +44,12 @@ function TerminalViewer() {
             className="header__title-text header__title-text--right"
           >[{numOpen} open console{numOpen > 1 ? 's' : ''}]</span>
           <InlineBtn
-            type={IconTypes.BTN_HIDE_CONSOLE_VIEWER}
-            classSuffix="console-hide"
+            icon={IconTypes.BTN_HIDE_CONSOLE_VIEWER}
             tooltip={'Hide console viewer'}
             onClick={() => dispatch(hideConsoleViewer())}
           />
         </div>
-        {openTerminals.map(terminal => <Terminal
+        {openTerminals.map(terminal => <DeviceTerminal
           key={terminal}
           device={terminal}
           active={terminal == openTerminal}

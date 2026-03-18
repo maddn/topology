@@ -8,13 +8,16 @@ import * as ManagedTopology from './ManagedTopology';
 import * as IpConnectivity from './IpConnectivity';
 import * as BaseConfig from './BaseConfig';
 
+import { CONFIGURATION_EDITOR_ACTIONS_URL } from 'constants/Layout';
 import * as IconTypes from 'constants/Icons';
-import { libvirtAction } from '../../topology/hooks';
 
 import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
          selectItem } from 'api/query';
+import { stopThenGoToUrl } from 'api/comet';
+import { setValue } from 'api/data';
 
-import { topologyToggled, getOpenTopology } from '../menuSlice';
+import { topologyToggled,
+         getOpenTopology, getOpenTopologyName } from '../menuSlice';
 
 export const label = 'Topology';
 export const path = '/topology:topologies/topology';
@@ -37,6 +40,19 @@ export function useFetchStatus() {
     ...BaseConfig.useFetchStatus()
   });
 }
+
+export function useOpenTopologyName() {
+  return useSelector((state) => getOpenTopologyName(state));
+}
+
+export const libvirtAction = (action, device) => async (dispatch, getState) => {
+  const openTopology = getOpenTopology(getState());
+  const actionPath = `${openTopology}/libvirt/${action}`;
+  await dispatch(setValue.initiate({
+    actionPath, leaf: 'device', value: device}));
+  dispatch(stopThenGoToUrl(`${CONFIGURATION_EDITOR_ACTIONS_URL}${actionPath}`));
+};
+
 
 export const Component = React.memo(function Component({ name }) {
   console.debug('Topologies Render');
@@ -63,29 +79,27 @@ export const Component = React.memo(function Component({ name }) {
       subHeader={
         <div className="config-viewer__btn-row">
           <InlineBtn
-            type={IconTypes.BTN_DEFINE}
-            classSuffix="define"
+            icon={IconTypes.BTN_DEFINE}
             tooltip="Define domain on KVM"
             onClick={(event) => goToLibvirtAction(event, 'define')}
             label="Define"
           />
           <InlineBtn
-            type={IconTypes.BTN_START}
-            classSuffix="start"
+            icon={IconTypes.BTN_START}
             tooltip="Start domain on KVM"
             onClick={(event) => goToLibvirtAction(event, 'start')}
             label="Start"
           />
           <InlineBtn
-            type={IconTypes.BTN_STOP}
-            classSuffix="stop"
+            icon={IconTypes.BTN_STOP}
+            style="danger"
             tooltip={'Stop domain on KVM'}
             onClick={(event) => goToLibvirtAction(event, 'stop')}
             label="Stop"
           />
           <InlineBtn
-            type={IconTypes.BTN_UNDEFINE}
-            classSuffix="undefine"
+            icon={IconTypes.BTN_UNDEFINE}
+            style="danger"
             tooltip={'Undefine domain on KVM'}
             onClick={(event) => goToLibvirtAction(event, 'undefine')}
             label="Undefine"

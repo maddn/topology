@@ -19,11 +19,11 @@ const interfaceSource = {
   beginDrag: ({ keypath, aEndDevice, zEndDevice, fromDevice, x, y,
     itemDragged, connectionSelected }, monitor, { mouseDownPos }) => {
     const item = {
-      connection: { keypath, aEndDevice, zEndDevice, fromDevice },
+      interface: { keypath, aEndDevice, zEndDevice, fromDevice },
       x, y, mouseDownPos
     };
     requestAnimationFrame(() => {
-      itemDragged({ fromDevice, aEndDevice, zEndDevice });
+      itemDragged({ fromDevice });
       connectionSelected(undefined);
     });
     return item;

@@ -1,9 +1,9 @@
 const getCssVariable = name =>
   getComputedStyle(document.documentElement).getPropertyValue(`--${name}`);
 
-const PRIMARY = getCssVariable('primary');
-const SECONDARY = getCssVariable('secondary');
-const BORDER = getCssVariable('border');
+const PRIMARY = getCssVariable('theme-base');
+const SECONDARY = getCssVariable('theme-alt');
+const BORDER = getCssVariable('divider');
 const DISABLED = getCssVariable('disabled');
 const HEADER = getCssVariable('header');
 const BLUE = 'rgb(4, 159, 217)';
@@ -39,6 +39,7 @@ export const STATE_COLOURS = {
   'undefined'               : DISABLED,
   'defined'                 : 'DarkKhaki',
   'started'                 : 'Khaki',
+  'stopping'                : 'LightSalmon',
   'ready'                   : 'LightGreen',
   'unmanaged'               : undefined,
   'sync-error'              : 'IndianRed'

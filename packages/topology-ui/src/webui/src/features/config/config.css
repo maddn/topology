@@ -1,16 +1,7 @@
-.config-viewer__title-text {
-  flex: 1 1 auto;
-  overflow: hidden;
-  line-height: 2rem;
-}
-
-.config-viewer__panel {
-  position: relative;
-}
-
 .config-viewer__btn-row {
-  background: var(--background-alt);
+  background: var(--accordion-level1-hover);
   display: flex;
+  gap: 0.25rem;
   padding: 0.5rem 0.25rem;
 }
 
@@ -37,6 +28,6 @@
   background: PaleTurquoise;
 }
 
-.accordion--closed > .accordion__header > .loading__dots > .loading__dot {
-  background-color: var(--sub-header);
+.accordion--open > .accordion__header > .loading__dots > .loading__dot {
+  background-color: White;
 }

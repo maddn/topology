@@ -9,14 +9,6 @@
   z-index: -1;
 }
 
-.terminal__viewer-layer {
-  height: 100%;
-  left: 0px;
-  position: absolute;
-  top: 0px;
-  width: 100%;
-}
-
 .terminal__viewer-body {
   display: flex;
   flex-direction: column;
@@ -24,7 +16,7 @@
 
 .terminal__viewer-background {
   background: var(--background);
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .terminal {
@@ -41,6 +33,6 @@
   visibility: hidden;
 }
 
-.terminal__telnet {
+.terminal__text {
   margin: 0;
 }

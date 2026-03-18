@@ -5,9 +5,9 @@ import { useDispatch } from 'react-redux';
 import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 import * as IconTypes from 'constants/Icons';
 
-import FieldGroup from '../../common/FieldGroup';
-import Accordion from '../../common/Accordion';
-import InlineBtn from '../../common/buttons/InlineBtn';
+import FieldGroup from 'features/common/FieldGroup';
+import Accordion from 'features/common/Accordion';
+import InlineBtn from 'features/common/buttons/InlineBtn';
 
 import { stopThenGoToUrl } from 'api/comet';
 import { useDeletePathMutation } from 'api/data';
@@ -15,7 +15,7 @@ import { useDeletePathMutation } from 'api/data';
 
 const NodePane = memo(function NodePane({
   title, label, keypath, level, isOpen, fade, nodeToggled,
-  underscore, queryTag, queryKey, disableDelete,
+  underscore, queryKey, disableDelete,
   disableGoTo, extraButtons, subHeader, children, ...rest
 }) {
   console.debug('NodePane Render');
@@ -33,7 +33,7 @@ const NodePane = memo(function NodePane({
   const [ deletePath ] = useDeletePathMutation();
   const deleteNode = useCallback(async (event) => {
     event.stopPropagation();
-    await deletePath({ keypath, tag: queryTag, queryKey });
+    await deletePath({ keypath, queryKey });
     if (isOpen) { toggle(); }
   });
 
@@ -50,19 +50,21 @@ const NodePane = memo(function NodePane({
             <u>{title.charAt(0)}</u> : title.charAt(0)}{title.substr(1)}</span>
           {!disableGoTo &&
             <InlineBtn
-              type={IconTypes.BTN_GOTO}
+              icon={IconTypes.BTN_GOTO}
               classSuffix="go-to"
               tooltip={`View ${label} in Configuration Editor`}
               onClick={goToNode}
+              style={level === 2 && 'alt'}
             />
           }
           {extraButtons}
           {!disableDelete &&
             <InlineBtn
-              type={IconTypes.BTN_DELETE}
+              icon={IconTypes.BTN_DELETE}
               classSuffix="delete"
               tooltip={`Delete ${label}`}
               onClick={deleteNode}
+              style={'danger'}
             />
           }
         </Fragment>

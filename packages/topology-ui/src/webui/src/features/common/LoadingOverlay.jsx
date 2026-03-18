@@ -20,21 +20,19 @@ const LoadingOverlay = React.forwardRef(
       style={{ opacity }}
       ref={callbackRef}
     >
-      <div className="loading__content">
-        <div className="loading__lines">
-          {fetching ?
-            <Fragment>
-              <div className="loading__line" />
-              <div className="loading__line" />
-              <div className="loading__line" />
-            </Fragment> :
-            <div className="loading__line-placeholder" />
-          }
-        </div>
-        <div className="loading__text">
-          {items && Object.entries(items).map(([label, status], idx) =>
-            <div key={idx}>{ `Fetching ${label}... ${status || ''}`}</div>)}
-        </div>
+      <div className="loading__lines">
+        {fetching ?
+          <Fragment>
+            <span className="loading__line" />
+            <span className="loading__line" />
+            <span className="loading__line" />
+          </Fragment> :
+          <div className="loading__line-placeholder" />
+        }
+      </div>
+      <div className="loading__text">
+        {items && Object.entries(items).map(([label, status], idx) =>
+          <div key={idx}>{ `Fetching ${label}... ${status || ''}`}</div>)}
       </div>
     </div>
   );

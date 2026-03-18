@@ -1,7 +1,7 @@
 import { COMMIT_MANAGER_URL, LOGIN_URL } from '../constants/Layout';
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { writeTransactionToggled, commitInProgressToggled,
-         handleError } from '../features/nso/nsoSlice';
+         getCommitInProgress, handleError } from '../features/nso/nsoSlice';
 
 
 export function findWriteTransaction(transactions, actionPath) {
@@ -22,12 +22,11 @@ const getJsonRpcBaseQuery = () => {
   let selector = undefined;
 
   const getTransType = method =>
-    [ 'get_trans_changes',
-      'create',
+    [ 'create',
       'delete',
       'set_value',
+      'get_trans_changes',
       'delete_trans',
-      'apply',
       'validate_commit',
       'commit' ].includes(method) ? 'read_write' :
     [ 'query',
@@ -35,7 +34,9 @@ const getJsonRpcBaseQuery = () => {
       'action' ].includes(method) ? 'read' : undefined;
 
 
-  const getTransaction = async (transType, actionPath, dispatch, api) => {
+  const getTransaction = async (
+    transType, actionPath, dispatch, api, allowNew
+  ) => {
     if (!transType) {
       return undefined;
     }
@@ -54,6 +55,8 @@ const getJsonRpcBaseQuery = () => {
     if (writeTrans) {
       dispatch(writeTransactionToggled(true));
       return writeTrans;
+    } else if (transType === 'read_write' && !allowNew) {
+      return undefined;
     }
 
     const readTrans = data?.find(trans => !trans.actionPath);
@@ -62,7 +65,6 @@ const getJsonRpcBaseQuery = () => {
     }
 
     if (!pendingTrans) {
-      console.log(actionPath);
       pendingTrans = dispatch(newTrans.initiate({ mode: transType, actionPath }));
     }
     const result = await pendingTrans;
@@ -74,10 +76,17 @@ const getJsonRpcBaseQuery = () => {
   };
 
   const getComet = async (method, dispatch) => {
-    if (!['comet', 'subscribe_cdboper'].includes(method)) {
+    if (![
+      'comet',
+      'subscribe_cdboper',
+      'subscribe_changes'
+    ].includes(method)) {
       return undefined;
     }
-    if (method === 'subscribe_cdboper' && !cometId) {
+    if ([
+      'subscribe_cdboper',
+      'subscribe_changes'
+    ].includes(method) && !cometId) {
       dispatch(jsonRpcApi.endpoints.comet.initiate());
     } else if (!cometId) {
       cometId = `main-1.${String(Math.random()).substring(2)}`;
@@ -85,10 +94,27 @@ const getJsonRpcBaseQuery = () => {
     return cometId;
   };
 
-  return async ({ method, transType, actionPath, params }, api) => {
+  return async ({ method, actionPath, params }, api) => {
     const comet = { comet_id: await getComet(method, api.dispatch) };
-    const trans = { th: await getTransaction(transType ||
-      getTransType(method),actionPath, api.dispatch, api) };
+
+    const transType = getTransType(method);
+    const th = await getTransaction(
+      transType, actionPath, api.dispatch, api,
+      [ 'create', 'delete', 'set_value' ].includes(method)
+    );
+
+    if (transType && !th) {
+      return {};
+    }
+
+    const trans = { th };
+
+    if ([ 'commit', 'delete_trans' ].includes(method)) {
+      await api.dispatch(jsonRpcApi.util.updateQueryData('getTrans', undefined,
+        draft => draft.filter(({ th }) => th !== trans.th)
+      ));
+    }
+
     const path = { path: params?.path && rewriteKeys(params.path) };
 
     const json = await baseQuery({
@@ -128,7 +154,7 @@ const getJsonRpcBaseQuery = () => {
       }
     }
 
-    if (method === 'delete_trans') {
+    if ([ 'commit', 'delete_trans' ].includes(method)) {
       await subscription.unsubscribe();
       subscription = undefined;
     }
@@ -142,16 +168,14 @@ const getJsonRpcBaseQuery = () => {
 export const jsonRpcApi = createApi({
   reducerPath: 'jsonRpcApi',
   baseQuery: getJsonRpcBaseQuery(),
-  tagTypes: ['trans', 'data'],
+  tagTypes: [ 'trans', 'data', 'changes', 'device-list' ],
   keepUnusedDataFor: 300,
+  invalidationBehavior: 'immediately',
   endpoints: (build) => ({
 
     getTrans: build.query({
-      query: () => ({
-        method: 'get_trans'
-      }),
-      providesTags: ['trans'],
-      keepUnusedDataFor: 0,
+      query: () => ({ method: 'get_trans' }),
+      providesTags: [ 'trans' ],
       transformResponse: (response) => response.result.trans.filter(
         trans => ['running', 'cs_trans'].includes(trans.db)).map(
           trans_running => ({
@@ -166,8 +190,8 @@ export const jsonRpcApi = createApi({
         method: 'get_trans_changes',
         params: { output: 'compact' }
       }),
-      keepUnusedDataFor: 0,
-      transformResponse: response => response.result.changes.length
+      providesTags: [ 'changes' ],
+      transformResponse: response => response?.result?.changes?.length || 0
     }),
 
     newTrans: build.mutation({
@@ -192,14 +216,12 @@ export const jsonRpcApi = createApi({
     }),
 
     revert: build.mutation({
-      query: () => ({
-        method: 'delete_trans'
-      }),
+      query: () => ({ method: 'delete_trans' }),
       async onQueryStarted(args, { dispatch, queryFulfilled }) {
         await queryFulfilled;
         await dispatch(writeTransactionToggled(false));
       },
-      invalidatesTags: ['trans', 'data']
+      invalidatesTags: [ 'trans', 'data' ]
     }),
 
     apply: build.mutation({
@@ -213,7 +235,7 @@ export const jsonRpcApi = createApi({
         dispatch(writeTransactionToggled(false));
         dispatch(commitInProgressToggled(false));
       },
-      invalidatesTags: ['trans']
+      invalidatesTags: [ 'trans', 'device-list', 'changes' ]
     }),
 
     getSystemSetting: build.query({
@@ -234,6 +256,9 @@ export const jsonRpcApi = createApi({
 
 const { endpoints: { newTrans, getTrans } } = jsonRpcApi;
 
-export const { endpoints: { getTransChanges, getSystemSetting, logout },
-               useRevertMutation, useApplyMutation } = jsonRpcApi;
+export const {
+  endpoints: { getTransChanges, getSystemSetting, logout },
+  useRevertMutation, useApplyMutation, useGetTransChangesQuery
+} = jsonRpcApi;
+
 export default jsonRpcApi.reducer;
