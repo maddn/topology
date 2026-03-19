@@ -89,6 +89,11 @@ submodule segment-routing {
       type uint32;
     }
 
+    leaf set-link-affinity {
+      type empty;
+      tailf:info "Set affinity values on link interfaces";
+    }
+
     list flex-algo {
       key id;
       description
@@ -109,6 +114,13 @@ submodule segment-routing {
         when "../../srv6";
         type string;
         tailf:info "Create an SRv6 locator for the flex-algo";
+      }
+      leaf-list devices {
+        type string;
+        tailf:non-strict-leafref {
+          path "/topologies/topology/devices/device/device-name";
+        }
+        tailf:info "Only create flex-algo on these devices else all IGP devices.";
       }
     }
 

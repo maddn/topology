@@ -22,8 +22,10 @@
       <srv6 when="{srv6}">
         <locator-prefix-start>{srv6/locator-prefix-start}</locator-prefix-start>
       </srv6>
+      <set-link-affinity when="{set-link-affinity}"/>
       <flex-algo foreach="{flex-algo}">
         <id>{id}</id>
+        <devices>{devices}</devices>
         <metric-type-delay when="{metric-type-delay}"/>
         <affinity-exclude>{affinity-exclude}</affinity-exclude>
         <srv6-locator>{srv6-locator}</srv6-locator>

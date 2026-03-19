@@ -32,7 +32,7 @@
                     </unicast>
                   </ipv4>
                 </address-family>
-                <affinity tags="merge" when="{count(/flex-algo) > 0}">
+                <affinity tags="merge" when="{/set-link-affinity and count(/flex-algo) > 0}">
                   <flex-algo>{affinity}</flex-algo>
                 </affinity>
               </interface>
@@ -149,16 +149,20 @@
                 <?end?>
 
                 <?set-root-node {/topologies/segment-routing[igp=$IGP_NAME]}?>
-                <flex-algo tags="merge" foreach="{/flex-algo}">
-                  <id>{id}</id>
-                  <metric-type>
-                    <delay when="{metric-type-delay}"/>
-                  </metric-type>
-                  <affinity>
-                    <exclude-any>{affinity-exclude}</exclude-any>
-                  </affinity>
-                  <advertise-definition/>
-                </flex-algo>
+                <?foreach {/flex-algo}?>
+                  <?if {not(devices) or count(devices[.=$DEVICE]) = 1}?>
+                    <flex-algo tags="merge">
+                      <id>{id}</id>
+                      <metric-type>
+                        <delay when="{metric-type-delay}"/>
+                      </metric-type>
+                      <affinity>
+                        <exclude-any>{affinity-exclude}</exclude-any>
+                      </affinity>
+                      <advertise-definition/>
+                    </flex-algo>
+                  <?end?>
+                <?end?>
               </tag>
             </isis>
           </router>
@@ -173,6 +177,26 @@
                     <advertise-local/>
                   </prefix-sid-map>
                 </segment-routing>
+
+                <?foreach {/flex-algo}?>
+                  <?if {not(devices) or count(devices[.=$DEVICE]) = 1}?>
+                    <flex-algo tags="merge">
+                      <id>{id}</id>
+                      <advertise-definition/>
+                      <metric-type>
+                        <delay when="{metric-type-delay}"/>
+                      </metric-type>
+                      <affinity>
+                        <attribute-list when="{affinity-exclude}">
+                          <id>exclude-any</id>
+                          <name>
+                            <name>{affinity-exclude}</name>
+                          </name>
+                        </attribute-list>
+                      </affinity>
+                    </flex-algo>
+                  <?end?>
+                <?end?>
               </isis>
             </isis-container>
           </router>
