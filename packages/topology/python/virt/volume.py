@@ -3,11 +3,9 @@ from abc import abstractmethod
 from io import BytesIO
 
 import base64
-import crypt
 import subprocess
 
-from passlib.hash import md5_crypt
-from fs.tarfs import TarFS
+from passlib.hash import md5_crypt, sha512_crypt
 
 from virt.topology_status import get_hypervisor_output_node
 from virt.virt_base import VirtBase
@@ -109,8 +107,8 @@ class Volume(VirtBase):
             'mac-address': self._resource_mgr.generate_mac_address(
                 device_id, 0xff, True),
             'username': mapping.remote_name,
-            'password': crypt.crypt(_ncs.decrypt(mapping.remote_password),
-                crypt.mksalt(crypt.METHOD_SHA512)),
+            'password': sha512_crypt.using(rounds=5000).hash(
+                _ncs.decrypt(mapping.remote_password)),
             'password-md5': md5_crypt.using(salt_size=4).hash(
                 _ncs.decrypt(mapping.remote_password)),
             **self._resource_mgr.mgmt_network_variables}
