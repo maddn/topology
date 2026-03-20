@@ -350,6 +350,12 @@ class InterfacePlumber:
             )
 
         pid = result['stdout'].strip()
+        if pid == '0':
+            raise CommandExecutionError(
+                f'Failed to get PID for container {container_name}\n'
+                f'PID = 0, is container stopped?'
+            )
+
         return pid
 
     def _ensure_netns_link(self, pid):

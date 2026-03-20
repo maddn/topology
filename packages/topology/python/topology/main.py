@@ -26,13 +26,13 @@ class GetDeviceConfiguration(Action):
                     and (input.format == 'cli' or not input.format)):
                 output.format = 'cli'
                 format_flags = maapi.CONFIG_C
-            elif (device.device_type.ne_type == 'cli' and not input.format or
+            elif ((device.device_type.ne_type == 'cli' and not input.format) or
                   input.format == 'cli'):
                 output.format = 'cli'
                 format_flags = maapi.CONFIG_C_IOS
-            elif (device.device_type.ne_type == 'netconf' and
+            elif ((device.device_type.ne_type == 'netconf' and
                   device.device_type.netconf.ned_id.startswith('juniper-junos')
-                  and not input.format or
+                  and not input.format) or
                   input.format == 'curly-braces'):
                 output.format = 'curly-braces'
                 format_flags = maapi.CONFIG_J

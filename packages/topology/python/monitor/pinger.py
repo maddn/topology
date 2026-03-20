@@ -52,7 +52,7 @@ class Pinger(spawn_context.Process):
         except Exception as err:
             with open(f'/tmp/python-{self.name}-pinger-error.log',
                     'w', encoding='utf-8') as log_file:
-                log_file.write(err)
+                log_file.write(f'{err}\n')
                 log_file.write(traceback.format_exc())
             raise
         finally:
