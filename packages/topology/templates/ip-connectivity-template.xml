@@ -157,7 +157,7 @@
 
   <devices xmlns="http://tail-f.com/ns/ncs">
     <?foreach {../devices/device}?>
-      <device tags="nocreate" when="{not(control-plan-id)}">
+      <device tags="nocreate" when="{not(control-plane-id)}">
         <name>{device-name}</name>
         <?set DEVICE_ID={id}?>
         <config>
