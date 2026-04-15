@@ -31,8 +31,14 @@ class Templates():
             else:
                 self._remove_nodes_with_empty_attributes(child)
 
+    def _remove_empty_attributes(self, element):
+        for (attrib, value) in element.items():
+            if value == '':
+                element.attrib.pop(attrib)
+
     def _clean_xml(self, xml_str):
         xml = fromstring(xml_str)
+        self._remove_empty_attributes(xml)
         self._remove_nodes_with_empty_attributes(xml)
         return xml_to_string(xml)
 

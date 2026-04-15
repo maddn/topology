@@ -67,14 +67,20 @@ class ConnectionLibvirt(Connection):
         if action in ('undefine', 'destroy') and when == 'pre-domain':
             return False
 
-        if action in ('define', 'create') and when == 'post-domain':
+        if action == 'define' and when == 'post-domain':
             return False
 
         if action == 'create':
             geneve = self._connection_mgr.get_interface_geneve_info(
                 device_id, iface_id)
+            plumber = self._get_plumber(device_id)
+
             if geneve:
-                plumber = self._get_plumber(device_id)
+                if when == 'post-domain':
+                    return plumber.set_allmulticast_on_iface(
+                        self._connection_mgr.get_interface_host_info(
+                            device_id, iface_id).interface_name)
+
                 plumber.create_geneve_on_host(
                     geneve.interface_name,
                     geneve.vni,

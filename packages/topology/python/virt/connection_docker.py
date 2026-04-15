@@ -466,6 +466,19 @@ class InterfacePlumber:
                 [f'ip link delete {iface_name}'],
                 f'--> Deleting geneve interface {iface_name}')
 
+    def set_allmulticast_on_iface(self, iface_name):
+        if not self._interface_exists_on_host(iface_name):
+            self.log_warning(f'Error setting allmulticast on {iface_name}. '
+                             f'Interface does not exist.')
+            return False
+
+        commands = [ f'ip link set dev {iface_name} allmulticast on' ]
+
+        self.execute(commands,
+                f'Setting allmulticast on {iface_name} (GENEVE macvtap)')
+
+        return True
+
     def create_container_to_bridge_link(
             self, device_name, iface_name, bridge_name):
 

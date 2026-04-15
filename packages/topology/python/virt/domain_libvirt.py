@@ -69,6 +69,7 @@ class DomainXmlBuilder():
             'udp-dest-port': udp_dest_port,
             'source-dev': source_dev if source_dev else '',
             'dev': dev_name if not udp_networking else '',
+            'trust': 'yes' if source_dev and model_type == 'virtio' else '',
             'model-type': model_type})
 
     def create_base(self, vcpus, memory, template):
