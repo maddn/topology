@@ -59,6 +59,26 @@ class Topology():
                         action, output,
                         other_device_id, other_iface_id, when, True)
 
+    def _device_action(self, action, output, device):
+        dev_def = self._dev_defs[device.definition]
+
+        self._virt_builder.domain_networks(action, output, device)
+        self.process_device_connections(action, output, device, 'pre-domain')
+
+        if action == 'define':
+            self._virt_builder.volume(action, output, device)
+
+        self._virt_builder.domain(action, output, device)
+
+        if action != 'define':
+            self._virt_builder.volume(action, output, device)
+
+        self.process_device_connections(action, output, device, 'post-domain')
+
+        update_device_status_after_action(device,
+                action, dev_def.ned_id is None)
+
+
     def action(self, action, device_name=None):
         output = self._output.libvirt_action.create()
         output.action = action
@@ -68,26 +88,19 @@ class Topology():
                     action, output, self._topology.devices.device)
 
         for device in self._topology.devices.device:
+            if self._virt_builder.domain_is_container(device):
+                continue
             if device_name is not None and device.device_name != device_name:
                 continue
+            self._device_action(action, output, device)
 
-            dev_def = self._dev_defs[device.definition]
+        for device in self._topology.devices.device:
+            if not self._virt_builder.domain_is_container(device):
+                continue
+            if device_name is not None and device.device_name != device_name:
+                continue
+            self._device_action(action, output, device)
 
-            self._virt_builder.domain_networks(action, output, device)
-            self.process_device_connections(action, output, device, 'pre-domain')
-
-            if action == 'define':
-                self._virt_builder.volume(action, output, device)
-
-            self._virt_builder.domain(action, output, device)
-
-            if action != 'define':
-                self._virt_builder.volume(action, output, device)
-
-            self.process_device_connections(action, output, device, 'post-domain')
-
-            update_device_status_after_action(device,
-                    action, dev_def.ned_id is None)
 
     def wait_for_shutdown(self, device_name=None):
         self._log.info('Waiting for shutdown to complete...')

@@ -97,6 +97,9 @@ class VirtBuilder():
     def domain_has_dataplane(self, device):
         return self.get_domain_builder(device)._has_data_plane(device)
 
+    def domain_is_container(self, device):
+        return self.get_domain_builder(device).IS_CONTAINERIZED
+
     def _get_device_type(self, device):
         return self._factory.get_device_type(device_name=device.device_name)
 
