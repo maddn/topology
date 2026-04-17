@@ -3,6 +3,7 @@ username ${username} privilege 15 secret 5 ${password-md5}
 ip domain-name nso-topology
 crypto key generate rsa modulus 2048
 interface GigabitEthernet0/0
+ no ip address dhcp
  ip address ${ip-address} 255.255.255.0
  no shutdown
 !
@@ -16,4 +17,6 @@ line vty 0 4
  width 0
 !
 ip ssh version 2
+no boot network
+no boot host
 end
