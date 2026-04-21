@@ -1,4 +1,4 @@
-<domain type='kvm'>
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
   <name>${device-name}</name>
   <memory unit='MiB'>${memory}</memory>
   <currentMemory unit='MiB'>${memory}</currentMemory>
@@ -17,7 +17,7 @@
     </system>
   </sysinfo>
   <os>
-    <type arch='x86_64' machine='pc-i440fx-1.4'>hvm</type>
+    <type arch='x86_64' machine='pc-i440fx-noble'>hvm</type>
     <boot dev='hd'/>
     <smbios mode='sysinfo'/>
   </os>
@@ -26,15 +26,8 @@
     <apic/>
     <pae/>
   </features>
-  <cpu mode='custom' match='exact' check='full'>
-    <model fallback='forbid'>qemu64</model>
-    <topology sockets='1' dies='1' cores='1' threads='1'/>
-    <feature policy='disable' name='svm'/>
-    <feature policy='require' name='popcnt'/>
-    <feature policy='require' name='hypervisor'/>
-    <feature policy='require' name='lahf_lm'/>
-    <feature policy='disable' name='abm'/>
-    <feature policy='disable' name='sse4a'/>
+  <cpu mode='host-model'>
+    <topology sockets='1' cores='${vcpus}' threads='1'/>
   </cpu>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>
@@ -56,13 +49,9 @@
       <target type='serial' port='0'/>
       <alias name='serial0'/>
     </console>
-    <memballoon model='virtio'>
-      <alias name='balloon0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
-    </memballoon>
   </devices>
-  <seclabel type='dynamic' model='dac' relabel='yes'>
-    <label>+0:+0</label>
-    <imagelabel>+0:+0</imagelabel>
-  </seclabel>
+  <qemu:commandline>
+     <qemu:arg value='-machine'/>
+     <qemu:arg value='smbios-entry-point-type=32'/>
+  </qemu:commandline>
 </domain>
