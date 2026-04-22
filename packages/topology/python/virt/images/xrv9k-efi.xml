@@ -3,27 +3,18 @@
   <memory unit='MiB'>${memory}</memory>
   <currentMemory unit='MiB'>${memory}</currentMemory>
   <vcpu placement='static'>${vcpus}</vcpu>
-  <cpu mode='custom' match='exact' check='full'>
-    <model fallback='forbid'>Westmere</model>
-    <feature policy='require' name='vmx'/>
-    <feature policy='require' name='vme'/>
-    <feature policy='require' name='pclmuldq'/>
-    <feature policy='require' name='x2apic'/>
-    <feature policy='require' name='hypervisor'/>
-    <feature policy='require' name='arat'/>
+  <cpu mode='host-passthrough' check='none' migratable='on'>
+    <topology sockets='1' dies='1' cores='${vcpus}' threads='1'/>
   </cpu>
-  <os firmware='efi'>
+  <os>
     <type arch='x86_64' machine='q35'>hvm</type>
     <boot dev='hd'/>
-    <loader secure='no'/>
-    <firmware>
-      <feature enabled='no' name='secure-boot'/>
-    </firmware>
+    <loader readonly='yes' type='pflash' stateless='no'>/usr/share/edk2/ovmf/iosxrv9000/efi_code.fd</loader>
+    <nvram template='/usr/share/edk2/ovmf/iosxrv9000/efi_vars.fd'>/var/lib/libvirt/qemu/nvram/${device-name}_VARS.fd</nvram>
   </os>
   <features>
     <acpi/>
     <apic/>
-    <pae/>
   </features>
   <clock offset='utc'>
     <timer name='rtc' tickpolicy='catchup'/>

@@ -1,6 +1,7 @@
 username ${username}
  group root-lr
  group cisco-support
+ group sysadmin
  secret 10 ${password}
 !
 interface MgmtEth0/RP0/CPU0/0
