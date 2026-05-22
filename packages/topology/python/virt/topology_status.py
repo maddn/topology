@@ -10,7 +10,7 @@ _ncs = __import__('_ncs')
 ACTION_STATUS_MAP = {
     'define': 'defined',
     'create': 'started',
-    'shutdown': 'defined',
+    'shutdown': 'stopping',
     'destroy': 'defined',
     'undefine': 'undefined'}
 

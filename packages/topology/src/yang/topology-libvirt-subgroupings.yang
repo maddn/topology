@@ -11,6 +11,7 @@ submodule topology-libvirt-subgroupings {
       enum undefined;
       enum defined;
       enum started;
+      enum stopping;
       enum ready;
       enum sync-error;
       enum unmanaged;
