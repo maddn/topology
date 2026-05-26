@@ -7,6 +7,16 @@ from monitor.console import Console
 _ncs = __import__('_ncs')
 
 
+def start_console_logger(device_path):
+    with maapi.single_read_trans('admin', 'python') as trans:
+        device = maagic.get_node(trans, device_path)
+        device.console.start()
+
+def stop_console_logger(device_path):
+    with maapi.single_read_trans('admin', 'python') as trans:
+        device = maagic.get_node(trans, device_path)
+        device.console.stop()
+
 def logger_name(topology_name, device_name):
     return f'{topology_name}-{device_name}'
 
@@ -123,6 +133,11 @@ class ConsoleActivityMonitor(Action):
         self.log.info('action name: ', name)
         topology_name = str(kp[4][0])
         device_name = trans.get_elem(f'{kp[1:]}/device-name')
+        definition = trans.get_elem(f'{kp[1:]}/definition')
+        monitor = trans.get_elem(f'/topology:topologies/libvirt'
+                f'/device-definition{{{definition}}}/console-monitor')
+        if monitor == 'false':
+            return
         if name == 'start':
             self.start_console(topology_name, device_name)
         elif name == 'stop':

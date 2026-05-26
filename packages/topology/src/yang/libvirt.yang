@@ -400,6 +400,11 @@ submodule libvirt {
           tailf:info
             "List of capabilities to add to southbound-locked devices.";
         }
+        leaf console-monitor {
+          type boolean;
+          tailf:info "Enable console monitoring (will block telnet port).";
+          default false;
+        }
         leaf console-timeout {
           type uint32;
           tailf:info "Maximum seconds with no console activity.";
