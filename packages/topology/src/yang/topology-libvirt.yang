@@ -5,7 +5,6 @@ submodule topology-libvirt {
   import tailf-common { prefix tailf; }
 
   include topology-base;
-  include topology-ui;
 
   // Additional groupings are in a seperate submodule due to an NSO bug.
   // If the groupings are in the same submodule they are missing from the
@@ -20,6 +19,10 @@ submodule topology-libvirt {
       "This grouping refines and augments the topology-base-grouping so the
        topology model can be used with libvirt.";
     uses topology-base-grouping {
+      refine "topology/devices/device/container" {
+        tailf:default-ref "../hypervisor";
+      }
+
       augment "topology/links/link/a-end-interface" {
         uses libvirt-interface-grouping;
       }
@@ -266,8 +269,6 @@ submodule topology-libvirt {
           }
           description "Updated by the check-topology-status action.";
         }
-
-        uses topology-layout-grouping;
       }
 
       augment "topology/links/link" {
@@ -283,7 +284,6 @@ submodule topology-libvirt {
       }
       augment "topology/devices/device" {
         uses libvirt-device-grouping;
-        uses topology-icon-grouping;
       }
     }
   }

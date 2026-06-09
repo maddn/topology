@@ -13,7 +13,7 @@ function DeviceTerminal({ device, active }) {
   const [ consoleLoggerStopped, setConsoleLoggerStopped ] = useState('');
   const output = `Stopping console logger... ${consoleLoggerStopped}\r\n`;
 
-  const { keypath, hypervisor, id } = useDevice(device) || {};
+  const { keypath, container: hypervisor, id } = useDevice(device) || {};
   const { data: ip } = useGetValueQuery({ keypath:
     `/topology:topologies/libvirt/hypervisor{${hypervisor}}/host` });
 
@@ -38,6 +38,7 @@ function DeviceTerminal({ device, active }) {
         keypath={keypath}
         active={active}
         history={output}
+        onClose={() => action({ path: `${keypath}/console/start` })}
       /> : active ?
       <div className="terminal">
         <pre className="terminal__text">{output}</pre>

@@ -16,11 +16,10 @@ import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
 import { stopThenGoToUrl } from 'api/comet';
 import { setValue } from 'api/data';
 
-import { topologyToggled,
-         getOpenTopology, getOpenTopologyName } from '../menuSlice';
+import { topologyToggled, getOpenTopology } from '../menuSlice';
 
 export const label = 'Topology';
-export const path = '/topology:topologies/topology';
+export const path = '/topologies/topology';
 
 const selection = {
   'provisioning-status': 'Provisioning Status'
@@ -39,10 +38,6 @@ export function useFetchStatus() {
     ...IpConnectivity.useFetchStatus(),
     ...BaseConfig.useFetchStatus()
   });
-}
-
-export function useOpenTopologyName() {
-  return useSelector((state) => getOpenTopologyName(state));
 }
 
 export const libvirtAction = (action, device) => async (dispatch, getState) => {

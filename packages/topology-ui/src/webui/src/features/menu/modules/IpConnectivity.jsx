@@ -60,7 +60,7 @@ export function Component({ topology }) {
   const keypath = isManaged ? data.keypath : serviceKeypath;
 
   const selector = useMemo(() => createItemsSelector(
-    isManaged ? 'topology' : 'parentName', topology), [ isManaged, topology ]);
+    isManaged ? 'topology' : 'ancestorName', topology), [ isManaged, topology ]);
 
   return (data ?
     <ServicePane

@@ -3,8 +3,8 @@ import { createContext, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 
 import { getIconSize, getDimensions, getZoomedContainer } from './topologySlice';
-import { useOpenTopologyName } from 'features/menu/modules/Topology';
-import { useQueryQuery, createItemsSelector } from 'api/query';
+import { useQueryQuery, createItemsSelector, selectItem } from 'api/query';
+import { getOpenTopologyName } from 'features/menu/menuSlice';
 
 
 export const LayoutContext = createContext();
@@ -12,14 +12,21 @@ export const LayoutContext = createContext();
 const safeRound = (n) =>
   Math.min(1, Math.max(0, Number.parseFloat(n).toFixed(4))).toString();
 
+export const useIconSize = () => {
+  const iconSize = useSelector((state) => getIconSize(state));
+  const dimensions = useSelector((state) => getDimensions(state));
+  const { width, height } = dimensions || {};
+  return width > height ? iconSize*height/100 : iconSize*width/100;
+};
+
 export function useLayoutsQuery() {
-  const topology = useOpenTopologyName();
+  const topology = useSelector(getOpenTopologyName);
   const selector = useMemo(() =>
     createItemsSelector('parentName', topology), [ topology ]);
   return useQueryQuery({
-    xpathExpr: '/topology:topologies/topology/layout/container',
+    xpathExpr: '/topologies/topology/layout/container',
     selection: [
-      'hypervisor',
+      'name',
       '../../name',
       'width',
       'title',
@@ -28,20 +35,44 @@ export function useLayoutsQuery() {
 }
 
 export function useLayoutOffsetQuery() {
-  const topology = useOpenTopologyName();
-  const selector = useMemo(() =>
-    createItemsSelector('parentName', topology), [ topology ]);
+  const topology = useSelector(getOpenTopologyName);
   return useQueryQuery({
-    xpathExpr: '/topology:topologies/topology/layout',
+    xpathExpr: '/topologies/topology/layout',
     selection: [
       '../name',
       'background-offset' ]
+  }, { selectFromResult: selectItem('parentName', topology) });
+}
+
+export function useZoomedLayoutsQuery() {
+  const topology = useSelector(getOpenTopologyName);
+  const selector = useMemo(() =>
+    createItemsSelector('ancestorName', topology), [ topology ]);
+  return useQueryQuery({
+    xpathExpr: '/topologies/topology/layout/container/zoomed/container',
+    selection: [
+      '../../name',
+      '../../../../name',
+      'title',
+      'width' ]
   }, { selectFromResult: selector });
 }
 
+export function getZoomedLayout(zoomedLayouts, name) {
+  return (zoomedLayouts || []).filter(
+    ({ parentName }) => parentName == name
+  ).map(
+    (zoomedLayout, index) => ({
+      name: `${zoomedLayout.parentName}-${index}`,
+      index,
+      ...zoomedLayout
+    })
+  );
+}
+
 const calculateLayout = (
-  basicLayout, dimensions,
-  iconHeightPc, iconWidthPc, zoomedContainerName, backgroundOffsetPc
+  basicLayout, dimensions, iconHeightPc, iconWidthPc,
+  zoomedContainerName, backgroundOffsetPc, zoomedLayouts
 ) => {
   console.debug('Reselect layout');
   if (!basicLayout || !dimensions) {
@@ -51,7 +82,10 @@ const calculateLayout = (
   let x = -iconWidthPc / 2;
   return basicLayout.reduce((accumulator,
     { name, title, connectionColour, width }, index) => {
+    const offset = backgroundOffsetPc / ((
+      index === 0 || index === (basicLayout.length - 1)) ? 4 : 2);
     const zoomed = zoomedContainerName === name;
+    const zoomedLayout = getZoomedLayout(zoomedLayouts, name);
     if (zoomed) {
       afterZoomed = true;
     }
@@ -63,7 +97,7 @@ const calculateLayout = (
       bottom: 100 - iconHeightPc,
       width: zoomed ? 100 - iconWidthPc : 0,
       height: 100 - iconHeightPc * 1.5,
-      backgroundWidth: zoomed ? 100 : 0
+      backgroundWidth: zoomed && zoomedLayout.length == 0 ? 100 : 0
     } : {
       left: x += iconWidthPc,
       right: x += width - iconWidthPc,
@@ -71,13 +105,7 @@ const calculateLayout = (
       bottom: 100 - iconHeightPc,
       width: width - iconWidthPc,
       height: 100 - iconHeightPc * 1.5,
-      backgroundWidth: (index === 0)
-        ? width - backgroundOffsetPc / 4
-        : (index === (basicLayout.length - 1))
-          ? width - backgroundOffsetPc / 4
-          : (index % 2)
-            ? width + backgroundOffsetPc / 2
-            : width - backgroundOffsetPc / 2
+      backgroundWidth: (index % 2) ? width + offset : width - offset
     };
     accumulator[name] = {
       name, index, title, connectionColour, pc,
@@ -88,6 +116,15 @@ const calculateLayout = (
         bottom: Math.round(pc.bottom * dimensions.height / 100)
       }
     };
+    zoomedLayout?.forEach(( container, index ) => {
+      accumulator[container.name] = {
+        index, parentName: name,
+        title: container.title,
+        pc: {
+          backgroundWidth: zoomed ?container.width : 0
+        }
+      };
+    });
     return accumulator;
   }, {});
 };
@@ -99,8 +136,10 @@ export const LayoutContextProvider = React.memo(function Context({ children }) {
   const iconSize = useSelector((state) => getIconSize(state));
 
   const { data } = useLayoutsQuery();
-  const { data: offset } = useLayoutOffsetQuery();
-  const { backgroundOffset } = offset?.length > 0 ? offset[0] : 'none';
+  const zoomedLayouts = useZoomedLayoutsQuery().data;
+  const layout = useLayoutOffsetQuery().data;
+  const backgroundOffset =
+    layout?.backgroundOffset || 'none';
 
   const context = useMemo(() => {
     const { width, height } = dimensions || {};
@@ -112,8 +151,9 @@ export const LayoutContextProvider = React.memo(function Context({ children }) {
       (backgroundOffset === 'odd' ? iconWidthPc : 0) -
       (backgroundOffset === 'even' ? iconWidthPc : 0);
 
-    const containers = calculateLayout(data, dimensions,
-      iconHeightPc, iconWidthPc, zoomedContainerName, backgroundOffsetPc);
+    const containers = calculateLayout(
+      data, dimensions, iconHeightPc, iconWidthPc,
+      zoomedContainerName, backgroundOffsetPc, zoomedLayouts);
 
     const pxToScreenPc = ({ x, y }) => ({
       pcX: x / width * 100,
@@ -141,7 +181,8 @@ export const LayoutContextProvider = React.memo(function Context({ children }) {
         return pxToScreenPc(coord);
       }
     };
-  }, [ data, iconSize, dimensions, zoomedContainerName ]);
+  }, [ data, iconSize, dimensions, zoomedContainerName,
+       backgroundOffset, zoomedLayouts ]);
 
   return (
     <LayoutContext.Provider value={context}>

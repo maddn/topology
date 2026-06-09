@@ -15,9 +15,10 @@ import { stopThenGoToUrl } from 'api/comet';
 import { useActionMutation, useGetValueQuery } from 'api/data';
 
 
-function ServicePane(
-  { keypath, serviceKeypath, children, topology, title, label, ...rest })
-{
+function ServicePane({
+  keypath, serviceKeypath = keypath, serviceReference = serviceKeypath,
+  children, title, label, ...rest
+}) {
   console.debug('ServicePane Render');
 
   const queryPath = serviceKeypath.endsWith('/..')
@@ -30,15 +31,15 @@ function ServicePane(
     tag: 'device-list'
   });
 
-  const isOpen = useSelector((state) => getOpenService(state) === serviceKeypath);
+  const isOpen = useSelector((state) =>
+    getOpenService(state) === serviceReference);
   const fade = useSelector((state) => !!getOpenService(state));
 
   const highlightedIcons = useMemo(() => isOpen ? data : [], [ isOpen, data ]);
 
   const dispatch = useDispatch();
-  const toggled = useCallback((keypath) => dispatch(serviceToggled({
-    keypath: serviceKeypath, highlightedIcons: [] })
-  ));
+  const toggled = useCallback(() =>
+    dispatch(serviceToggled(serviceReference)), [ serviceReference ]);
 
   useEffect(() => isOpen && dispatch(
     highlightedIconsUpdated({ highlightedIcons })
@@ -52,7 +53,7 @@ function ServicePane(
       path: `${serviceKeypath}/touch`
     });
     dispatch(stopThenGoToUrl(COMMIT_MANAGER_URL));
-  });
+  }, [ action, dispatch, serviceKeypath ]);
 
   return (
     <NodePane

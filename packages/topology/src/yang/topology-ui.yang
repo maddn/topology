@@ -27,6 +27,7 @@ submodule topology-ui {
       enum "web-server";
     }
   }
+
   typedef icon-coordinate {
     type decimal64 {
       fraction-digits 18;
@@ -34,6 +35,7 @@ submodule topology-ui {
     }
     description "Normalized relative coordinate";
   }
+
   typedef config-format {
     type enumeration {
       enum cli;
@@ -44,86 +46,7 @@ submodule topology-ui {
     }
   }
 
-  grouping icon-coordinates {
-    container coord {
-      leaf x {
-        type icon-coordinate;
-      }
-
-      leaf y {
-        type icon-coordinate;
-      }
-    }
-  }
-
-  grouping topology-icon-grouping {
-    description
-      "This grouping refines and augments the topology-base-grouping so the
-       topology model can be used with libvirt.";
-
-    container icon {
-      uses icon-coordinates;
-
-
-      leaf type {
-        type icon-type;
-      }
-
-      container zoomed {
-        uses icon-coordinates;
-      }
-
-      leaf underlay {
-        type boolean;
-      }
-    }
-  }
-
-  grouping topology-layout-grouping {
-    container layout {
-      leaf background-offset {
-        type enumeration {
-          enum odd;
-          enum even;
-          enum none;
-        }
-      }
-
-      list container {
-        key hypervisor;
-        ordered-by user;
-        description
-          "A list of child containers that will be rendered in as the
-           background when the container is zoomed";
-
-        leaf hypervisor {
-          type leafref {
-            path "/topologies/libvirt/hypervisor/name";
-          }
-        }
-
-        leaf title {
-          type string;
-        }
-
-        leaf width {
-          type uint8 {
-            range "0..100";
-          }
-          must "sum(../../container/width) = 100" {
-            error-message "The container widths must add up to 100%";
-          }
-          description "The width of the container in percent";
-        }
-
-        leaf connection-colour {
-          type string;
-        }
-      }
-    }
-  }
-
-  augment "/ncs:devices/ncs:device" {
+  grouping get-configuration-action-grouping {
     tailf:action get-configuration {
       tailf:info "Get full device configuration";
       tailf:actionpoint get-device-configuration;
@@ -148,6 +71,121 @@ submodule topology-ui {
         }
       }
     }
+  }
+
+  typedef background-offset {
+    type enumeration {
+      enum odd;
+      enum even;
+      enum none;
+    }
+  }
+
+  grouping icon-coordinates {
+    container coord {
+      leaf x {
+        type icon-coordinate;
+      }
+
+      leaf y {
+        type icon-coordinate;
+      }
+    }
+  }
+
+  grouping topology-icon-grouping {
+    container icon {
+      leaf type {
+        type icon-type;
+      }
+
+      uses icon-coordinates;
+
+      list zoomed {
+        key container;
+
+        leaf container {
+          type leafref {
+            path "../../../../../layout/container/name";
+          }
+        }
+
+        uses icon-coordinates;
+      }
+
+      leaf underlay {
+        type boolean;
+      }
+    }
+  }
+
+  grouping topology-device-ui-grouping {
+    leaf container {
+      type leafref {
+        path "../../../layout/container/name";
+      }
+    }
+
+    uses topology-icon-grouping;
+  }
+
+  grouping topology-layout-grouping {
+    container layout {
+      leaf background-offset {
+        type background-offset;
+      }
+
+      list container {
+        key name;
+        ordered-by user;
+
+        leaf name {
+          type string;
+        }
+
+        leaf title {
+          type string;
+        }
+
+        leaf width {
+          type uint8 {
+            range "0..100";
+          }
+          must "sum(../../container/width) = 100" {
+            error-message "The container widths must add up to 100%";
+          }
+        }
+
+        leaf connection-colour {
+          type string;
+        }
+
+        container zoomed {
+          list container {
+            key title;
+            ordered-by user;
+
+            leaf title {
+              type string;
+            }
+
+            leaf width {
+              type uint8 {
+                range "0..100";
+              }
+              must "sum(../../container/width) = 100" {
+                error-message
+                  "The zoomed container widths must add up to 100%";
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  augment "/ncs:devices/ncs:device" {
+    uses get-configuration-action-grouping;
   }
 
 }

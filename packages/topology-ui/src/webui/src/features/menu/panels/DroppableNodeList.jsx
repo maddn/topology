@@ -1,28 +1,39 @@
 import React from 'react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useDispatch } from 'react-redux';
 import { useDrop } from 'react-dnd';
 import classNames from 'classnames';
 
 import { DEVICE } from 'constants/ItemTypes';
+import { CONFIGURATION_EDITOR_EDIT_URL } from 'constants/Layout';
 
 import NodePane from './NodePane';
 import NodeListWrapper from './NodeListWrapper';
 
 import { pathKeyRegex, swapLabels, useQueryQuery } from 'api/query';
 import { useCreateMutation } from 'api/data';
+import { stopThenGoToUrl } from 'api/comet';
 
+export const DROP_BEHAVIOUR_CREATE_ONLY = 0;
+export const DROP_BEHAVIOUR_OPEN_NEW_ITEM = 1;
+export const DROP_BEHAVIOUR_GOTO = 2;
 
 function DroppableNodeList({
   label, keypath, noTitle,
-  baseSelect, labelSelect, selector, isLeafList,
+  baseSelect, labelSelect, isLeafList, selector,
   allowDrop, accept,
+  dropBehaviour = DROP_BEHAVIOUR_CREATE_ONLY,
+  calculateName, newItemDefaults,
+  newItemDragType, defaultsPath, newItemDragIcon,
   disableCreate, disableGoTo,
   ...rest
 }) {
   console.debug('DrobbableNodeList Render');
+  const dispatch = useDispatch();
   const [ openNode, setOpenNode ] = useState(null);
   const [ create ] = useCreateMutation();
-  const createNode = useCallback((name) => create({ name, keypath, ...rest }));
+  const createNode = useCallback(name => create({ name, keypath, ...rest }));
+  const ref = useRef({});
 
   const { data } = useQueryQuery({
     xpathExpr: keypath.replace(pathKeyRegex, ''),
@@ -32,8 +43,21 @@ function DroppableNodeList({
 
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: DEVICE,
-    drop: ({ type, name }) => {
-      createNode(name);
+    drop: async ({ type, name }) => {
+      if (dropBehaviour !== DROP_BEHAVIOUR_OPEN_NEW_ITEM ) {
+        const key = typeof calculateName === 'function'
+          ? calculateName(name, data) : name;
+        await createNode(key);
+        if (dropBehaviour === DROP_BEHAVIOUR_GOTO) {
+          dispatch(stopThenGoToUrl(
+            `${CONFIGURATION_EDITOR_EDIT_URL}${keypath}{${key}}`));
+        }
+      } else {
+        ref.current.openNewItem(
+          typeof newItemDefaults === 'function'
+            ? newItemDefaults(name)
+            : newItemDefaults);
+      }
     },
     canDrop: ({ type }, monitor) => {
       return allowDrop && (!accept || type === accept);
@@ -56,6 +80,10 @@ function DroppableNodeList({
         label={label}
         level={2}
         disableCreate={disableCreate}
+        newItemDragType={newItemDragType}
+        defaultsPath={defaultsPath}
+        newItemDragIcon={newItemDragIcon}
+        ref={ref}
      >
         {data?.map(({ name, keypath, ...item }) =>
           <NodePane

@@ -11,21 +11,22 @@ import { getDraggedItem, getVisibleUnderlays, getZoomedContainer,
          underlayToggled, containerZoomToggled } from './topologySlice';
 import { LayoutContext } from './LayoutContext';
 
-
-function Container({ name }) {
+function Container(props) {
   console.debug('Container Render');
 
   const dispatch = useDispatch();
   const layout = useContext(LayoutContext);
 
+  const container = layout.containers[props.name];
+
+  const { parentName, index, title,
+          pc : { backgroundWidth: width } } = container;
+  const name = parentName || props.name;
+
   const zoomedContainer = useSelector((state) => getZoomedContainer(state));
   const draggedItem = useSelector((state) => getDraggedItem(state));
   const underlayVisible = useSelector(
     (state) => getVisibleUnderlays(state).includes(name));
-
-  const container = layout.containers[name];
-
-  const { index, title, pc : { backgroundWidth: width } } = container;
 
   return (
     <div
@@ -70,7 +71,9 @@ function Container({ name }) {
       <div className={classNames(
         'component__layer', 'container__overlay', {
         'container__overlay--inactive':
-          draggedItem?.icon && draggedItem.container !== name
+          draggedItem?.container && draggedItem?.container !== name,
+        'container__overlay--dragging':
+          draggedItem && draggedItem?.icon === 'new-item'
       })}/>
     </div>
   );

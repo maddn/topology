@@ -5,11 +5,17 @@ import { useSelector } from 'react-redux';
 import Sidebar from 'features/common/Sidebar';
 import Config from './Config';
 import { usePlatformsQuery, useDevicesQuery } from 'features/topology/Icon';
-import { getExpandedIcons, getConfigViewerVisible } from 'features/topology/topologySlice';
+import { getExpandedIcons,
+         getConfigViewerVisible } from 'features/topology/topologySlice';
 import { getOpenTopology, getOpenService } from 'features/menu/menuSlice';
 
+const DefaultConfigHeaderActions = () => null;
+const getNsoDeviceEditorKeypath = (device) =>
+  `/ncs:devices/device{${device.name}}`;
 
-function ConfigViewer() {
+function ConfigViewer({
+    ConfigHeaderActions = DefaultConfigHeaderActions,
+    getDeviceEditorKeypath = getNsoDeviceEditorKeypath }) {
   console.debug('Config Viewer Render');
   const expandedIcons = useSelector((state) => getExpandedIcons(state));
   const configViewerVisible = useSelector((state) => getConfigViewerVisible(state));
@@ -25,14 +31,21 @@ function ConfigViewer() {
       </div>
       <div className="accordion__group">
         {devices && platforms && expandedIcons && expandedIcons.map(
-          device => <Config
-            key={device}
-            device={device}
-            keypath={devices.find(({ name }) => name === device)?.keypath}
-            managed={platforms.find(({ parentName }) => parentName === device)}
-            openService={openService}
-            openTopology={openTopology}/>
-        )}
+          icon => {
+            const device = devices?.find(({ name }) => name === icon);
+            if (!device) {
+              return null;
+            }
+            return <Config
+              key={icon}
+              device={icon}
+              editorKeypath={getDeviceEditorKeypath(device) ||
+                getNsoDeviceEditorKeypath(device)}
+              managed={platforms.find(({ parentName }) => parentName === icon)}
+              openService={openService}
+              openTopology={openTopology}
+              ConfigHeaderActions={ConfigHeaderActions}/>;
+          })}
       </div>
     </Sidebar>
   );

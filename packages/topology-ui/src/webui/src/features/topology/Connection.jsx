@@ -14,31 +14,32 @@ import RoundButton from './RoundButton';
 import ConnectionInfo from './ConnectionInfo';
 
 import { getDraggedItem, getSelectedConnection, getEditMode,
-         getLinkMetricsVisible, connectionSelected } from './topologySlice';
+         getConnectionInfoVisible, connectionSelected } from './topologySlice';
 
 import { useIconPosition, useIsExpanded } from './Icon';
-import { useOpenTopologyName } from 'features/menu/modules/Topology';
 
 import { LayoutContext } from './LayoutContext';
-import { useDevice } from './Icon';
 
 import { stopThenGoToUrl } from 'api/comet';
 import { useQueryQuery, createItemsSelector } from 'api/query';
 import { useDeletePathMutation } from 'api/data';
+import { getOpenTopologyName } from 'features/menu/menuSlice';
+import { useQuerySelection } from './QuerySelectionContext';
 
 
 // === Queries ================================================================
 
 function __useConnectionsQuery(selectFromResult) {
+  const { connections: connectionsQuery } = useQuerySelection();
   return useQueryQuery({
-    xpathExpr: '/topology:topologies/topology/links/link',
+    xpathExpr: '/topologies/topology/links/link',
     selection: [ '../../name', 'a-end-device', 'z-end-device',
-                 'igp-metric', 'te-metric', 'delay-metric' ]
+                 ...connectionsQuery.selection ]
   }, { selectFromResult });
 }
 
 export function useConnectionsQuery() {
-  const topology = useOpenTopologyName();
+  const topology = useSelector(getOpenTopologyName);
   return __useConnectionsQuery(useMemo(() =>
     createItemsSelector('parentName', topology), [ topology ]));
 }
@@ -46,26 +47,24 @@ export function useConnectionsQuery() {
 function getConnectedDevices(topology, device, connections) {
   return connections?.reduce(
     (accumulator, { parentName, aEndDevice, zEndDevice }) => {
-      if (parentName === topology && (
-          device === aEndDevice || device === zEndDevice)) {
+      if (parentName === topology &&
+          (device === aEndDevice || device === zEndDevice)) {
         accumulator.push(device === aEndDevice ? zEndDevice : aEndDevice);
       }
       return accumulator;
     }, []
-  );
+  ) || [];
 }
 
 export function useConnectedDevices(name) {
-  const topology = useOpenTopologyName();
-
+  const topology = useSelector(getOpenTopologyName);
   const selector = useMemo(() => createSelector(
-    result => JSON.stringify(getConnectedDevices(topology, name, result.data) || []),
+    result => JSON.stringify(getConnectedDevices(topology, name, result.data)),
     devices => ({ data: JSON.parse(devices) })
-  ), [ name ]);
+  ), [ topology, name ]);
 
   return __useConnectionsQuery(selector).data;
 }
-
 
 // === Utils ==================================================================
 
@@ -99,7 +98,7 @@ function lineAngle({ x1, y1, x2, y2 }) {
 // === Component ==============================================================
 
 const Connection = memo(function Connection({
-    keypath, aEndDevice, zEndDevice, igp, te, delay }) {
+    keypath, aEndDevice, zEndDevice, ...connectionInfo }) {
   console.debug('Connection Render');
 
   const dispatch = useDispatch();
@@ -107,7 +106,8 @@ const Connection = memo(function Connection({
 
   const layout = useContext(LayoutContext);
 
-  const linkMetricsVisible = useSelector((state) => getLinkMetricsVisible(state));
+  const connectionInfoVisible = useSelector((state) =>
+    getConnectionInfoVisible(state));
   const editMode = useSelector((state) => getEditMode(state));
   const dragging = useSelector((state) => {
     const draggedItem = getDraggedItem(state);
@@ -137,8 +137,8 @@ const Connection = memo(function Connection({
     dispatch(stopThenGoToUrl(CONFIGURATION_EDITOR_EDIT_URL + keypath));
   }, []);
 
-  const { x: x1, y: y1, ...aEndIcon } = useIconPosition(useDevice(aEndDevice));
-  const { x: x2, y: y2, ...zEndIcon } = useIconPosition(useDevice(zEndDevice));
+  const { x: x1, y: y1, ...aEndIcon } = useIconPosition(aEndDevice);
+  const { x: x2, y: y2, ...zEndIcon } = useIconPosition(zEndDevice);
   const expanded = useIsExpanded(aEndDevice) | useIsExpanded(zEndDevice);
   const hidden = aEndIcon.hidden || zEndIcon.hidden;
   const colour = aEndIcon.connectionColour || zEndIcon.connectionColour;
@@ -236,10 +236,8 @@ const Connection = memo(function Connection({
       />
       <ConnectionInfo
         actualLineAngle={actualLineAngle}
-        hide={!linkMetricsVisible || expanded}
-        igp={igp}
-        te={te}
-        delay={delay}
+        hide={!connectionInfoVisible || expanded}
+        {...connectionInfo}
       />
     </div>
   );

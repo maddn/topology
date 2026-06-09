@@ -6,7 +6,10 @@ export const getOpenTopology = state => state.menu.openTopology;
 export const getOpenService = state => state.menu.openService;
 
 export const getOpenTopologyName = state =>
-  getOpenTopology(state) &&  getOpenTopology(state).match(/{([^}]+)}$/)[1];
+  getOpenTopology(state) && getOpenTopology(state).match(/{([^}]+)}$/)[1];
+
+export const getOpenServiceName = state =>
+  getOpenService(state) && getOpenService(state).match(/{([^}]+)}$/)[1];
 
 
 // === Reducer ================================================================
@@ -18,9 +21,9 @@ const menuSlice = createSlice({
     topologyToggled: (state, { payload }) => {
       state.openTopology = state.openTopology === payload ? undefined : payload;
     },
+
     serviceToggled: (state, { payload }) => {
-      const { keypath } = payload;
-      state.openService = state.openService === keypath ? undefined : keypath;
+      state.openService = state.openService === payload ? undefined : payload;
     },
   }
 });

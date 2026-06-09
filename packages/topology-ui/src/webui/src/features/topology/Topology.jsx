@@ -5,17 +5,18 @@ import ReactResizeDetector from 'react-resize-detector';
 
 import Container from './Container';
 import Connection, { useConnectionsQuery } from './Connection';
-import Icon, { useDevicesQuery, usePlatformsQuery } from './Icon';
+import Icon, { useDevicesQuery, useZoomedIconsQuery, usePlatformsQuery } from './Icon';
 import DragLayerCanvas from './DragLayerCanvas';
 import CustomDragLayer from './CustomDragLayer';
 import LoadingOverlay from '../common/LoadingOverlay';
 
-import { LayoutContextProvider, useLayoutsQuery } from './LayoutContext';
+import { LayoutContextProvider, getZoomedLayout,
+         useLayoutsQuery, useZoomedLayoutsQuery } from './LayoutContext';
 import { dimensionsChanged } from './topologySlice';
 import { fetchStatus } from 'api/query';
 
 
-const TopologyBody = React.memo(function TopologyBody () {
+const TopologyBody = React.memo(function TopologyBody ({ getDeviceStatus }) {
   console.debug('TopologyBody Render');
 
   const dispatch = useDispatch();
@@ -24,7 +25,9 @@ const TopologyBody = React.memo(function TopologyBody () {
   const canvasRef = useRef();
 
   const layouts = useLayoutsQuery();
+  const zoomedLayouts = useZoomedLayoutsQuery();
   const devices = useDevicesQuery();
+  const zoomedIcons = useZoomedIconsQuery();
   const connections = useConnectionsQuery();
   const platforms = usePlatformsQuery();
 
@@ -42,8 +45,11 @@ const TopologyBody = React.memo(function TopologyBody () {
           <span className="header__title-text">Select a topology...</span>
         </div>
         <div className="component__layer">
-          {layouts.data?.map(({ name }) =>
-            <Container key={name} name={name} />
+          {layouts.data?.flatMap(({ name }) => [
+            name,
+            ...getZoomedLayout(zoomedLayouts.data, name).map(({ name }) => name)
+          ]).map(container =>
+            <Container key={container} name={container} />
           )}
         </div>
         <div className="component__layer topology__body-placeholder">
@@ -54,20 +60,18 @@ const TopologyBody = React.memo(function TopologyBody () {
               refreshRate={500}
             />
               {devices.data && connections.data?.map(
-                ({ keypath, aEndDevice, zEndDevice,
-                   igpMetric, teMetric, delayMetric }) =>
+                ({ keypath, aEndDevice, zEndDevice, ...connection }) =>
                   <Connection
                     key={`${aEndDevice} - ${zEndDevice}`}
                     keypath={keypath}
                     aEndDevice={aEndDevice}
                     zEndDevice={zEndDevice}
-                    igp={igpMetric}
-                    te={teMetric}
-                    delay={delayMetric}
+                    {...connection}
                   />
               )}
-              {devices.data?.map(({ id, name }) =>
-                  <Icon key={id} name={name} />
+              {devices.data?.map(({ name }) =>
+                  <Icon key={name} name={name}
+                    getDeviceStatus={getDeviceStatus} />
               )}
               <DragLayerCanvas canvasRef={canvasRef} />
               <CustomDragLayer canvasRef={canvasRef} />
@@ -75,10 +79,12 @@ const TopologyBody = React.memo(function TopologyBody () {
         </div>
       </div>
       <LoadingOverlay items={{
-        'Layouts':      fetchStatus(layouts),
-        'Devices':      fetchStatus(devices),
-        'Connections':  fetchStatus(connections),
-        'Platforms':    fetchStatus(platforms)
+        'Layouts':        fetchStatus(layouts),
+        'Zoomed Layouts': fetchStatus(zoomedLayouts),
+        'Devices':        fetchStatus(devices),
+        'Zoomed Icons':   fetchStatus(zoomedIcons),
+        'Connections':    fetchStatus(connections),
+        'Platforms':      fetchStatus(platforms)
       }}/>
     </LayoutContextProvider>
   );

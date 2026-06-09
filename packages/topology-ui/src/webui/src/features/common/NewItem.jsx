@@ -28,18 +28,21 @@ class NewItem extends PureComponent {
     this.inputRef = createRef();
   }
 
-  processDefaults = (keypath, defaults) =>
-    Promise.all(defaults.map(({ path, value }) => this.props.setValue({
-      keypath, leaf: path, value
+  processDefaults = async (keypath, defaults, name) =>
+    Promise.all(defaults.map(({ path, value, prefix }) => this.props.setValue({
+      keypath, leaf: path,
+      value: `${value}${prefix ? name : ''}`
     })));
 
   create = async () => {
     const { value } = this.state;
-    const { path, defaults, close, create, stopThenGoToUrl } = this.props;
+    const { path, defaultsPath, defaults, close, create, stopThenGoToUrl } = this.props;
     if (value) {
       const keypath = `${path}{${value}}`;
+      const defaultsKeyPath = defaultsPath
+        ? `${defaultsPath}{${value}}` : keypath;
       await create({ keypath: path, name: value });
-      await this.processDefaults(keypath, defaults || []);
+      await this.processDefaults(defaultsKeyPath, defaults || [], value);
       this.setState({ value: '' });
       close();
       stopThenGoToUrl(CONFIGURATION_EDITOR_EDIT_URL + keypath);

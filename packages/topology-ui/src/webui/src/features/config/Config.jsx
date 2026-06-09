@@ -15,11 +15,10 @@ import { getOpenTerminals, terminalToggled,
 import { handleError } from 'features/nso/nsoSlice';
 import { action } from 'api/data';
 import { stopThenGoToUrl } from 'api/comet';
-import { libvirtAction } from 'features/menu/modules/Topology';
 
 
 const mapDispatchToProps = {
-  handleError, stopThenGoToUrl, libvirtAction, terminalToggled,
+  handleError, stopThenGoToUrl, terminalToggled,
   action: action.initiate
 };
 
@@ -102,14 +101,26 @@ const slice = (configLines, format) => {
   }
 };
 
-const convertXpaths = (config) => {
-  let ret = config?.replace( /\[[^=[]*='(.[^']*)'\]/g, '{$1}' );
-  ret = ret?.replace( /topology:/g, '' );
-  return ret?.replace( /\/topologies\//g, '/topology:topologies/' );
+const keypathRegex =
+  /\/(?:[A-Za-z_][\w.-]*:)?[A-Za-z_][\w.-]*(?:\{[^}]*\})?(?:\/(?:[A-Za-z_][\w.-]*:)?[A-Za-z_][\w.-]*(?:\{[^}]*\})?)*/g;
+
+const normalizeKeypath = (keypath) => {
+  const segments = keypath.split('/');
+  const prefix = segments[1]?.match(/^([A-Za-z_][\w.-]*):/)?.[1];
+
+  return prefix ? segments.map((segment, index) =>
+    index > 1 && segment.startsWith(`${prefix}:`)
+      ? segment.slice(prefix.length + 1)
+      : segment
+  ).join('/') : keypath;
 };
 
+const normalizeKeypaths = (config) =>
+  config?.replace(/\[[^=[]*='([^']*)'\]/g, '{$1}')
+    .replace(keypathRegex, normalizeKeypath);
+
 const formatConfig = (config, format) => {
-  const configLines = slice(convertXpaths(config).split('\n'), format);
+  const configLines = slice(normalizeKeypaths(config).split('\n'), format);
   return pretty(configLines, format).join('\n');
 };
 
@@ -123,7 +134,6 @@ class Config extends PureComponent {
       format: undefined,
       serviceMetaData: false
     };
-    this.libvirtAction = this.libvirtAction.bind(this);
     this.goToDevice = this.goToDevice.bind(this);
     this.terminalToggled = this.terminalToggled.bind(this);
   }
@@ -138,7 +148,7 @@ class Config extends PureComponent {
     try {
       const result = await action({
         path: `/ncs:devices/ncs:device{${
-          device}}/topology:get-configuration`,
+          device}}/get-configuration`,
         params: { format, 'service-meta-data': true }
       });
       this.setState({
@@ -174,16 +184,10 @@ class Config extends PureComponent {
     }
   }
 
-  async libvirtAction(event, action) {
-    event.stopPropagation();
-    const { device, libvirtAction } = this.props;
-    libvirtAction(action, device);
-  }
-
   async goToDevice(event, action) {
     event.stopPropagation();
-    const { keypath, stopThenGoToUrl } = this.props;
-    stopThenGoToUrl(`${CONFIGURATION_EDITOR_EDIT_URL}${keypath}`);
+    const { editorKeypath, stopThenGoToUrl } = this.props;
+    stopThenGoToUrl(`${CONFIGURATION_EDITOR_EDIT_URL}${editorKeypath}`);
   }
 
   terminalToggled(event) {
@@ -269,7 +273,7 @@ class Config extends PureComponent {
 
   render() {
     console.debug('Config Render');
-    const { device, managed, consoleState } = this.props;
+    const { device, managed, consoleState, ConfigHeaderActions } = this.props;
     const { format, serviceMetaData, isFetching, config } = this.state;
 
     return (
@@ -310,38 +314,7 @@ class Config extends PureComponent {
             tooltip={'View device in Configuration Editor'}
             onClick={(event) => this.goToDevice(event)}
           />
-          <InlineBtn
-            icon={IconTypes.BTN_DEFINE}
-            tooltip={'Define domain on KVM'}
-            onClick={(event) => this.libvirtAction(event, 'define')}
-          />
-          <InlineBtn
-            icon={IconTypes.BTN_START}
-            tooltip={'Start domain on KVM'}
-            onClick={(event) => this.libvirtAction(event, 'start')}
-          />
-          <InlineBtn
-            icon={IconTypes.BTN_STOP}
-            tooltip={'Stop domain on KVM'}
-            onClick={(event) => this.libvirtAction(event, 'stop')}
-          />
-          <InlineBtn
-            icon={IconTypes.BTN_UNDEFINE}
-            tooltip={'Undefine domain on KVM'}
-            onClick={(event) => this.libvirtAction(event, 'undefine')}
-          />
-          <InlineBtn
-            icon={IconTypes.BTN_RESTART}
-            tooltip={'Reboot domain on KVM'}
-            onClick={(event) => this.libvirtAction(event, 'reboot')}
-          />
-          <InlineBtn
-            icon={IconTypes.BTN_RESET}
-            style="danger"
-            classSuffix="hard-reset"
-            tooltip={'Hard reset domain on KVM (undefine and restart)'}
-            onClick={(event) => this.libvirtAction(event, 'hard-reset')}
-          />
+          <ConfigHeaderActions device={device} managed={managed}/>
         </Fragment>}>
         {managed && <Fragment>
           <div className="config-viewer__btn-row">

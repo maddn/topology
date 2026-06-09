@@ -1,30 +1,50 @@
 import React from 'react';
-import { useState, useCallback, useRef,
+import { useState, useCallback, useEffect, useRef, useImperativeHandle,
          Fragment, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
-
-import LoadingOverlay from '../../common/LoadingOverlay';
-import NewItem from '../../common/NewItem';
-import InlineBtn from '../../common/buttons/InlineBtn';
+import { useDrag } from 'react-dnd';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import { BTN_ADD } from 'constants/Icons';
-import { bodyOverlayToggled } from '../../nso/nsoSlice';
+
+import LoadingOverlay from 'features/common/LoadingOverlay';
+import NewItem from 'features/common/NewItem';
+import InlineBtn from 'features/common/buttons/InlineBtn';
+import IconSvg from 'features/topology/icons/IconSvg';
+
+import { bodyOverlayToggled } from 'features/nso/nsoSlice';
+import { connectPngDragPreview } from 'features/topology/DragLayerCanvas';
+import { useIconSize } from 'features/topology/LayoutContext';
+import { itemDragged } from 'features/topology/topologySlice';
+
 import { isFetching } from 'api/query';
 
 
 const NodeListWrapper = forwardRef(function NodeListWrapper({
   title, label, keypath, level, fetching, disableCreate, newItemDefaults,
+  newItemDragType, newItemDragIcon, defaultsPath,
   children
 }, ref) {
   console.debug('NodeListWrapper Render');
 
   const [ newItemOpen, setNewItemOpen ] = useState(false);
   const [ minHeight, setMinHeight ] = useState(0);
+  const [ itemDefaults, setItemDefaults ] = useState();
 
   const dispatch = useDispatch();
   const btnRef = useRef(null);
+  const iconSize = useIconSize();
+
+  useImperativeHandle(ref, () => ({
+    openNewItem(defaults) {
+      setItemDefaults(defaults);
+      setNewItemOpen(true);
+      dispatch(bodyOverlayToggled(true));
+    }
+  }), [ dispatch ]);
 
   const openNewItem = () => {
+    setItemDefaults(undefined);
     setNewItemOpen(true);
     dispatch(bodyOverlayToggled(true));
   };
@@ -41,6 +61,30 @@ const NodeListWrapper = forwardRef(function NodeListWrapper({
     }
   }, [ minHeight, fetching ]);
 
+  const [ , drag, dragPreview ] = useDrag(() => ({
+    type: newItemDragType || 'UNDEFINED',
+    item: () => {
+      dispatch(itemDragged({ icon: 'new-item' }));
+      return ({ icon: 'new-item' });
+    },
+    end: (item, monitor) => {
+      dispatch(itemDragged(undefined));
+      if (monitor.didDrop()) {
+        openNewItem();
+        setItemDefaults(monitor.getDropResult()?.itemDefaults);
+      }
+    },
+    canDrag: newItemDragType !== undefined
+  }));
+
+  useEffect(() => {
+    newItemDragIcon && connectPngDragPreview(renderToStaticMarkup(
+      <IconSvg type={newItemDragIcon} size={iconSize} />),
+      iconSize, dragPreview, true);
+  }, [ iconSize, newItemDragIcon ]);
+
+  const defaults = itemDefaults ?? newItemDefaults;
+
   return (
     <Fragment>
       {title &&
@@ -48,20 +92,21 @@ const NodeListWrapper = forwardRef(function NodeListWrapper({
           <span className="header__title-text">{title}</span>
           {!disableCreate &&
             <Fragment>
-              <InlineBtn
+              {drag(<div><InlineBtn
                 ref={btnRef}
                 icon={BTN_ADD}
                 classSuffix="create"
-                tooltip={`Add New ${label}`}
+                tooltip={`Add New ${label}${newItemDragType ? ' (drag me)' : ''}`}
                 onClick={openNewItem}
-              />
+              /></div>)}
               <NewItem
                 btnRef={btnRef}
                 path={keypath}
                 label={`${label} Name`}
                 isOpen={newItemOpen}
                 close={closeNewItem}
-                defaults={newItemDefaults}
+                defaults={defaults}
+                defaultsPath={defaultsPath}
               />
             </Fragment>
           }

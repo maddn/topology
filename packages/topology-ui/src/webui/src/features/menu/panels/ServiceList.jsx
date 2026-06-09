@@ -1,11 +1,12 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 
 import NodeListWrapper from './NodeListWrapper';
 import Accordion from 'features/common/Accordion';
 
-import { useOpenTopologyName } from '../modules/Topology';
 import { useIsManagedTopology,
          path as managedTopologyPath } from '../modules/ManagedTopology';
+import { getOpenTopologyName } from '../menuSlice';
 
 import { useQueryState as _useQueryState, selectItem } from 'api/query';
 
@@ -36,7 +37,7 @@ export function useData(
 export function ServiceList ({ module }) {
   console.debug('ServiceList Render');
 
-  const openTopology = useOpenTopologyName();
+  const openTopology = useSelector(getOpenTopologyName);
   const managedTopologyData = module.useQuery(undefined, true).data;
   const serviceData = module.useQuery().data;
   const data = serviceData && managedTopologyData?.concat(serviceData);

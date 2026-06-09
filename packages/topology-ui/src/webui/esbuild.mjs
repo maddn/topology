@@ -1,7 +1,10 @@
 import * as esbuild from 'esbuild';
 
 await esbuild.build({
-  entryPoints: [ 'telnet-proxy.mjs' ],
+  entryPoints: [ 'ssh-proxy.mjs', 'telnet-proxy.mjs' ],
+  loader: {
+    '.node': 'file'
+  },
   outdir: '../../webui',
   platform: 'node',
   bundle: true,
