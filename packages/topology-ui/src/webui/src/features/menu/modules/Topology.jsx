@@ -2,8 +2,8 @@ import React from 'react';
 import { useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
-import NodePane from '../panels/NodePane';
-import InlineBtn from '../../common/buttons/InlineBtn';
+import NodePane from 'features/menu/panels/NodePane';
+import InlineBtn from 'features/common/buttons/InlineBtn';
 import * as ManagedTopology from './ManagedTopology';
 import * as IpConnectivity from './IpConnectivity';
 import * as BaseConfig from './BaseConfig';
@@ -16,7 +16,7 @@ import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
 import { stopThenGoToUrl } from 'api/comet';
 import { setValue } from 'api/data';
 
-import { topologyToggled, getOpenTopology } from '../menuSlice';
+import { topologyToggled, getOpenTopology } from 'features/menu/menuSlice';
 
 export const label = 'Topology';
 export const path = '/topologies/topology';

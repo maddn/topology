@@ -1,12 +1,12 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 
-import NodeListWrapper from './NodeListWrapper';
+import NodeListWrapper from 'features/menu/panels/NodeListWrapper';
 import Accordion from 'features/common/Accordion';
 
 import { useIsManagedTopology,
          path as managedTopologyPath } from '../modules/ManagedTopology';
-import { getOpenTopologyName } from '../menuSlice';
+import { getOpenTopologyName } from 'features/menu/menuSlice';
 
 import { useQueryState as _useQueryState, selectItem } from 'api/query';
 

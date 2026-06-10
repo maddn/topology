@@ -1,9 +1,9 @@
 import React from 'react';
 import { useMemo } from 'react';
 
-import ServicePane from '../panels/ServicePane';
-import FieldGroup from '../../common/FieldGroup';
-import DroppableNodeList from '../panels/DroppableNodeList';
+import ServicePane from 'features/menu/panels/ServicePane';
+import FieldGroup from 'features/common/FieldGroup';
+import DroppableNodeList from 'features/menu/panels/DroppableNodeList';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
          createItemsSelector } from 'api/query';

@@ -1,9 +1,9 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 
-import Terminal from './Terminal';
+import Terminal from 'features/terminal/Terminal';
 
-import { useDevice } from '../topology/Icon';
+import { useDevice } from 'features/topology/Icon';
 import { useGetValueQuery } from 'api/data';
 import { useActionMutation } from '/api/data';
 

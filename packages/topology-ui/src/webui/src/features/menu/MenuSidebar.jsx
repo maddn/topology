@@ -1,7 +1,7 @@
 import React from 'react';
 
-import Sidebar from '../common/Sidebar';
-import NodeListWrapper from './panels/NodeListWrapper';
+import Sidebar from 'features/common/Sidebar';
+import NodeListWrapper from 'features/menu/panels/NodeListWrapper';
 import ServiceList from './panels/ServiceList';
 
 import * as Topology from './modules/Topology';

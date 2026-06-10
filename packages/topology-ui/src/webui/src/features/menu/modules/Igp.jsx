@@ -1,8 +1,8 @@
 import React from 'react';
 import { useMemo } from 'react';
 
-import ServicePane from '../panels/ServicePane';
-import DeviceList from '../panels/DeviceList';
+import ServicePane from 'features/menu/panels/ServicePane';
+import DeviceList from 'features/menu/panels/DeviceList';
 
 import { useQueryQuery, useMemoizeWhenFetched,
          createItemsSelector } from 'api/query';

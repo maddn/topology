@@ -1,7 +1,7 @@
 import React from 'react';
 
-import ServicePane from '../panels/ServicePane';
-import CreatableService from '../panels/CreatableService';
+import ServicePane from 'features/menu/panels/ServicePane';
+import CreatableService from 'features/menu/panels/CreatableService';
 
 import { useQueryQuery, useQueryState, useMemoizeWhenFetched,
          selectItem } from 'api/query';
