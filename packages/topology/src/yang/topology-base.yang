@@ -4,7 +4,8 @@ submodule topology-base {
 
   import tailf-common { prefix tailf; }
 
-  include topology-ui;
+  include common-topology;
+  include common-topology-ui;
 
   description
     "This submodule defines the base topology model. It is intended that the
@@ -12,47 +13,6 @@ submodule topology-base {
      Currently this model is refined in the topology-libvirt submodule to add
      the libvirt nodes, and that is the version included in the final topology
      model.";
-
-  grouping topology-grouping {
-    description
-      "Common topology structure. The using module must augment
-       topology/devices with a device list that provides device-name.";
-
-    list topology {
-      key name;
-
-      leaf name {
-        type string;
-      }
-
-      container devices;
-
-      container links {
-        description "Point to point links between devices in the toplogy.";
-
-        list link {
-          key "a-end-device z-end-device";
-
-          leaf a-end-device {
-            type string;
-            tailf:non-strict-leafref {
-              path "../../../devices/device/device-name";
-            }
-          }
-
-          leaf z-end-device {
-            type string;
-            tailf:non-strict-leafref {
-              path "../../../devices/device/device-name";
-            }
-            must ". != ../a-end-device" {
-              error-message "a-end-device and z-end-device must be different";
-            }
-          }
-        }
-      }
-    }
-  }
 
   grouping topology-base-grouping {
     uses topology-grouping {

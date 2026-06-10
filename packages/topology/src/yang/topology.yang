@@ -6,10 +6,11 @@ module topology {
   import tailf-common { prefix tailf; }
   import tailf-ncs { prefix ncs; }
 
+  include common-topology;
+  include common-topology-ui;
   include topology-base;
   include topology-libvirt;
   include topology-libvirt-subgroupings;
-  include topology-ui;
   include libvirt;
   include ip-connectivity;
   include base-config;
@@ -52,6 +53,10 @@ module topology {
 
   augment "/topologies/topology" {
     uses ip-connectivity-service-grouping;
+  }
+
+  augment "/ncs:devices/ncs:device" {
+    uses get-configuration-action-grouping;
   }
 
   grouping managed-topology {
