@@ -8,7 +8,7 @@ import CreatableService from 'features/menu/panels/CreatableService';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
          createItemsSelector } from 'api/query';
-import { getPath, useQueryState, useData } from '../panels/ServiceList';
+import { getPath, useQueryState, useData } from '../ServiceList';
 
 const service = 'topology/ip-connectivity';
 const queryKey = 'ip-connectivity';

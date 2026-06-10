@@ -6,7 +6,7 @@ import DeviceList from 'features/menu/panels/DeviceList';
 
 import { useQueryQuery, useMemoizeWhenFetched,
          createItemsSelector } from 'api/query';
-import { getPath, useQueryState, useData } from '../panels/ServiceList';
+import { getPath, useQueryState, useData } from '../ServiceList';
 
 export const label = 'IGP Service';
 export const service = 'igp';

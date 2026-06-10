@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 
 import InlineBtn from 'features/common/buttons/InlineBtn';
 import * as IconTypes from 'constants/Icons';
-import { libvirtAction } from 'features/menu/modules/Topology';
+import { libvirtAction } from './sidebar-modules/Topology';
 
 function ConfigHeaderActions({ device }) {
   const dispatch = useDispatch();

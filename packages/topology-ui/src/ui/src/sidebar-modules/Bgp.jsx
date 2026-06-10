@@ -6,7 +6,7 @@ import ServicePane from 'features/menu/panels/ServicePane';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
          createItemsSelector } from 'api/query';
-import { getPath, useQueryState, useData } from '../panels/ServiceList';
+import { getPath, useQueryState, useData } from '../ServiceList';
 
 export const label = 'BGP Service';
 export const service = 'bgp';

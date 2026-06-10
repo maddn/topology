@@ -2,12 +2,12 @@ import React from 'react';
 
 import Sidebar from 'features/common/Sidebar';
 import NodeListWrapper from 'features/menu/panels/NodeListWrapper';
-import ServiceList from './panels/ServiceList';
+import ServiceList from './ServiceList';
 
-import * as Topology from './modules/Topology';
-import * as Igp from './modules/Igp';
-import * as SegmentRouting from './modules/SegmentRouting';
-import * as Bgp from './modules/Bgp';
+import * as Topology from './sidebar-modules/Topology';
+import * as Igp from './sidebar-modules/Igp';
+import * as SegmentRouting from './sidebar-modules/SegmentRouting';
+import * as Bgp from './sidebar-modules/Bgp';
 
 function MenuSidebar() {
   console.debug('MenuSidebar Render');

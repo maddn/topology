@@ -7,7 +7,7 @@ import DroppableNodeList from 'features/menu/panels/DroppableNodeList';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
          createItemsSelector } from 'api/query';
-import { getPath, useQueryState, useData } from '../panels/ServiceList';
+import { getPath, useQueryState, useData } from '../ServiceList';
 
 export const label = 'Segment Routing Service';
 export const service = 'segment-routing';
