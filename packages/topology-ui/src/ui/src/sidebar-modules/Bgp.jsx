@@ -6,11 +6,13 @@ import ServicePane from 'features/menu/panels/ServicePane';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
          createItemsSelector } from 'api/query';
-import { getPath, useQueryState, useData } from '../ServiceList';
+import { useQueryState, useData } from 'features/menu/panels/ServiceList';
 
 export const label = 'BGP Service';
 export const service = 'bgp';
-export const setTopologyInNewItem = true;
+export const path = `/topology:topologies/${service}`;
+export const stackedPath = `/topology:topologies/managed-topology/${service}`;
+export const newItemContextLeaf = 'topology';
 
 const peRouters = 'provider-edge/routers';
 const lsRouters = 'link-state/routers';
@@ -22,20 +24,28 @@ const selection = {
   'route-reflector/loopback-id':  'Route Reflector Loopback'
 };
 
-export function useQuery(itemSelector, managed) {
+function useServiceQueryState(suffix, queryKey) {
+  return useQueryState(
+    suffix ? `${path}/${suffix}` : path,
+    suffix ? `${stackedPath}/${suffix}` : stackedPath,
+    queryKey
+  );
+}
+
+export function useQuery(itemSelector, stacked) {
   return useQueryQuery({
-    xpathExpr : getPath(service, managed),
-    selection : ['as-number', 'topology', ...Object.keys(selection) ],
+    xpathExpr: stacked ? stackedPath : path,
+    selection: ['as-number', 'topology', ...Object.keys(selection) ],
     tag: 'managed-topology'
   }, { selectFromResult: itemSelector });
 }
 
 export function useFetchStatus() {
   return useMemoizeWhenFetched({
-    'BGP Services': useQueryState(service),
-    'PE Routers': useQueryState(`${service}/${peRouters}`),
-    'Link-State Routers': useQueryState(`${service}/${lsRouters}`),
-    'Router Reflectors': useQueryState(`${service}/${routerReflectors}`)
+    'BGP Services': useServiceQueryState(),
+    'PE Routers': useServiceQueryState(peRouters),
+    'Link-State Routers': useServiceQueryState(lsRouters),
+    'Router Reflectors': useServiceQueryState(routerReflectors)
   });
 }
 
@@ -52,8 +62,10 @@ export function Component({ name }) {
     <ServicePane
       key={name}
       title={`AS ${name}`}
+      label={label}
+      keypath={keypath}
       serviceKeypath={serviceKeypath}
-      { ...{ label, keypath, ...swapLabels(data, selection) } }
+      { ...swapLabels(data, selection) }
     >
       <DeviceList
         label="PE Router"

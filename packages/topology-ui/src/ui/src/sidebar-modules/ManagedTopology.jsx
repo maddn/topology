@@ -1,13 +1,22 @@
 import React from 'react';
+import { useMemo } from 'react';
 
 import ServicePane from 'features/menu/panels/ServicePane';
 import CreatableService from 'features/menu/panels/CreatableService';
 
 import { useQueryQuery, useQueryState, useMemoizeWhenFetched,
-         selectItem } from 'api/query';
+         createItemsSelector, selectItem } from 'api/query';
+
+import * as Topology from './Topology';
+import * as IpConnectivity from './IpConnectivity';
+import * as BaseConfig from './BaseConfig';
+import * as Igp from './Igp';
+import * as Bgp from './Bgp';
+import * as SegmentRouting from './SegmentRouting';
 
 export const label = 'Managed Topology';
-export const path = '/topology:topologies/managed-topology';
+export const service = 'managed-topology';
+export const path = `/topology:topologies/${service}`;
 
 export function useQuery(itemSelector) {
   return useQueryQuery({
@@ -22,21 +31,32 @@ export function useFetchStatus() {
   });
 }
 
-export function useIsManagedTopology(name) {
-  return useQuery(selectItem('name', name)).data !== undefined;
-}
-
 function formatDate(isoDateStr) {
   const date = new Date(isoDateStr);
   return `${
     date.getDate()}/${date.getMonth()+1} ${date.toTimeString().slice(0, 8)}`;
 }
 
-export const Component = React.memo(function Component({ name }) {
+export function Component({ name }) {
   console.debug('Managed Topology Services Render');
 
   const { data } = useQuery(selectItem('name', name));
   const keypath = data?.keypath;
+  const topologySelector = useMemo(() =>
+    createItemsSelector('topology', name), [ name ]);
+
+  const { data: igpServices } = Igp.useQuery(topologySelector, true);
+  const { data: bgpServices } = Bgp.useQuery(topologySelector, true);
+  const { data: srServices } = SegmentRouting.useQuery(topologySelector, true);
+
+  const configReferences = useMemo(() => [
+    `${IpConnectivity.path.replace(
+      Topology.path, `${Topology.path}{${name}}`)}`,
+    `${BaseConfig.path}{${name}}`,
+    ...(igpServices?.map(({ name }) => `${Igp.path}{${name}}`) || []),
+    ...(bgpServices?.map(({ asNumber }) => `${Bgp.path}{${asNumber}}`) || []),
+    ...(srServices?.map(({ igp }) => `${SegmentRouting.path}{${igp}}`) || [])
+  ], [ bgpServices, igpServices, name, srServices ]);
 
   const plan = Object.fromEntries(useQueryQuery({
     xpathExpr: `${path}/plan/component/state[status = 'reached'][last()]`,
@@ -52,9 +72,10 @@ export const Component = React.memo(function Component({ name }) {
       serviceKeypath={keypath}
       title={label}
       label={label}
+      configReferences={configReferences}
       queryTag="managed-topology"
       {...plan}
     /> :
       <CreatableService { ...{ label, keypath: `${path}{${name}}` } } />
   );
-});
+}

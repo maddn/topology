@@ -6,43 +6,58 @@ import DeviceList from 'features/menu/panels/DeviceList';
 
 import { useQueryQuery, useMemoizeWhenFetched,
          createItemsSelector } from 'api/query';
-import { getPath, useQueryState, useData } from '../ServiceList';
+import { useQueryState, useData } from 'features/menu/panels/ServiceList';
 
 export const label = 'IGP Service';
 export const service = 'igp';
-export const setTopologyInNewItem = true;
+export const path = `/topology:topologies/${service}`;
+export const stackedPath = `/topology:topologies/managed-topology/${service}`;
+export const newItemContextLeaf = 'topology';
 
 const devices = 'devices';
 
-export function useQuery(itemSelector, managed) {
+function useServiceQueryState(suffix, queryKey) {
+  return useQueryState(
+    suffix ? `${path}/${suffix}` : path,
+    suffix ? `${stackedPath}/${suffix}` : stackedPath,
+    queryKey
+  );
+}
+
+export function useQuery(itemSelector, stacked) {
   return useQueryQuery({
-    xpathExpr : getPath(service, managed),
-    selection : [ 'name', 'topology', 'boolean(is-is)', 'boolean(ospf)' ],
+    xpathExpr: stacked ? stackedPath : path,
+    selection: [ 'name', 'topology', 'boolean(is-is)', 'boolean(ospf)' ],
     tag: 'managed-topology'
   }, { selectFromResult: itemSelector });
 }
 
 export function useFetchStatus() {
   return useMemoizeWhenFetched({
-    'IGP Services': useQueryState(service),
-    'IGP Devices': useQueryState(`${service}/${devices}`)
+    'IGP Services': useServiceQueryState(),
+    'IGP Devices': useServiceQueryState(devices)
   });
 }
 
-export function Component ({ name, fetching }) {
+export function Component({ name }) {
   console.debug('Igp Render');
 
   const [ data, serviceKeypath ] = useData(useQuery, name);
   const selector = useMemo(() => createItemsSelector('parentName', name), [ name ]);
   const { keypath, topology, isIs, ospf } = data;
+  const serviceSelection = {
+    'Routing Protocol': isIs ? 'IS-IS' : ospf ? 'OSPF' : ''
+  };
 
   return (
     <ServicePane
       key={name}
+      title={`Domain ${name}`}
+      label={label}
+      keypath={keypath}
       serviceKeypath={serviceKeypath}
-      title={`Domain ${name}`} { ...{
-        label, keypath, topology,
-        'Routing Protocol': isIs ? 'IS-IS' : ospf ? 'OSPF' : '' } }
+      topology={topology}
+      { ...serviceSelection }
     >
       <DeviceList
         label="Device"

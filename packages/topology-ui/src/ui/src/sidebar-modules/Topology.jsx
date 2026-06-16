@@ -49,17 +49,23 @@ export const libvirtAction = (action, device) => async (dispatch, getState) => {
 };
 
 
-export const Component = React.memo(function Component({ name }) {
+export function Component({ name }) {
   console.debug('Topologies Render');
 
   const dispatch = useDispatch();
   const { data } = useQuery(selectItem('name', name));
   const { keypath } = data;
+  const isOpen = useSelector((state) => getOpenTopology(state) === keypath);
+  const fade = useSelector((state) => !!getOpenTopology(state));
 
   const goToLibvirtAction = (event, action) => {
     event.stopPropagation();
     dispatch(libvirtAction(action, null));
   };
+
+  const toggle = useCallback(() => {
+    dispatch(topologyToggled(keypath));
+  }, [ dispatch, keypath ]);
 
   return (
     <NodePane
@@ -67,9 +73,9 @@ export const Component = React.memo(function Component({ name }) {
       title={name}
       label={label}
       level="0"
-      isOpen={useSelector((state) => getOpenTopology(state) === keypath)}
-      fade={useSelector((state) => !!getOpenTopology(state))}
-      nodeToggled={useCallback((keypath) => dispatch(topologyToggled(keypath)))}
+      isOpen={isOpen}
+      fade={fade}
+      nodeToggled={toggle}
       keypath={keypath}
       subHeader={
         <div className="config-viewer__btn-row">
@@ -101,11 +107,11 @@ export const Component = React.memo(function Component({ name }) {
           />
         </div>
       }
-        { ...swapLabels(data, selection) }
+      { ...swapLabels(data, selection) }
     >
       <ManagedTopology.Component name={name}/>
       <IpConnectivity.Component topology={name}/>
       <BaseConfig.Component topology={name}/>
     </NodePane>
   );
-});
+}

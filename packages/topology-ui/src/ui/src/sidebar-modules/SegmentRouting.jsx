@@ -7,10 +7,12 @@ import DroppableNodeList from 'features/menu/panels/DroppableNodeList';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
          createItemsSelector } from 'api/query';
-import { getPath, useQueryState, useData } from '../ServiceList';
+import { useQueryState, useData } from 'features/menu/panels/ServiceList';
 
 export const label = 'Segment Routing Service';
 export const service = 'segment-routing';
+export const path = `/topology:topologies/${service}`;
+export const stackedPath = `/topology:topologies/managed-topology/${service}`;
 const flexAlgo = 'flex-algo';
 
 const selection = {
@@ -28,9 +30,17 @@ const srgb = {
   'srgb/upper-bound': 'Upper Bound'
 };
 
-export function useQuery(itemSelector, managed) {
+function useServiceQueryState(suffix, queryKey) {
+  return useQueryState(
+    suffix ? `${path}/${suffix}` : path,
+    suffix ? `${stackedPath}/${suffix}` : stackedPath,
+    queryKey
+  );
+}
+
+export function useQuery(itemSelector, stacked) {
   return useQueryQuery({
-    xpathExpr: getPath(service, managed),
+    xpathExpr: stacked ? stackedPath : path,
     selection: [
       'igp',
       'deref(igp)/../topology',
@@ -43,12 +53,12 @@ export function useQuery(itemSelector, managed) {
 
 export function useFetchStatus() {
   return useMemoizeWhenFetched({
-    'Segment Routing Services': useQueryState(service),
-    'Flex Algos': useQueryState(`${service}/${flexAlgo}`)
+    'Segment Routing Services': useServiceQueryState(),
+    'Flex Algos': useServiceQueryState(flexAlgo)
   });
 }
 
-export const Component = React.memo(function Component({ name }) {
+export function Component({ name }) {
   console.debug('SegmentRouting Render');
 
   const [ data, serviceKeypath ] = useData(useQuery, name);
@@ -59,8 +69,11 @@ export const Component = React.memo(function Component({ name }) {
     <ServicePane
       key={name}
       title={`IGP ${name}`}
+      label={label}
+      keypath={keypath}
       serviceKeypath={serviceKeypath}
-      { ...{ label, keypath, topology, ...swapLabels(data, selection) }}
+      topology={topology}
+      { ...swapLabels(data, selection) }
     >
       <FieldGroup title="SRGB" { ...swapLabels(data, srgb) } />
       <DroppableNodeList
@@ -75,6 +88,6 @@ export const Component = React.memo(function Component({ name }) {
         selector={selector}
      />
      <FieldGroup title="SRv6" { ...swapLabels(data, srv6) } />
-   </ServicePane>
+    </ServicePane>
   );
-});
+}
