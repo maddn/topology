@@ -26,7 +26,7 @@ details.
 
 ### Dependencies
 
-- NSO 5.6
+- NSO 6.7
 - IOS-XR CLI NED
 - IOS CLI NED
 
@@ -63,19 +63,22 @@ To build and run the Docker container, follow these steps:
 1. Clone this git repository.
 
    ```shell
-   git clone https://github.com/maddn/topology.git
+   git clone --recurse-submodules https://github.com/maddn/topology.git
    ```
+
+   If the repository was cloned without submodules, run
+   `git submodule update --init` before building.
 
 2. Copy the NSO installer binary to the `nso‑install‑file` directory.
    ```shell
-   cp nso-5.6.3.1.linux.x86_64.installer.bin topology/nso-install-file
+   cp nso-6.7.linux.x86_64.installer.bin topology/nso-install-file
    ```
 
 3. Copy the IOS-XR and IOS CLI NEDs to the `system/opt/ncs/packages`
    directory.
    ```shell
-   cp ncs-5.6.3-cisco-ios-6.77.12.tar.gz topology/system/opt/ncs/packages
-   cp ncs-5.6.3-cisco-iosxr-7.38.5.tar.gz topology/system/opt/ncs/packages
+   cp ncs-6.7-cisco-ios-*.tar.gz topology/system/opt/ncs/packages
+   cp ncs-6.7-cisco-iosxr-*.tar.gz topology/system/opt/ncs/packages
    ```
 
 4. **Optional.** To enable passwordless SSH login from the Docker container to
@@ -116,14 +119,14 @@ To install this project on an existing NSO instance, follow these steps:
 
 1. Copy the IOS-XR and IOS CLI NEDs to the NSO instance `packages` directory.
    ```shell
-   cp ncs-5.6.3-cisco-ios-6.77.12.tar.gz <nso-run-dir>/packages
-   cp ncs-5.6.3-cisco-iosxr-7.38.5.tar.gz <nso-run-dir>/packages
+   cp ncs-6.7-cisco-ios-*.tar.gz <nso-run-dir>/packages
+   cp ncs-6.7-cisco-iosxr-*.tar.gz <nso-run-dir>/packages
    ```
 
 2. Clone this git repository.
 
    ```shell
-   git clone https://github.com/maddn/topology.git
+   git clone --recurse-submodules https://github.com/maddn/topology.git
    ```
 
 3. Copy the topology packages to the NSO instance `packages` directory.

@@ -8,7 +8,7 @@ import * as ManagedTopology from './ManagedTopology';
 import * as IpConnectivity from './IpConnectivity';
 import * as BaseConfig from './BaseConfig';
 
-import { CONFIGURATION_EDITOR_ACTIONS_URL } from 'constants/Layout';
+import { configurationEditorUrl } from 'features/nso/WebuiOne';
 import * as IconTypes from 'constants/Icons';
 
 import { useQueryQuery, useQueryState, useMemoizeWhenFetched, swapLabels,
@@ -45,7 +45,7 @@ export const libvirtAction = (action, device) => async (dispatch, getState) => {
   const actionPath = `${openTopology}/libvirt/${action}`;
   await dispatch(setValue.initiate({
     actionPath, leaf: 'device', value: device}));
-  dispatch(stopThenGoToUrl(`${CONFIGURATION_EDITOR_ACTIONS_URL}${actionPath}`));
+  dispatch(stopThenGoToUrl(configurationEditorUrl(actionPath)));
 };
 
 
