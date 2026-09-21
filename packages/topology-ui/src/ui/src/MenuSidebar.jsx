@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 
-import Sidebar from 'features/common/Sidebar';
+import SidebarPane from 'features/common/SidebarPane';
 import NodeListWrapper from 'features/menu/panels/NodeListWrapper';
 import ServiceList from 'features/menu/panels/ServiceList';
 import { getOpenTopologyName } from 'features/menu/menuSlice';
@@ -15,10 +15,10 @@ import * as Bgp from './sidebar-modules/Bgp';
 function MenuSidebar() {
   console.debug('MenuSidebar Render');
 
-  const openTopology = useSelector(getOpenTopologyName);
+  const openTopologyName = useSelector(getOpenTopologyName);
 
   return (
-    <Sidebar>
+    <SidebarPane>
       <NodeListWrapper
         title="Topologies"
         label={Topology.label}
@@ -31,19 +31,19 @@ function MenuSidebar() {
       <ServiceList
         module={Igp}
         stackedModule={ManagedTopology}
-        contextName={openTopology}
+        contextName={openTopologyName}
       />
       <ServiceList
         module={SegmentRouting}
         stackedModule={ManagedTopology}
-        contextName={openTopology}
+        contextName={openTopologyName}
       />
       <ServiceList
         module={Bgp}
         stackedModule={ManagedTopology}
-        contextName={openTopology}
+        contextName={openTopologyName}
       />
-    </Sidebar>
+    </SidebarPane>
   );
 }
 

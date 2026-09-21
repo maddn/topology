@@ -78,7 +78,7 @@ export function Component({ name }) {
       nodeToggled={toggle}
       keypath={keypath}
       subHeader={
-        <div className="config-viewer__btn-row">
+        <div className="action-row">
           <InlineBtn
             icon={IconTypes.BTN_DEFINE}
             tooltip="Define domain on KVM"

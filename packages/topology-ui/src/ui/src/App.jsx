@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import classNames from 'classnames';
 
 import WebuiOne from 'features/nso/WebuiOne';
+import Sidebar from 'features/common/Sidebar';
 import TopologyViewer from 'features/topology/TopologyViewer';
 import ConfigViewer from 'features/config/ConfigViewer';
 import TerminalViewer from 'features/terminal/TerminalViewer';
@@ -49,17 +50,21 @@ function App () {
         }}
       >
         <WebuiOne title="Topology">
-          <MenuSidebar/>
+          <Sidebar>
+            <MenuSidebar/>
+          </Sidebar>
           <div className={classNames('centre-pane', {
             'centre-pane--edit-mode': editMode
           })}>
             <TopologyViewer getDeviceStatus={getDeviceStatus}/>
             <TerminalViewer DeviceTerminal={DeviceTerminal}/>
           </div>
-          <ConfigViewer
-            ConfigHeaderActions={ConfigHeaderActions}
-            getDeviceEditorKeypath={getDeviceEditorKeypath}
-          />
+          <Sidebar>
+            <ConfigViewer
+              ConfigHeaderActions={ConfigHeaderActions}
+              getDeviceEditorKeypath={getDeviceEditorKeypath}
+            />
+          </Sidebar>
         </WebuiOne>
       </QuerySelectionProvider>
     </DndProvider>

@@ -1,4 +1,5 @@
 const HTMLWebpackPlugin = require('html-webpack-plugin');
+const path = require('path');
 const webpack = require('webpack');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 
@@ -55,6 +56,7 @@ module.exports = {
   },
   resolve: {
     symlinks: false,
+    modules: [ path.resolve(__dirname, 'webui'), 'node_modules' ],
     extensions: [ '', '.js', '.jsx' ]
   }
 };
