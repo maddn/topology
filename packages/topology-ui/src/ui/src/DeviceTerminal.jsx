@@ -5,7 +5,7 @@ import Terminal from 'features/terminal/Terminal';
 
 import { useDevice } from 'features/topology/Icon';
 import { useGetValueQuery } from 'api/data';
-import { useActionMutation } from '/api/data';
+import { useActionMutation } from 'api/data';
 
 
 function DeviceTerminal({ device, active }) {
@@ -35,7 +35,6 @@ function DeviceTerminal({ device, active }) {
       <Terminal
         ip={ip}
         port={`160${`0${id}`.slice(-2)}`}
-        keypath={keypath}
         active={active}
         history={output}
         onClose={() => action({ path: `${keypath}/console/start` })}

@@ -2,7 +2,6 @@ import * as esbuild from 'esbuild';
 
 await esbuild.build({
   entryPoints: [
-    'proxies/ssh-proxy.mjs',
     'proxies/telnet-proxy.mjs'
   ],
   loader: {
