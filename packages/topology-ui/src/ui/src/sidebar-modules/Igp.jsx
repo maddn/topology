@@ -44,7 +44,7 @@ export function Component({ name }) {
 
   const [ data, serviceKeypath ] = useData(useQuery, name);
   const selector = useMemo(() => createItemsSelector('parentName', name), [ name ]);
-  const { keypath, topology, isIs, ospf } = data;
+  const { keypath, isIs, ospf } = data;
   const serviceSelection = {
     'Routing Protocol': isIs ? 'IS-IS' : ospf ? 'OSPF' : ''
   };
@@ -56,7 +56,6 @@ export function Component({ name }) {
       label={label}
       keypath={keypath}
       serviceKeypath={serviceKeypath}
-      topology={topology}
       { ...serviceSelection }
     >
       <DeviceList

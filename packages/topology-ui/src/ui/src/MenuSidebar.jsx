@@ -2,7 +2,7 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 
 import SidebarPane from 'features/common/SidebarPane';
-import NodeListWrapper from 'features/menu/panels/NodeListWrapper';
+import CreatableNodeSection from 'features/menu/panels/CreatableNodeSection';
 import ServiceList from 'features/menu/panels/ServiceList';
 import { getOpenTopologyName } from 'features/menu/menuSlice';
 
@@ -19,7 +19,7 @@ function MenuSidebar() {
 
   return (
     <SidebarPane>
-      <NodeListWrapper
+      <CreatableNodeSection
         title="Topologies"
         label={Topology.label}
         keypath={Topology.path}
@@ -27,7 +27,7 @@ function MenuSidebar() {
       >
         {Topology.useQuery().data?.map(({ name }) =>
           <Topology.Component key={name} name={name} />)}
-      </NodeListWrapper>
+      </CreatableNodeSection>
       <ServiceList
         module={Igp}
         stackedModule={ManagedTopology}

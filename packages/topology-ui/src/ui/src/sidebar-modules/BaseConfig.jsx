@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import ServicePane from 'features/menu/panels/ServicePane';
 import FieldGroup from 'features/common/FieldGroup';
-import DroppableNodeList from 'features/menu/panels/DroppableNodeList';
+import DroppableNodeQueryList from 'features/menu/panels/DroppableNodeQueryList';
 import CreatableService from 'features/menu/panels/CreatableService';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
@@ -102,7 +102,7 @@ export function Component({ topology }) {
       { ...swapLabels(data, selection) }
     >
       <FieldGroup title="Logging" { ...swapLabels(data, logging) } />
-      <DroppableNodeList
+      <DroppableNodeQueryList
         label="SNMP Server"
         keypath={`${keypath}/${snmpServers}`}
         baseSelect={[ 'ip-address', '../../topology' ]}
@@ -114,7 +114,7 @@ export function Component({ topology }) {
      />
       <FieldGroup title="GRPC" { ...swapLabels(data, grpc) } />
       <FieldGroup title="Static Routes" { ...swapLabels(data, managementRoutes) } />
-      <DroppableNodeList
+      <DroppableNodeQueryList
         label="Static Route"
         noTitle={true}
         disableCreate={true}

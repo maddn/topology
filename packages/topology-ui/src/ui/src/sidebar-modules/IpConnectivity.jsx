@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import ServicePane from 'features/menu/panels/ServicePane';
 import FieldGroup from 'features/common/FieldGroup';
-import DroppableNodeList from 'features/menu/panels/DroppableNodeList';
+import DroppableNodeQueryList from 'features/menu/panels/DroppableNodeQueryList';
 import CreatableService from 'features/menu/panels/CreatableService';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
@@ -82,7 +82,7 @@ export function Component({ topology }) {
       queryKey={queryKey}
       { ...swapLabels(data, selection) }
     >
-      <DroppableNodeList
+      <DroppableNodeQueryList
         label="Loopback Interface"
         keypath={`${keypath}/${loopbackInterfaces}`}
         baseSelect={[ 'id', isManaged ? '../../topology' : '../../../name' ]}

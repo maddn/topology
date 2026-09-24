@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import ServicePane from 'features/menu/panels/ServicePane';
 import FieldGroup from 'features/common/FieldGroup';
-import DroppableNodeList from 'features/menu/panels/DroppableNodeList';
+import DroppableNodeQueryList from 'features/menu/panels/DroppableNodeQueryList';
 
 import { useQueryQuery, useMemoizeWhenFetched, swapLabels,
          createItemsSelector } from 'api/query';
@@ -63,7 +63,7 @@ export function Component({ name }) {
 
   const [ data, serviceKeypath ] = useData(useQuery, name);
   const selector = useMemo(() => createItemsSelector('igp', name), [ name ]);
-  const { keypath, topology } = data;
+  const { keypath } = data;
 
   return (
     <ServicePane
@@ -72,11 +72,10 @@ export function Component({ name }) {
       label={label}
       keypath={keypath}
       serviceKeypath={serviceKeypath}
-      topology={topology}
       { ...swapLabels(data, selection) }
     >
       <FieldGroup title="SRGB" { ...swapLabels(data, srgb) } />
-      <DroppableNodeList
+      <DroppableNodeQueryList
         label="Flex Algo"
         keypath={`${keypath}/${flexAlgo}`}
         baseSelect={[ 'id', '../igp', ]}
